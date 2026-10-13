@@ -1,0 +1,8 @@
+title = "spermatozoa"
+year = "2022"
+updated = "2022-07-05"
+made_with = ["ableton live"]
+lead = true
+order = 7
+blurb = ""
+hero = { type = "audio", src = "song.mp3" }

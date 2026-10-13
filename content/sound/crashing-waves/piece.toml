@@ -1,0 +1,8 @@
+title = "crashing waves"
+year = "2026"
+updated = "2026-05-13"
+made_with = ["ableton live"]
+lead = true
+order = 2
+blurb = ""
+hero = { type = "audio", src = "song.mp3" }

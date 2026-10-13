@@ -1,0 +1,8 @@
+title = "stare into the sun"
+year = "2026"
+updated = "2026-05-16"
+made_with = ["ableton live"]
+lead = true
+order = 1
+blurb = ""
+hero = { type = "audio", src = "song.mp3" }

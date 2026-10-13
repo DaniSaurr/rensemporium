@@ -1,0 +1,8 @@
+title = "idk some shit"
+year = "2022"
+updated = "2022-05-30"
+made_with = ["ableton live"]
+lead = true
+order = 10
+blurb = ""
+hero = { type = "audio", src = "song.mp3" }
