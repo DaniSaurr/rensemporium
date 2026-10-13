@@ -1,0 +1,22 @@
+title = "reliquaries"
+year = "2026"
+updated = "2026-07-26"
+made_with = ["blender 5.1", "codex"]
+lead = true
+order = 4
+blurb = ""
+thumb = "the-last-litany.jpg"
+hero = { type = "image", src = "the-last-litany.jpg", alt = "a masked armoured figure before a round window" }
+ai = [ { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+gallery = [
+  { src = "the-last-litany-closeup.jpg", caption = "the last litany, closeup" },
+  { src = "the-last-litany-v2.jpg", caption = "the last litany v2" },
+  { src = "vesper-reliquary.jpg", caption = "vesper reliquary" },
+  { src = "vesper-reliquary-three-quarter.jpg", caption = "vesper reliquary, three-quarter" },
+  { src = "reliquary-guardian-v2.jpg", caption = "reliquary guardian v2" },
+  { src = "reliquary-guardian-v2-closeup.jpg", caption = "reliquary guardian v2, closeup" },
+  { src = "aeolian-surveyor.jpg", caption = "aeolian surveyor" },
+  { src = "aeolian-surveyor-detail.jpg", caption = "aeolian surveyor, detail" },
+  { src = "pelagic-reliquary.jpg", caption = "pelagic reliquary" },
+  { src = "pelagic-reliquary-detail.jpg", caption = "pelagic reliquary, detail" },
+]

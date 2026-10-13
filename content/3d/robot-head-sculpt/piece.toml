@@ -1,0 +1,23 @@
+title = "robot head sculpt"
+year = "2019"
+updated = "2019-10-25"
+made_with = ["blender"]
+lead = false
+order = 50
+blurb = ""
+
+thumb = "turntable-poster.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "turntable-poster.jpg" }
+gallery = [
+  { src = "high-front.jpg", caption = "high sculpt" },
+  { src = "low-and-high-left.jpg", caption = "low poly and high poly sculpt, october 2019" },
+  { src = "high-left.jpg", caption = "high sculpt" },
+  { src = "low-left.jpg", caption = "low sculpt" },
+  { src = "dynamesh-front.jpg", caption = "dynamesh robot 3" },
+  { src = "done-robot-tiers.jpg", caption = "done robot, three levels of detail: about 3 thousand, 97 thousand and 1.4 million vertices, july 2019", contain = true },
+  { src = "done-robot-front.jpg", caption = "done robot high res" },
+  { src = "done-robot-clay.jpg", caption = "done robot high res, clay" },
+  { src = "snake-head-front.jpg", caption = "snake head" },
+  { src = "snake-head-left.jpg", caption = "snake head" },
+  { src = "snake-head-clay.jpg", caption = "snake head, clay" },
+]

@@ -1,0 +1,17 @@
+title = "godot 3d models"
+year = "2026"
+updated = "2026-07-19"
+made_with = ["blender", "godot"]
+lead = false
+order = 38
+blurb = ""
+
+thumb = "kit.jpg"
+hero = { type = "image", src = "kit.jpg", alt = "twelve small game models on one board: a carved stone block, trees, a mountain, crystals, a book and bricks" }
+gallery = [
+  { src = "mountain-front.jpg", caption = "mountain" },
+  { src = "crabblock-left.jpg", caption = "crabblock" },
+  { src = "medium-tree-left.jpg", caption = "medium_tree" },
+  { src = "bricks-left.jpg", caption = "bricks" },
+  { src = "book-left.jpg", caption = "book" },
+]

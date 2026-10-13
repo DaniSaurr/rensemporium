@@ -1,0 +1,11 @@
+title = "triangle game"
+year = "2023"
+updated = "2023-03-09"
+made_with = ["javascript"]
+lead = false
+order = 22
+blurb = "experimenting with block stacking and gravity led to me just playing around and making some guys"
+caption = "experimenting with block stacking and gravity led to me just playing around and making some guys"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.png"
+hero = { type = "image", src = "shot.png" }

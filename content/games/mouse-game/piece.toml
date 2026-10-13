@@ -1,0 +1,11 @@
+title = "mouse game"
+year = "2023"
+updated = "2023-02-26"
+made_with = ["javascript"]
+lead = false
+order = 20
+blurb = "testing out some more real-time elements for game ideas"
+caption = "testing out some more real-time elements for game ideas"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

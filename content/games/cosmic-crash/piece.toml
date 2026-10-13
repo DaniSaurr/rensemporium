@@ -1,0 +1,26 @@
+title = "cosmic crash"
+year = "2019, 2026"
+updated = "2026-05-21"
+made_with = ["unreal 4.23", "javascript"]
+lead = true
+order = 1
+blurb = "a star fox-style shooter. started in unreal at college, finished in the browser."
+thumb = "astrogirl.png"
+hero = { type = "iframe", src = "play/" }
+links = [ { label = "play full screen", href = "play/" } ]
+ai = [ { tool = "gpt" } ]
+gallery = [
+  { src = "astrogirl.png", caption = "astrogirl texture, 2019", contain = true },
+  { src = "ui-sketch-1.png", caption = "hud sketch, 2019", contain = true },
+  { src = "ui-sketch-2.png", caption = "hud sketch, 2019", contain = true },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "unreal, october 2019", contain = true },
+  { src = "dev-02.jpg", caption = "unreal, october 2019", contain = true },
+  { src = "dev-03.jpg", caption = "ship texturing, november 2019" },
+  { src = "dev-04.jpg", caption = "unreal, november 2019", contain = true },
+  { src = "dev-05.jpg", caption = "unreal, november 2019", contain = true },
+  { src = "dev-06.jpg", caption = "enemy attack plan, december 2019", contain = true },
+  { src = "dev-07.jpg", caption = "unreal, december 2019", contain = true },
+  { src = "dev-08.jpg", caption = "unreal editor, december 2019" },
+]

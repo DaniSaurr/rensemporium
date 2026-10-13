@@ -1,0 +1,14 @@
+# build output
+_site/
+# the inventory holds a full mirror, thumbnails of every .blend, and notes about private folders; it stays on this PC
+inventory/
+# readable personal writings; only the scrambled copies get built
+content/writing/private/source/
+__pycache__/
+# raw Blender renders; picks get copied into content/3d
+renders/
+
+# never public: unpublished drafts, the about-page draft, the planning doc (it lists private folders)
+content/_drafts/
+content/about/draft.html
+PLAN.md

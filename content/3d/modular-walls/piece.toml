@@ -1,0 +1,15 @@
+title = "modular walls"
+year = "2020 to 2021"
+updated = "2021-05-20"
+made_with = ["blender"]
+lead = false
+order = 43
+blurb = ""
+
+thumb = "uvdemo-left.jpg"
+hero = { type = "image", src = "uvdemo-left.jpg", alt = "a hotel interior block with a red patterned carpet and gold trim" }
+gallery = [
+  { src = "hotel-walls-left.jpg", caption = "modeularHotelWalls" },
+  { src = "snow-left.jpg", caption = "snow mesh" },
+  { src = "level2-left.jpg", caption = "level2" },
+]

@@ -1,0 +1,35 @@
+title = "shapes journey"
+year = "2026"
+updated = "2026-05-24"
+made_with = ["pencil", "ink", "marker"]
+lead = true
+order = 1
+blurb = "this is a gallery of shape from my exploration of sacred geometry."
+caption = "this is a gallery of shape from my exploration of sacred geometry."
+thumb = "shape-01.jpg"
+hero = { type = "image", src = "shape-01.jpg", alt = "shape 1 of 24" }
+gallery = [
+  { src = "shape-02.jpg" },
+  { src = "shape-03.jpg" },
+  { src = "shape-04.jpg" },
+  { src = "shape-05.jpg" },
+  { src = "shape-06.jpg" },
+  { src = "shape-07.jpg" },
+  { src = "shape-08.jpg" },
+  { src = "shape-09.jpg" },
+  { src = "shape-10.jpg" },
+  { src = "shape-11.jpg" },
+  { src = "shape-12.jpg" },
+  { src = "shape-13.jpg" },
+  { src = "shape-14.jpg" },
+  { src = "shape-15.jpg" },
+  { src = "shape-16.jpg" },
+  { src = "shape-17.jpg" },
+  { src = "shape-18.jpg" },
+  { src = "shape-19.jpg" },
+  { src = "shape-20.jpg" },
+  { src = "shape-21.jpg" },
+  { src = "shape-22.jpg" },
+  { src = "shape-23.jpg" },
+  { src = "shape-24.jpg" },
+]

@@ -1,0 +1,23 @@
+title = "bot project"
+year = "2026"
+updated = "2026-07-26"
+made_with = ["blender 5.1"]
+lead = true
+order = 14
+blurb = ""
+thumb = "poster.jpg"
+hero = { type = "video", src = "robots.mp4", poster = "poster.jpg" }
+ai = [ { tool = "claude", models = ["opus 4.8", "opus 5"] }, { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+gallery = [
+  { src = "robots.mp4", caption = "window polisher, fallen star repairer, hatchling of the horizon" },
+  { src = "cube-toss.mp4", caption = "hatchling of the horizon, cube toss" },
+  { src = "star-repairer-loop.mp4", caption = "fallen star repairer, loop" },
+  { src = "window-polisher.jpg", caption = "bot 09, window polisher", contain = true },
+  { src = "star-repairer.jpg", caption = "bot 19, fallen star repairer", contain = true },
+  { src = "hatchling.jpg", caption = "bot 30, hatchling of the horizon", contain = true },
+  { src = "hatchling-night.jpg", caption = "bot 30, first preview", contain = true },
+  { src = "poses-09.jpg", caption = "bot 09, animation poses", contain = true },
+  { src = "poses-19.jpg", caption = "bot 19, animation poses", contain = true },
+  { src = "poses-30.jpg", caption = "bot 30, procedural animation poses", contain = true },
+  { src = "toss-checkpoints.jpg", caption = "cube toss, nine frames", contain = true },
+]

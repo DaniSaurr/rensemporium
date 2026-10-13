@@ -1,0 +1,14 @@
+title = "fish game"
+year = "2024"
+updated = "2024-02-17"
+made_with = ["pico-8"]
+lead = false
+order = 17
+blurb = ""
+hero = { type = "image", src = "fishgame-4.gif", alt = "fishing line dropped into water with a fish nearby" }
+gallery = [
+  { src = "fishgame-0.gif", caption = "pico-8 sprite editor, 2024" },
+  { src = "fishgame-1.gif" },
+  { src = "fishgame-2.gif" },
+  { src = "fishgame-3.gif" },
+]

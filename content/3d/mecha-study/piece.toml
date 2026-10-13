@@ -1,0 +1,25 @@
+title = "mecha study"
+year = "2021"
+updated = "2021-06-20"
+made_with = ["blender"]
+lead = false
+order = 30
+blurb = ""
+
+thumb = "mecha-9color.jpg"
+hero = { type = "image", src = "mecha-9color.jpg", alt = "a blue and purple mech figure with white horns on a lavender background" }
+gallery = [
+  { src = "mecha-9color-front.jpg" },
+  { src = "mecha-8color-pose.jpg" },
+  { src = "mecha-8color-left.jpg" },
+  { src = "mecha-7color-left.jpg" },
+  { src = "mecha-6colours-left.jpg" },
+  { src = "mecha-psoing-left.jpg" },
+  { src = "manashpere-left.jpg" },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "carve tool 1, june 2021 (clay render)" },
+  { src = "dev-02.jpg", caption = "carve tool 3, june 2021 (clay render)" },
+  { src = "dev-03.jpg", caption = "carve tool 5, june 2021 (clay render)" },
+  { src = "dev-04.jpg", caption = "carve tool 7, june 2021 (clay render)" },
+]

@@ -1,0 +1,13 @@
+title = "robots"
+year = "2021"
+updated = "2021-06-06"
+made_with = ["blender 2.90"]
+lead = false
+order = 30
+blurb = ""
+thumb = "mecha.jpg"
+hero = { type = "image", src = "mecha.jpg", alt = "a red and black mecha on a white floor" }
+gallery = [
+  { src = "mechawip.jpg", caption = "work in progress" },
+  { src = "robot.jpg" },
+]

@@ -1,0 +1,26 @@
+title = "superposition"
+year = "2026"
+updated = "2026-06-06"
+made_with = ["blender 4.1"]
+lead = true
+order = 1
+blurb = ""
+thumb = "poster.jpg"
+hero = { type = "youtube", id = "U5ivjHhm7x8", title = "wip superposition video" }
+tags = ["music video", "vertical, 1080x1920"]
+credits = [
+  "3d models from sketchfab: office floor, low-rise wall-to-wall office building, roads ii, dead tree 001, low-poly rat, bart simpson",
+  "sky: DaySkyHDRI027B, ambientcg",
+  "text animation: textstudio.com",
+]
+gallery = [
+  { src = "loop.mp4", caption = "loop, frames 316 to 507" },
+  { src = "still-0100.jpg", caption = "frame 100" },
+  { src = "still-0292.jpg", caption = "frame 292" },
+  { src = "still-0340.jpg", caption = "frame 340" },
+  { src = "still-0412.jpg", caption = "frame 412" },
+  { src = "still-0460.jpg", caption = "frame 460" },
+  { src = "still-0580.jpg", caption = "frame 580" },
+  { src = "still-0628.jpg", caption = "frame 628" },
+  { src = "still-0700.jpg", caption = "frame 700" },
+]

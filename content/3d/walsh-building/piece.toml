@@ -1,0 +1,18 @@
+title = "walsh building"
+year = "2020"
+updated = "2020-12-03"
+made_with = ["blender"]
+lead = false
+order = 56
+blurb = ""
+
+thumb = "walsh5-file.jpg"
+hero = { type = "image", src = "walsh5-file.jpg", alt = "a red brick corner building with green trim and a dark roof" }
+gallery = [
+  { src = "walsh5-right.jpg", caption = "walshBuilding5" },
+  { src = "walsh5-left.jpg" },
+  { src = "walsh5-low.jpg" },
+  { src = "blockout6-file.jpg", caption = "blockout6, november 2020" },
+  { src = "blockout6-left.jpg", caption = "blockout6" },
+  { src = "blockout6-high.jpg" },
+]

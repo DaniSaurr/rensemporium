@@ -1,0 +1,15 @@
+title = "kalabu"
+year = "2021"
+updated = "2021-07-05"
+made_with = ["blender"]
+lead = false
+order = 20
+blurb = ""
+
+thumb = "kalabu-file.jpg"
+hero = { type = "image", src = "kalabu-file.jpg" }
+gallery = [
+  { src = "kalabu-left34.jpg" },
+  { src = "kalabu-right34.jpg" },
+  { src = "kalabu-low.jpg" },
+]

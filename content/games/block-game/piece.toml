@@ -1,0 +1,11 @@
+title = "block game"
+year = "2023"
+updated = "2023-03-06"
+made_with = ["javascript"]
+lead = false
+order = 21
+blurb = "i wanted to make a game about stacking blocks. it didn't really go anywhere but i learned from the attempt"
+caption = "i wanted to make a game about stacking blocks. it didn't really go anywhere but i learned from the attempt"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

@@ -1,0 +1,19 @@
+title = "july 2018"
+year = "2018"
+updated = "2018-09-28"
+made_with = ["blender 2.79"]
+lead = false
+order = 35
+blurb = ""
+
+thumb = "little-scene.jpg"
+hero = { type = "image", src = "little-scene.jpg", alt = "a low-poly lake scene with purple rocks, reeds and a small house" }
+gallery = [
+  { src = "rocks.jpg", caption = "rocks" },
+  { src = "house.jpg", caption = "house" },
+  { src = "staff.jpg", caption = "staff" },
+  { src = "tsuchiniko.jpg", caption = "tsuchiniko" },
+  { src = "eyebot.jpg", caption = "eyebot" },
+  { src = "donut.jpg", caption = "donut" },
+  { src = "lizard.jpg", caption = "lizard" },
+]

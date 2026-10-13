@@ -1,0 +1,40 @@
+title = "dungeonzoo"
+year = "2026"
+updated = "2026-10-07"
+made_with = ["godot 4"]
+lead = true
+order = 2
+blurb = "first-person dungeon crawling where you catch the monsters in a net."
+thumb = "pup.png"
+hero = { type = "video", src = "run.mp4", poster = "pup.png" }
+ai = [ { tool = "claude", models = ["opus 5.5", "sonnet 5.5"] } ]
+facts = [["status", "in progress, version 0.05"], ["plays on", "windows"]]
+gallery = [
+  { src = "ring.png" },
+  { src = "line.png" },
+  { src = "zoo.png" },
+  { src = "zoo-crowd.png" },
+  { src = "meadow.png" },
+  { src = "beach.png" },
+  { src = "snow.png" },
+  { src = "volcano.png" },
+  { src = "map.png" },
+  { src = "plinths.png" },
+  { src = "gate.png" },
+  { src = "pup.png" },
+  { src = "version-0.01.jpg", group = "every version, 0.01 to 0.05", caption = "0.01" },
+  { src = "version-0.02.jpg", group = "every version, 0.01 to 0.05", caption = "0.02" },
+  { src = "version-0.03.jpg", group = "every version, 0.01 to 0.05", caption = "0.03" },
+  { src = "version-0.04.jpg", group = "every version, 0.01 to 0.05", caption = "0.04" },
+  { src = "version-0.05.jpg", group = "every version, 0.01 to 0.05", caption = "0.05" },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "2 october 2026" },
+  { src = "dev-02.jpg", caption = "2 october 2026" },
+  { src = "dev-03.jpg", caption = "4 october 2026" },
+  { src = "dev-04.jpg", caption = "4 october 2026" },
+  { src = "dev-05.jpg", caption = "4 october 2026" },
+  { src = "dev-06.jpg", caption = "4 october 2026" },
+  { src = "dev-07.jpg", caption = "5 october 2026" },
+  { src = "dev-08.jpg", caption = "6 october 2026" },
+]

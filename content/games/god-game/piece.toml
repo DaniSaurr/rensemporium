@@ -1,0 +1,13 @@
+title = "citybuilder"
+year = "2026"
+updated = "2026-07-20"
+made_with = ["three.js"]
+lead = false
+order = 25
+blurb = "i've been getting really into ancient mesopatamia and i thought it would be fun to play with three.js"
+caption = "i've been getting really into ancient mesopatamia and i thought it would be fun to play with three.js"
+links = [ { label = "play", href = "play/" } ]
+ai = [ { tool = "claude", models = ["fable 5", "opus 4.8", "sonnet 5"] } ]
+credits = ["three.js 0.165.0 (MIT), loaded from jsdelivr"]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

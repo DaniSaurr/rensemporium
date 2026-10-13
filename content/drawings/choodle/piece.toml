@@ -1,0 +1,9 @@
+title = "choodle"
+year = "2026"
+updated = "2026-04-27"
+made_with = []
+lead = true
+order = 2
+blurb = ""
+thumb = "choodle.png"
+hero = { type = "image", src = "choodle.png", alt = "line drawing of a jester in a mechanical body" }

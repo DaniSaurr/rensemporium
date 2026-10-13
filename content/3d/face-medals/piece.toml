@@ -1,0 +1,13 @@
+title = "face medals"
+year = "2026"
+updated = "2026-06-16"
+made_with = ["blender"]
+lead = false
+order = 37
+blurb = ""
+
+thumb = "faces-file.jpg"
+hero = { type = "image", src = "faces-file.jpg", alt = "three relief faces on discs: a sun face in orange, a pale face and a grey mercury face" }
+gallery = [
+  { src = "faces-left.jpg" },
+]

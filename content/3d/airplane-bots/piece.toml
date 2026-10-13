@@ -1,0 +1,22 @@
+title = "airplane bots"
+year = "2024"
+updated = "2024-01-18"
+made_with = ["blender"]
+lead = false
+order = 32
+blurb = ""
+
+thumb = "poster.jpg"
+hero = { type = "video", src = "bot5-turn.mp4", poster = "poster.jpg" }
+gallery = [
+  { src = "bot5-turn.mp4", caption = "airplane bot 5" },
+  { src = "bot5-left.jpg", caption = "airplane bot 5" },
+  { src = "bot5-high.jpg" },
+  { src = "bot5-back.jpg" },
+  { src = "bot5-low.jpg" },
+  { src = "bot3-front.jpg", caption = "airplane bot 3" },
+  { src = "bot3-left.jpg" },
+  { src = "bot3-right.jpg" },
+  { src = "bot2-high.jpg", caption = "airplane bot 2" },
+  { src = "bot2-left.jpg" },
+]

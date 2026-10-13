@@ -1,0 +1,33 @@
+title = "hotel for fancy creatures"
+year = "2018 to 2026"
+updated = "2026-07-22"
+made_with = ["unity", "javascript"]
+lead = true
+order = 4
+blurb = "my creatures, in complex rooms."
+thumb = "rooms.png"
+hero = { type = "image", src = "rooms.png", alt = "a grid of cartoon creatures, each in a differently patterned room" }
+links = [
+  { label = "play", href = "play/" },
+  { label = "my creatures", href = "rooms-2020/hffctest3.html" },
+  { label = "more complex creatures", href = "rooms-2020/hffctest7.html" },
+  { label = "complex creatures in complex rooms", href = "rooms-2020/roomtest2.html" },
+]
+ai = [ { tool = "claude", models = ["fable 5", "opus 4.8", "sonnet 5"] }, { tool = "gpt", models = ["gpt-5.5"] } ]
+facts = [["status", "in progress"], ["plays on", "browser"], ["earlier", "unity, 2018 to 2020"]]
+gallery = [
+  { src = "concept-poster.jpg", group = "concept images" },
+  { src = "concept-apparatus.jpg", group = "concept images" },
+  { src = "concept-weekday-guests.jpg", group = "concept images" },
+  { src = "concept-tiernan.jpg", group = "concept images" },
+  { src = "concept-clockwork.jpg", group = "concept images" },
+  { src = "pixel-tiles.png", group = "pixel art, 2020 to 2021", contain = true },
+  { src = "pixel-bee.png", group = "pixel art, 2020 to 2021", contain = true },
+  { src = "pixel-eye.png", group = "pixel art, 2020 to 2021", contain = true },
+  { src = "pixel-rat.png", group = "pixel art, 2020 to 2021", contain = true },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "mockup, december 2020" },
+  { src = "dev-02.jpg", caption = "floor plan, may 2021", contain = true },
+  { src = "dev-03.png", caption = "texture atlas, may 2022", contain = true },
+]

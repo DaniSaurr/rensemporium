@@ -1,0 +1,17 @@
+title = "setanta"
+year = "2026"
+updated = "2026-09-05"
+made_with = ["blender"]
+lead = false
+order = 23
+blurb = ""
+
+thumb = "irish-myth-setanta-left34.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "irish-myth-setanta-left34.jpg" }
+gallery = [
+  { src = "irish-myth-setanta-left34.jpg" },
+  { src = "irish-myth-setanta-right34.jpg" },
+  { src = "irish-myth-setanta-low.jpg" },
+  { src = "irish-myth-level11-left34.jpg" },
+  { src = "irish-myth-level11-right34.jpg" },
+]

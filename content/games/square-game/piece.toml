@@ -1,0 +1,11 @@
+title = "square game"
+year = "2023"
+updated = "2023-03-01"
+made_with = ["javascript"]
+lead = false
+order = 15
+blurb = "an actual little game where you can get a score by clicking squares :)"
+caption = "an actual little game where you can get a score by clicking squares :)"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

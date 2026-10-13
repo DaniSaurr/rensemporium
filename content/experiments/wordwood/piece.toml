@@ -1,0 +1,20 @@
+title = "wordwood"
+year = "2026"
+updated = "2026-10-11"
+made_with = ["three.js"]
+lead = true
+thumb = "wordwood-final.png"
+order = 1
+blurb = ""
+hero = { type = "image", src = "wordwood-final.png", alt = "web version in screen-grid mode: the scene drawn as lines of words" }
+links = [ { label = "walk in", href = "play/wordwood-single.html" } ]
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+credits = ["three.js 0.160.0 (MIT), inlined in the single build", "jetbrains mono bold (SIL OFL 1.1), inlined in the single build"]
+dev = [
+  { src = "dev-01.jpg", caption = "10 october 2026" },
+  { src = "dev-02.jpg", caption = "10 october 2026" },
+  { src = "dev-03.jpg", caption = "10 october 2026" },
+  { src = "dev-04.jpg", caption = "11 october 2026", contain = true },
+  { src = "dev-05.jpg", caption = "11 october 2026", contain = true },
+  { src = "dev-06.jpg", caption = "11 october 2026" },
+]

@@ -1,0 +1,10 @@
+title = "egg game"
+year = "2023"
+updated = "2023-03-18"
+made_with = ["javascript"]
+lead = false
+order = 13
+blurb = "i got really into the pet simulator idea and expanded it into a full thing and even a minigame"
+caption = "i got really into the pet simulator idea and expanded it into a full thing and even a minigame"
+hero = { type = "image", src = "petgamess.png", alt = "screenshot from petgame and egggame" }
+links = [ { label = "play", href = "play/" } ]

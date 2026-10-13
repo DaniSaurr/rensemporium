@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}about · ren's emporium{% endblock %}
+{% block description %}about dani deetvleet{% endblock %}
+{% block aitoggle %}{% endblock %}
+{% block main %}
+<header class="room-head">
+  <h1>about</h1>
+</header>
+<div class="prose about">
+  {{ body | safe }}
+</div>
+{% if links %}
+<ul class="about-links">
+  {% for l in links %}<li><a class="button quiet" href="{{ l.href }}" target="_blank" rel="noopener">{{ l.label }}</a></li>{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

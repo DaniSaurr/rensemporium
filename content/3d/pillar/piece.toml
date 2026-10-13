@@ -1,0 +1,15 @@
+title = "pillar"
+year = "2026"
+updated = "2026-06-10"
+made_with = ["blender"]
+lead = false
+order = 40
+blurb = ""
+
+thumb = "pillar2-file.jpg"
+hero = { type = "image", src = "pillar2-file.jpg", alt = "a grey temple front with green-tinted columns on a checkered floor" }
+gallery = [
+  { src = "pillar3-file.jpg", caption = "pillar3" },
+  { src = "pillar3-front.jpg" },
+  { src = "pillar2-left.jpg", caption = "pillar2" },
+]

@@ -1,0 +1,10 @@
+title = "confractus"
+year = "2026"
+updated = "2026-03-11"
+made_with = ["javascript"]
+lead = false
+order = 12
+blurb = "confractus, the latest version with polish"
+caption = "confractus, the latest version with polish"
+hero = { type = "image", src = "highscore.png", alt = "beat my high score!" }
+links = [ { label = "play", href = "play/" }, { label = "prototype", href = "prototype/" } ]

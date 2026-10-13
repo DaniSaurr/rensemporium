@@ -1,0 +1,22 @@
+title = "cosmic crash models"
+year = "2019"
+updated = "2019-11-28"
+made_with = ["maya"]
+lead = false
+order = 52
+blurb = ""
+
+thumb = "health-pickup.jpg"
+hero = { type = "image", src = "health-pickup.jpg", alt = "two grey medical crates with raised crosses, a low poly one beside a high poly one" }
+gallery = [
+  { src = "astrogirl-left.jpg", caption = "astrogirl" },
+  { src = "astrogirl-front.jpg" },
+  { src = "main-ship.jpg", caption = "main ship, low poly and high poly" },
+  { src = "enemy-ship.jpg", caption = "enemy ship, low poly and high poly" },
+  { src = "sea-mine.jpg", caption = "sea mine, low poly and high poly" },
+  { src = "health-pickup-front.jpg", caption = "health pickup, low poly and high poly" },
+  { src = "cast-front.jpg", caption = "giant, goblin, normal man, weird man and cucullain" },
+  { src = "cast-left.jpg" },
+  { src = "biplane-and-whip.jpg", caption = "biplane and chain whip" },
+  { src = "main-ship-front.jpg" },
+]

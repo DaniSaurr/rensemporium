@@ -1,0 +1,24 @@
+title = "blackwood"
+year = "2026"
+updated = "2026-08-08"
+made_with = ["blender 5.1"]
+lead = false
+order = 34
+blurb = ""
+thumb = "level.jpg"
+hero = { type = "image", src = "level.jpg", alt = "a low poly cliff and forest level seen from above" }
+ai = [ { tool = "gpt", models = ["gpt-5.6-sol"] } ]
+gallery = [
+  { src = "level.jpg", caption = "level overview" },
+  { src = "courtyard.jpg", caption = "courtyard" },
+  { src = "forest-approach.jpg", caption = "forest approach" },
+  { src = "downhill-overview.jpg", caption = "downhill path" },
+  { src = "downhill-top.jpg" },
+  { src = "downhill-bottom.jpg" },
+  { src = "courtyard-closeup.jpg", caption = "courtyard, close" },
+  { src = "forest-gate.jpg", caption = "forest gate" },
+  { src = "ravine-bridge.jpg", caption = "ravine bridge" },
+  { src = "shrine.jpg", caption = "shrine" },
+  { src = "ridge-trail.jpg", caption = "eastern ridge trail" },
+  { src = "hamlet.jpg", caption = "forest hamlet" },
+]

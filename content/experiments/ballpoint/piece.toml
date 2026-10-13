@@ -1,0 +1,10 @@
+title = "ballpoint"
+year = "2026"
+updated = "2026-09-30"
+made_with = ["javascript"]
+lead = true
+order = 2
+blurb = ""
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

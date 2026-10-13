@@ -1,0 +1,23 @@
+title = "gothic church"
+year = "2025"
+updated = "2025-05-12"
+made_with = ["blender"]
+lead = true
+order = 2
+blurb = ""
+
+thumb = "turntable-poster.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "turntable-poster.jpg" }
+credits = ["textures on the small church generated with ai"]
+gallery = [
+  { src = "dusk-left.jpg" },
+  { src = "dusk-front.jpg" },
+  { src = "dusk-right.jpg" },
+  { src = "dusk-high.jpg" },
+  { src = "dusk-back.jpg" },
+  { src = "dusk-low.jpg" },
+  { src = "progression.jpg", caption = "church2, church4, church5, church6, church7 and church8, may 2025, same camera", contain = true },
+  { src = "day-left.jpg" },
+  { src = "day-front.jpg" },
+  { src = "small-church.jpg", caption = "small church, may 2025" },
+]

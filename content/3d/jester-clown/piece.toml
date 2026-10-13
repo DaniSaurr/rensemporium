@@ -1,0 +1,22 @@
+title = "jester clown"
+year = "2022"
+updated = "2022-05-20"
+made_with = ["blender"]
+lead = true
+order = 9
+blurb = ""
+
+thumb = "clown-file.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "clown-file.jpg" }
+gallery = [
+  { src = "clown-file.jpg" },
+  { src = "clown-left34.jpg" },
+  { src = "clown-right34.jpg" },
+  { src = "clown-low.jpg" },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "wip, may 2022 (clay render)" },
+  { src = "dev-02.jpg", caption = "wip2, may 2022 (clay render)" },
+  { src = "dev-03.jpg", caption = "low poly 1, may 2022 (clay render)" },
+  { src = "dev-04.jpg", caption = "low poly colored 2, may 2022 (clay render)" },
+]

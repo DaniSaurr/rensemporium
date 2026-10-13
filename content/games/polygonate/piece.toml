@@ -1,0 +1,11 @@
+title = "polygonate"
+year = "2024"
+updated = "2024-05-27"
+made_with = ["javascript"]
+lead = false
+order = 24
+blurb = "experimental"
+caption = "experimental"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

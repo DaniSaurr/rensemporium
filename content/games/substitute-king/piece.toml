@@ -1,0 +1,22 @@
+title = "substitute king"
+year = "2026"
+updated = "2026-09-30"
+made_with = ["godot 4"]
+lead = true
+order = 3
+blurb = ""
+thumb = "court.jpg"
+hero = { type = "video", src = "mind.mp4", poster = "court.jpg" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "title.jpg" },
+  { src = "court.jpg" },
+  { src = "market.jpg" },
+  { src = "liver.jpg" },
+  { src = "battle.jpg" },
+  { src = "mind.jpg" },
+  { src = "stacks.jpg", caption = "the stacks" },
+  { src = "irkalla.jpg", caption = "irkalla" },
+  { src = "camp.jpg" },
+  { src = "map.jpg", caption = "nineveh", contain = true },
+]

@@ -1,0 +1,11 @@
+title = "walk cycles"
+year = "2017"
+updated = "2017-10-24"
+made_with = []
+lead = false
+order = 3
+blurb = ""
+hero = { type = "image", src = "walk-01.gif", alt = "animated walk and fall cycle" }
+gallery = [
+  { src = "walk-02.gif" },
+]

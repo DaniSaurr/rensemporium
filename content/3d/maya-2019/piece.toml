@@ -1,0 +1,22 @@
+title = "maya 2019"
+year = "2019 to 2020"
+updated = "2020-04-15"
+made_with = ["maya"]
+lead = false
+order = 53
+blurb = ""
+
+thumb = "cute-castle-left.jpg"
+hero = { type = "image", src = "cute-castle-left.jpg", alt = "a small grey castle with blue bands on a green octagonal base" }
+gallery = [
+  { src = "castle-tower-left.jpg", caption = "castle tower modular" },
+  { src = "castle-tower-front.jpg" },
+  { src = "frog-left.jpg", caption = "frog" },
+  { src = "frog-front.jpg" },
+  { src = "bench-left.jpg", caption = "bench" },
+  { src = "nibbler-left.jpg", caption = "nibbler" },
+  { src = "nibbler-front.jpg" },
+  { src = "ice-rink-left.jpg", caption = "ice rink" },
+  { src = "little-mouse-man-left.jpg", caption = "little mouse man, 2020" },
+  { src = "cute-castle-front.jpg", caption = "cute castle" },
+]

@@ -1,0 +1,18 @@
+title = "character blockouts"
+year = "2021"
+updated = "2021-08-21"
+made_with = ["blender"]
+lead = false
+order = 58
+blurb = ""
+
+thumb = "lineup.jpg"
+hero = { type = "image", src = "lineup.jpg", alt = "four pale clay figures in a row: a girl with a staff, a winged child, a thin mech and a flat bird shape" }
+gallery = [
+  { src = "emilia-front.jpg", caption = "emilia, august 2021" },
+  { src = "gallemblock-front.jpg", caption = "gallemblock, july 2021" },
+  { src = "gallemblock-left.jpg" },
+  { src = "mechthing-left.jpg", caption = "mech thing, january 2021" },
+  { src = "funny-little-guy-left.jpg", caption = "funny little guy, august 2021" },
+  { src = "personbase-left.jpg", caption = "person base, january 2021" },
+]

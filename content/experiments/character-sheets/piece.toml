@@ -1,0 +1,26 @@
+title = "character sheets"
+year = "2026"
+updated = "2026-07-26"
+made_with = ["codex"]
+lead = false
+order = 8
+blurb = ""
+thumb = "sheet-01.jpg"
+hero = { type = "image", src = "sheet-01.jpg", alt = "ten harlequin figures in a grid on red" }
+ai = [ { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+gallery = [
+  { src = "sheet-02.jpg", contain = true },
+  { src = "sheet-03.jpg", contain = true },
+  { src = "sheet-04.jpg", contain = true },
+  { src = "sheet-05.jpg", contain = true },
+  { src = "sheet-06.jpg", contain = true },
+  { src = "sheet-07.jpg", contain = true },
+  { src = "sheet-08.jpg", contain = true },
+  { src = "sheet-09.jpg", contain = true },
+  { src = "sheet-10.jpg", contain = true },
+  { src = "sheet-11.jpg", contain = true },
+  { src = "sheet-12.jpg", contain = true },
+  { src = "sheet-13.jpg", contain = true },
+  { src = "sheet-14.jpg", contain = true },
+  { src = "sheet-15.jpg", contain = true },
+]

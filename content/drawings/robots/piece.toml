@@ -1,0 +1,14 @@
+title = "robots"
+year = ""
+updated = "2021-06-06"
+made_with = []
+lead = true
+order = 6
+blurb = "robots i made"
+caption = "robots i made"
+thumb = "mechawip.jpg"
+hero = { type = "image", src = "mechawip.jpg", alt = "red mecha figure on a black background" }
+gallery = [
+  { src = "mecha.jpg" },
+  { src = "robot.jpg" },
+]

@@ -1,0 +1,19 @@
+title = "packing dive"
+year = "2026"
+updated = "2026-10-08"
+made_with = ["python", "glsl"]
+lead = true
+order = 5
+blurb = ""
+thumb = "poster.jpg"
+hero = { type = "video", src = "dive.mp4", poster = "poster.jpg" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+credits = [
+  "squares in a square: david ellsworth's packing svgs",
+  "circles in a circle: packomania",
+]
+dev = [
+  { src = "dev-01.jpg", caption = "8 october 2026", contain = true },
+  { src = "dev-02.jpg", caption = "8 october 2026", contain = true },
+  { src = "dev-03.jpg", caption = "8 october 2026" },
+]

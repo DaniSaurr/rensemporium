@@ -1,0 +1,10 @@
+title = "ball game"
+year = "2023"
+updated = "2023-02-24"
+made_with = ["javascript"]
+lead = false
+order = 19
+blurb = "like, a drawing app of some kind"
+caption = "like, a drawing app of some kind"
+hero = { type = "image", src = "ballgameimg.png", alt = "ballgame preview" }
+links = [ { label = "play", href = "play/" } ]

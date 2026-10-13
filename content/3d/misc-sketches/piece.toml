@@ -1,0 +1,16 @@
+title = "misc"
+year = "2023 to 2026"
+updated = "2026-06-16"
+made_with = ["blender"]
+lead = false
+order = 44
+blurb = ""
+
+thumb = "cool-shapes-left.jpg"
+hero = { type = "image", src = "cool-shapes-left.jpg", alt = "a tall tower of black frames and glass shapes" }
+gallery = [
+  { src = "e1-left.jpg", caption = "E1" },
+  { src = "e1-file.jpg" },
+  { src = "chick-left.jpg", caption = "chick1" },
+  { src = "playing-scene-left.jpg", caption = "playing scene 1" },
+]

@@ -1,0 +1,11 @@
+title = "webapp"
+year = "2023"
+updated = "2023-02-23"
+made_with = ["javascript"]
+lead = false
+order = 18
+blurb = "a testbed for when i was starting to learn js"
+caption = "a testbed for when i was starting to learn js"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

@@ -1,0 +1,36 @@
+title = "watched town"
+year = "2026"
+updated = "2026-07-24"
+made_with = ["godot 4.7", "blender"]
+lead = true
+order = 8
+blurb = ""
+thumb = "approach-poster.jpg"
+hero = { type = "video", src = "approach.mp4", poster = "approach-poster.jpg" }
+ai = [ { tool = "claude", models = ["fable 5", "opus 4.8"] }, { tool = "gpt", models = ["gpt-5.6-terra"] } ]
+gallery = [
+  { src = "walk-01.jpg" },
+  { src = "walk-02.jpg" },
+  { src = "walk-03.jpg" },
+  { src = "walk-05.jpg", caption = "the grab" },
+  { src = "town-01.jpg" },
+  { src = "town-02.jpg" },
+  { src = "town-03.jpg" },
+  { src = "town-04.jpg" },
+  { src = "town-05.jpg" },
+  { src = "town-06.jpg" },
+  { src = "town-07.jpg" },
+  { src = "town-08.jpg" },
+  { src = "town-blender.jpg", caption = "town scene, blender" },
+  { src = "watcher-turntable.mp4", caption = "winged watcher model" },
+  { src = "model-front.jpg", caption = "winged watcher on the dome" },
+  { src = "model-side.jpg" },
+  { src = "pose-idle.jpg", caption = "pose: perch idle" },
+  { src = "pose-alert.jpg", caption = "pose: perch alert" },
+  { src = "pose-pounce.jpg", caption = "pose: pounce" },
+  { src = "pose-get.jpg", caption = "pose: get" },
+]
+dev = [
+  { src = "dev-island-town.jpg", caption = "island town, 22 july 2026" },
+  { src = "dev-wing-sketch.jpg", caption = "wing sketch, 22 july 2026" },
+]

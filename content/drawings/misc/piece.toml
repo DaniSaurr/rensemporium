@@ -1,0 +1,19 @@
+title = "misc"
+year = ""
+updated = "2025-06-27"
+made_with = []
+lead = false
+order = 2
+blurb = "misc stuff"
+caption = "misc stuff"
+hero = { type = "image", src = "misc-01.gif", alt = "night street with a dark silhouette and lit windows" }
+gallery = [
+  { src = "misc-02.png" },
+  { src = "misc-03.png" },
+  { src = "misc-04.jpg" },
+  { src = "misc-05.jpg" },
+  { src = "misc-06.jpg" },
+  { src = "misc-07.jpg" },
+  { src = "misc-08.jpg" },
+  { src = "misc-09.png" },
+]

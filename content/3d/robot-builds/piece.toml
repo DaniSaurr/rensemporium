@@ -1,0 +1,19 @@
+title = "robot builds"
+year = "2026"
+updated = "2026-07-26"
+made_with = ["blender 5.1"]
+lead = false
+order = 31
+blurb = ""
+thumb = "poster.jpg"
+hero = { type = "video", src = "blue-shield-turn.mp4", poster = "poster.jpg" }
+ai = [ { tool = "claude", models = ["fable 5", "opus 4.8"] }, { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+gallery = [
+  { src = "blue-shield-turn.mp4", caption = "blue shield robot" },
+  { src = "shield-front.jpg", caption = "blue shield robot, v2" },
+  { src = "shield-left.jpg" },
+  { src = "shield-high.jpg" },
+  { src = "shield-back.jpg" },
+  { src = "lamp-left.jpg", caption = "robot lamp" },
+  { src = "lamp-file.jpg" },
+]

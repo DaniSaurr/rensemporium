@@ -1,0 +1,13 @@
+title = "hellhound"
+year = "2020"
+updated = "2020-11-05"
+made_with = ["blender 2.90"]
+lead = false
+order = 30
+blurb = ""
+thumb = "heavenhound.jpg"
+hero = { type = "image", src = "heavenhound.jpg", alt = "a tan hound character with a golden sword" }
+gallery = [
+  { src = "heavenhound-2.jpg", caption = "heavenhound, october 2020" },
+  { src = "hellhound.jpg", caption = "hellhound, october 2020" },
+]

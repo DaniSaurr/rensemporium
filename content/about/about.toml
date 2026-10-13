@@ -1,0 +1,7 @@
+# the about page: body.html is Dani's own words (from the old site's 2026 about page)
+links = [
+  { label = "youtube", href = "https://www.youtube.com/@deetvleet" },
+  { label = "tumblr", href = "https://deetvleet.tumblr.com/" },
+  { label = "x", href = "https://x.com/deetvleet" },
+  { label = "the old emporium", href = "https://rensemporium.neocities.org/" },
+]

@@ -1,0 +1,36 @@
+title = "spooktober 2020"
+year = "2020"
+updated = "2020-10-29"
+made_with = ["blender 2.90"]
+lead = true
+order = 11
+blurb = ""
+thumb = "necromancer.jpg"
+hero = { type = "image", src = "necromancer.jpg", alt = "a necromancer with a skull face, and puppet skeletons" }
+gallery = [
+  { src = "musical.jpg" },
+  { src = "scarecrow.jpg" },
+  { src = "alien.jpg" },
+  { src = "blackcat.jpg" },
+  { src = "clown-jester.jpg" },
+  { src = "demon.jpg" },
+  { src = "monster.jpg" },
+  { src = "mummy.jpg" },
+  { src = "psychic.jpg" },
+  { src = "siren.jpg" },
+  { src = "spider.jpg" },
+  { src = "vampire.jpg" },
+  { src = "werewolf.jpg" },
+  { src = "witch.jpg" },
+  { src = "zombie.jpg" },
+  { src = "r26-raven.jpg" },
+  { src = "r26-jackalope.jpg" },
+  { src = "r26-knight.jpg" },
+  { src = "r26-puppet.jpg" },
+  { src = "r26-antique.jpg" },
+  { src = "r26-witch-spider.jpg" },
+  { src = "r26-cats.jpg" },
+  { src = "r26-alien.jpg" },
+  { src = "r26-werewolf.jpg" },
+  { src = "r26-mistofolees.jpg" },
+]

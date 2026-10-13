@@ -1,0 +1,17 @@
+title = "dinosaur stages"
+year = "2019"
+updated = "2019-10-11"
+made_with = ["blender"]
+lead = false
+order = 54
+blurb = ""
+
+thumb = "retopo-left.jpg"
+hero = { type = "image", src = "retopo-left.jpg", alt = "a pale dinosaur with a curled tail, head lowered to the ground" }
+gallery = [
+  { src = "stages.jpg", caption = "dinosaur1, dinosaur (downward dog) and dinosaur sculpt retopo, october 2019", contain = true },
+  { src = "retopo-right.jpg", caption = "retopo" },
+  { src = "retopo-low.jpg" },
+  { src = "downward-dog-right.jpg", caption = "downward dog" },
+  { src = "dino1-right.jpg", caption = "dinosaur1" },
+]

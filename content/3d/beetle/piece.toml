@@ -1,0 +1,13 @@
+title = "beetle"
+year = "2021"
+updated = "2021-08-19"
+made_with = ["blender"]
+lead = false
+order = 42
+blurb = ""
+
+thumb = "beetle-file.jpg"
+hero = { type = "image", src = "beetle-file.jpg", alt = "a green and yellow beetle character with antennae and a blue face" }
+gallery = [
+  { src = "beetle-left.jpg", caption = "beetle4" },
+]

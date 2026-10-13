@@ -1,0 +1,14 @@
+title = "easter art 2026"
+year = "2026"
+updated = "2026-04-12"
+made_with = []
+lead = true
+order = 5
+blurb = ""
+thumb = "easter-2026-01.jpg"
+hero = { type = "image", src = "easter-2026-01.jpg", alt = "pen-line swirl drawing in pink, blue and purple on cream" }
+gallery = [
+  { src = "easter-2026-02.jpg" },
+  { src = "easter-2026-03.jpg" },
+  { src = "easter-2026-04.jpg" },
+]

@@ -1,0 +1,24 @@
+title = "retro bots"
+year = "2026"
+updated = "2026-07-24"
+made_with = ["codex"]
+lead = true
+order = 3
+blurb = ""
+thumb = "15-mushroom-radio-keeper.jpg"
+hero = { type = "image", src = "15-mushroom-radio-keeper.jpg", alt = "a purple robot with a mushroom cap and a plant" }
+ai = [ { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+credits = ["style inspired by lostinlatencyX on x"]
+gallery = [
+  { src = "02-weather-technician.jpg", caption = "weather technician" },
+  { src = "03-glimmer-librarian.jpg", caption = "glimmer librarian" },
+  { src = "04-string-repairer.jpg", caption = "string repairer" },
+  { src = "06-puddle-surveyor.jpg", caption = "puddle surveyor" },
+  { src = "07-cloud-postman.jpg", caption = "cloud postman" },
+  { src = "08-pocket-astronomer.jpg", caption = "pocket astronomer" },
+  { src = "09-window-polisher-simplified.jpg", caption = "window polisher, simplified" },
+  { src = "13-umbrella-mechanic-simplified.jpg", caption = "umbrella mechanic, simplified" },
+  { src = "14-moon-pail-carrier.jpg", caption = "moon pail carrier" },
+  { src = "16-echo-collector-simplified.jpg", caption = "echo collector, simplified" },
+  { src = "19-fallen-star-repairer-simplified.jpg", caption = "fallen star repairer, simplified" },
+]

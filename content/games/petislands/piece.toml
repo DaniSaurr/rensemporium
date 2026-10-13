@@ -1,0 +1,44 @@
+title = "petislands"
+year = "2026"
+updated = "2026-10-02"
+made_with = ["roblox"]
+lead = true
+order = 5
+blurb = ""
+thumb = "store-beach.jpg"
+hero = { type = "image", src = "store-beach.jpg", alt = "store thumbnail for evolve a pet!, the beach island" }
+links = [ { label = "play on roblox", href = "https://www.roblox.com/games/89842755787656/Evolve-All-Pets" } ]
+ai = [ { tool = "claude", models = ["opus 5.5", "sonnet 5.5"] } ]
+facts = [["status", "live"], ["plays on", "roblox"]]
+gallery = [
+  { src = "store-snow.jpg", group = "the islands" },
+  { src = "store-volcano.jpg", group = "the islands" },
+  { src = "store-meadow-wide.jpg", group = "the islands" },
+  { src = "store-geode-raid.jpg", group = "the islands" },
+  { src = "store-clam-raid.jpg", group = "the islands" },
+  { src = "store-reactor-raid.jpg", group = "the islands" },
+  { src = "clean-pets.jpg", group = "the islands" },
+  { src = "clean-meadow.jpg", group = "the islands" },
+  { src = "pet-pup.jpg", group = "the pets", caption = "pup", contain = true },
+  { src = "pet-fox.jpg", group = "the pets", caption = "fox", contain = true },
+  { src = "pet-kitty.jpg", group = "the pets", caption = "kitty", contain = true },
+  { src = "pet-unicorn.jpg", group = "the pets", caption = "unicorn", contain = true },
+  { src = "pet-kraken.jpg", group = "the pets", caption = "kraken", contain = true },
+  { src = "pet-dolphin.jpg", group = "the pets", caption = "dolphin", contain = true },
+  { src = "pet-turtle.jpg", group = "the pets", caption = "turtle", contain = true },
+  { src = "pet-yeti.jpg", group = "the pets", caption = "yeti", contain = true },
+  { src = "pet-snowman.jpg", group = "the pets", caption = "snowman", contain = true },
+  { src = "pet-phoenix.jpg", group = "the pets", caption = "phoenix", contain = true },
+  { src = "pet-obsidiangolem.jpg", group = "the pets", caption = "obsidian golem", contain = true },
+  { src = "pet-cherub.jpg", group = "the pets", caption = "cherub", contain = true },
+  { src = "pet-popup.jpg", group = "the pets", caption = "popup", contain = true },
+  { src = "pet-tapeworm.jpg", group = "the pets", caption = "tapeworm", contain = true },
+  { src = "icon.png", group = "the islands", caption = "store icon", contain = true },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "1 october 2026" },
+  { src = "dev-02.jpg", caption = "1 october 2026" },
+  { src = "dev-03.jpg", caption = "1 october 2026" },
+  { src = "dev-04.jpg", caption = "1 october 2026" },
+  { src = "dev-05.jpg", caption = "1 october 2026" },
+]

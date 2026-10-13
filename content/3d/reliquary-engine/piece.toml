@@ -1,0 +1,16 @@
+title = "reliquary engine"
+year = "2026"
+updated = "2026-07-28"
+made_with = ["blender 5.1", "python"]
+lead = false
+order = 33
+blurb = ""
+thumb = "poster.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "poster.jpg" }
+ai = [ { tool = "claude", models = ["opus 4.8", "opus 5"] } ]
+gallery = [
+  { src = "turntable.mp4", caption = "turntable" },
+  { src = "threequarter.jpg", contain = true },
+  { src = "front.jpg", contain = true },
+  { src = "low.jpg", contain = true },
+]

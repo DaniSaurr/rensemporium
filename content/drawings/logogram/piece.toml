@@ -1,0 +1,12 @@
+title = "logogram"
+year = "2026"
+updated = "2026-04-21"
+made_with = []
+lead = true
+order = 3
+blurb = ""
+thumb = "logogram.png"
+hero = { type = "image", src = "logogram.png", alt = "logogram: a sword with a monogram, in black ink on white" }
+gallery = [
+  { src = "logogram-c.png", caption = "variant", contain = true },
+]

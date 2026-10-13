@@ -1,0 +1,13 @@
+title = "hffc hotel"
+year = "2022"
+updated = "2022-10-19"
+made_with = ["blender"]
+lead = false
+order = 34
+blurb = ""
+
+thumb = "hotel-file.jpg"
+hero = { type = "image", src = "hotel-file.jpg", alt = "a stone hotel at night with lit windows, seen down a path" }
+gallery = [
+  { src = "hotel5-file.jpg", caption = "hffc hotel 5" },
+]

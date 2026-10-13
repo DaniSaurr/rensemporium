@@ -1,0 +1,4 @@
+label = "3d"
+order = 2
+intro = ""
+layout = "timeline"   # one newest-first sequence with year headings, no lead/shelf split

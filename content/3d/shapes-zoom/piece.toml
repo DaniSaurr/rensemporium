@@ -1,0 +1,13 @@
+title = "shapes zoom"
+year = "2026"
+updated = "2026-06-09"
+made_with = ["blender"]
+lead = false
+order = 41
+blurb = ""
+
+thumb = "shapes-left.jpg"
+hero = { type = "image", src = "shapes-left.jpg", alt = "a cube-shaped stack of thin layers in red, green and blue patterns" }
+gallery = [
+  { src = "shapes-file.jpg", caption = "file camera" },
+]

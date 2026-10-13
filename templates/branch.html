@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ branch.label }} · ren's emporium{% endblock %}
+{% block description %}{{ branch.intro }}{% endblock %}
+{% block aitoggle %}{% if branch.key != "games" %}{{ super() }}{% endif %}{% endblock %}
+{% block main %}
+<header class="room-head">
+  <h1>{{ branch.label }}</h1>
+  {% if branch.intro %}<p>{{ branch.intro }}</p>{% endif %}
+  {% if branch.pieces %}<p class="count">{{ branch.pieces | length }} {{ "piece" if branch.pieces | length == 1 else "pieces" }}{% if branch.span %} · {{ branch.span }}{% endif %}</p>
+  {% else %}<p class="count">nothing in here yet.</p>{% endif %}
+</header>
+
+{% if branch.timeline %}
+{% for yr in branch.timeline %}
+<section class="year"{% if yr.all_ai %} data-ai="1"{% endif %}>
+<h2 class="year-head">{{ yr.year }}</h2>
+<div class="leads timeline">
+{% for p in yr.pieces %}
+  <a class="card" href="{{ p.slug }}/"{% if p.is_ai %} data-ai="1"{% endif %}>
+    {% if p.thumb %}<div class="thumb"><img src="{{ p.slug }}/{{ p.thumb }}" alt=""{% if loop.index > 8 or yr != branch.timeline[0] %} loading="lazy"{% endif %}></div>{% endif %}
+    <div class="meta">
+      <h2>{{ p.title }}</h2>
+      <div class="when">{{ p.year }}</div>
+      {% if p.blurb %}<p>{{ p.blurb }}</p>{% endif %}
+    </div>
+  </a>
+{% endfor %}
+</div>
+</section>
+{% endfor %}
+{% else %}
+<div class="leads">
+{% for p in branch.leads %}
+  {% if p.hero and p.hero.type == "audio" %}
+  <div class="card track"{% if p.is_ai %} data-ai="1"{% endif %}>
+    <div class="meta">
+      <h2><a href="{{ p.slug }}/">{{ p.title }}</a></h2>
+      <div class="when">{{ p.year }}</div>
+      <audio controls preload="none" src="{{ p.slug }}/{{ p.hero.src }}"></audio>
+    </div>
+  </div>
+  {% else %}
+  <a class="card" href="{{ p.slug }}/"{% if p.is_ai %} data-ai="1"{% endif %}>
+    {% if p.thumb %}<div class="thumb"><img src="{{ p.slug }}/{{ p.thumb }}" alt=""{% if loop.index > 6 %} loading="lazy"{% endif %}></div>
+    {% endif %}
+    <div class="meta">
+      <h2>{{ p.title }}</h2>
+      <div class="when">{{ p.year }}</div>
+      {% if p.blurb %}<p>{{ p.blurb }}</p>{% endif %}
+    </div>
+  </a>
+  {% endif %}
+{% endfor %}
+</div>
+
+{% if branch.shelf %}
+<section class="shelf">
+  <h2>older stuff</h2>
+  <ul>
+  {% for p in branch.shelf %}
+    <li{% if p.is_ai %} data-ai="1"{% endif %}><a href="{{ p.slug }}/">
+      <span class="mini{% if not p.thumb %} none{% endif %}">{% if p.thumb %}<img src="{{ p.slug }}/{{ p.thumb }}" alt="" loading="lazy">{% endif %}</span>
+      <span class="t">{{ p.title }}</span><span class="y">{{ p.year }}</span>
+    </a></li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

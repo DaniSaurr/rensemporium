@@ -1,0 +1,17 @@
+title = "biomech heads"
+year = "2023"
+updated = "2023-12-29"
+made_with = ["blender"]
+lead = false
+order = 21
+blurb = ""
+
+thumb = "heads-sohead3-left34.jpg"
+hero = { type = "image", src = "heads-sohead3-left34.jpg" }
+gallery = [
+  { src = "heads-sohead3-right34.jpg" },
+  { src = "heads-sohead4-left34.jpg" },
+  { src = "heads-sohead4-right34.jpg" },
+  { src = "heads-sohead5-left34.jpg" },
+  { src = "heads-sohead5-right34.jpg" },
+]

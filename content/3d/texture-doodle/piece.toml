@@ -1,0 +1,15 @@
+title = "cat and crow"
+year = "2026"
+updated = "2026-07-02"
+made_with = ["blender"]
+lead = true
+order = 6
+blurb = ""
+
+thumb = "cat-and-crow.jpg"
+hero = { type = "image", src = "cat-and-crow.jpg", alt = "a textured low-poly cat standing over a blue and white crow" }
+gallery = [
+  { src = "cat-left.jpg", caption = "animal exports cat" },
+  { src = "untitled-file.jpg", caption = "untitled" },
+  { src = "untitled-left.jpg" },
+]

@@ -1,0 +1,11 @@
+title = "pelet game"
+year = "2022"
+updated = "2026-05-08"
+made_with = ["bitsy"]
+lead = false
+order = 16
+blurb = "made in bitsy over a couple days"
+caption = "made in bitsy over a couple days"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

@@ -1,0 +1,28 @@
+title = "nephilim"
+year = "2021"
+updated = "2021-05-26"
+made_with = ["blender 2.90"]
+lead = true
+order = 7
+blurb = ""
+thumb = "nephilim-red.jpg"
+hero = { type = "video", src = "turnaround.mp4", poster = "turnaround-poster.jpg" }
+gallery = [
+  { src = "render-turntable.mp4" },
+  { src = "render-left34.jpg" },
+  { src = "render-right34.jpg" },
+  { src = "nephilim-red.jpg", caption = "april 2021" },
+  { src = "nephilim-blue-lineup.jpg", caption = "march 2021" },
+  { src = "nephilim-closeup.jpg", caption = "march 2021" },
+  { src = "rising.mp4", caption = "march 2021" },
+  { src = "nephilim-standing.jpg", caption = "march 2021" },
+  { src = "nephilim-standing-2.jpg", caption = "march 2021" },
+  { src = "nephilim-alt-colour.jpg", caption = "alternate colours, march 2021" },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "mk1, march 2021 (clay render)" },
+  { src = "dev-02.jpg", caption = "mk3, march 2021 (clay render)" },
+  { src = "dev-03.jpg", caption = "mk6, march 2021 (clay render)" },
+  { src = "dev-04.jpg", caption = "mk7, march 2021 (clay render)" },
+  { src = "dev-05.jpg", caption = "2mk5, april 2021 (clay render)" },
+]

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block back %}{% endblock %}
+{% block bodyclass %}home{% endblock %}
+{% block main %}
+<h1 class="site-title"><a id="site-title-link" href="{{ root }}">ren's emporium</a></h1>
+<p class="byline">dani deetvleet</p>
+<div class="map-wrap">
+{{ map_wide | safe }}
+{{ map_tall | safe }}
+</div>
+<p class="home-intro">{{ site.intro }}</p>
+{% if lately %}
+<section class="lately">
+  <h2>lately</h2>
+  <ul>{% for p in lately %}
+    <li{% if p.is_ai %} data-ai="1"{% endif %}><a href="{{ p.room }}/{{ p.slug }}/"><span class="mini"><img src="{{ p.room }}/{{ p.slug }}/{{ p.thumb }}" alt=""></span><span class="t">{{ p.title }}</span><span class="y">{{ p.room_label }} · {{ p.year }}</span></a></li>
+  {% endfor %}</ul>
+</section>
+{% endif %}
+<script src="{{ root }}static/js/titledecider.js"></script>
+{% endblock %}

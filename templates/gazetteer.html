@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}gazetteer · ren's emporium{% endblock %}
+{% block description %}every page on ren's emporium{% endblock %}
+{% block main %}
+<header class="room-head">
+  <h1>gazetteer</h1>
+  <p>everything on the site, in one list.</p>
+</header>
+<div class="gaz">
+{% for b in branches %}
+  <section>
+    <h2><a href="{{ root }}{{ b.key }}/">{{ b.label }}</a></h2>
+    <ol>
+    {% for p in b.pieces %}
+      <li{% if p.is_ai %} data-ai="1"{% endif %}><a href="{{ root }}{{ b.key }}/{{ p.slug }}/">{{ p.title }}</a><span class="yr">{{ p.year }}</span></li>
+    {% endfor %}
+    </ol>
+  </section>
+{% endfor %}
+  <section>
+    <h2>elsewhere</h2>
+    <ol>
+      <li><a href="{{ root }}about/">about</a><span class="yr"></span></li>
+      <li><a href="https://rensemporium.neocities.org/">the old emporium</a><span class="yr">2022–26</span></li>
+    </ol>
+  </section>
+</div>
+{% endblock %}

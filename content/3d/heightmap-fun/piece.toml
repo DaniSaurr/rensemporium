@@ -1,0 +1,14 @@
+title = "heightmap fun"
+year = "2021"
+updated = "2021-06-10"
+made_with = ["blender 2.93"]
+lead = false
+order = 30
+blurb = ""
+thumb = "heightmap-1.jpg"
+hero = { type = "image", src = "heightmap-1.jpg", alt = "a dark canyon terrain under a starry sky" }
+gallery = [
+  { src = "heightmap-2.jpg", caption = "june 2021" },
+  { src = "heightmap-5.jpg", caption = "june 2021" },
+  { src = "heightmap-nodes.jpg", caption = "node setup" },
+]

@@ -1,0 +1,31 @@
+title = "biomechanical quadruped"
+year = "2026"
+updated = "2026-08-05"
+made_with = ["blender 5.1"]
+lead = true
+order = 13
+blurb = ""
+thumb = "left34.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "left34.jpg" }
+ai = [ { tool = "claude", models = ["opus 4.8", "opus 5"] }, { tool = "gpt", models = ["gpt-5.6-sol"] } ]
+gallery = [
+  { src = "turntable.mp4", caption = "turntable" },
+  { src = "left34.jpg" },
+  { src = "right34.jpg" },
+  { src = "low.jpg" },
+  { src = "front.jpg" },
+  { src = "top.jpg", caption = "top" },
+  { src = "head.jpg", caption = "head" },
+  { src = "neck.jpg", caption = "neck" },
+  { src = "torso.jpg", caption = "torso" },
+  { src = "pelvis.jpg", caption = "pelvis" },
+  { src = "dorsal-module.jpg", caption = "dorsal module" },
+  { src = "front-leg.jpg", caption = "front leg" },
+  { src = "hind-leg.jpg", caption = "hind leg" },
+  { src = "cables.jpg", caption = "cables" },
+  { src = "kit-joint.jpg", caption = "joint kit part" },
+]
+dev = [
+  { src = "dev-first-blockout.jpg", caption = "first blockout, 25 july 2026" },
+  { src = "dev-blockout.jpg", caption = "blockout with hand edits" },
+]

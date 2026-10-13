@@ -1,0 +1,17 @@
+title = "diver"
+year = "2024"
+updated = "2024-04-28"
+made_with = ["blender"]
+lead = true
+order = 4
+blurb = ""
+
+thumb = "front.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "front.jpg" }
+gallery = [
+  { src = "front.jpg", caption = "clay render" },
+  { src = "helmet.jpg", caption = "helmet" },
+  { src = "high.jpg" },
+  { src = "back.jpg" },
+  { src = "mariner6-short-camera-file.jpg", caption = "through the file's own camera" },
+]

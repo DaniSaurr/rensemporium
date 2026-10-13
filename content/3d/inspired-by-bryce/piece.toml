@@ -1,0 +1,13 @@
+title = "inspired by bryce"
+year = "2026"
+updated = "2026-07-09"
+made_with = ["blender 5.1"]
+lead = true
+order = 12
+blurb = ""
+thumb = "bryce-2.jpg"
+hero = { type = "image", src = "bryce-2.jpg", alt = "layered violet and blue circles around a flower-of-life pattern on black" }
+gallery = [
+  { src = "bryce-1.jpg" },
+  { src = "bryce-3.jpg" },
+]

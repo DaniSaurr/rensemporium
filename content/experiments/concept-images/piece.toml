@@ -1,0 +1,39 @@
+title = "concept images"
+year = "2026"
+updated = "2026-07-26"
+made_with = ["codex"]
+lead = false
+order = 9
+blurb = ""
+thumb = "hero.jpg"
+hero = { type = "image", src = "hero.jpg", alt = "five generated concept images side by side: a tower, a candy tower, a mech, a stag machine and a masked figure" }
+ai = [ { tool = "gpt", models = ["gpt-5.6-sol"] } ]
+gallery = [
+  { src = "concept-02.jpg", contain = true },
+  { src = "concept-03.jpg", contain = true },
+  { src = "concept-04.jpg", contain = true },
+  { src = "concept-05.jpg", contain = true },
+  { src = "concept-06.jpg", contain = true },
+  { src = "concept-07.jpg", contain = true },
+  { src = "concept-08.jpg", contain = true },
+  { src = "concept-09.jpg", contain = true },
+  { src = "concept-10.jpg", contain = true },
+  { src = "concept-11.jpg", contain = true },
+  { src = "concept-12.jpg", contain = true },
+  { src = "concept-13.jpg", contain = true },
+  { src = "concept-14.jpg", contain = true },
+  { src = "concept-15.jpg", contain = true },
+  { src = "concept-16.jpg", contain = true },
+  { src = "concept-17.jpg", contain = true },
+  { src = "concept-18.jpg", contain = true },
+  { src = "concept-19.jpg", contain = true },
+  { src = "concept-20.jpg", contain = true },
+  { src = "concept-21.jpg", contain = true },
+  { src = "concept-22.jpg", contain = true },
+  { src = "concept-23.jpg", contain = true },
+  { src = "concept-24.jpg", contain = true },
+  { src = "concept-25.jpg", contain = true },
+  { src = "concept-26.jpg", contain = true },
+  { src = "concept-27.jpg", contain = true },
+  { src = "concept-28.jpg", contain = true },
+]

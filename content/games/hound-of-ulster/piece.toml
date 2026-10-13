@@ -1,0 +1,56 @@
+title = "the hound of ulster"
+year = "2018, 2025 to 2026"
+updated = "2026-09-26"
+made_with = ["unity", "godot 4"]
+lead = true
+order = 6
+blurb = ""
+thumb = "godot-beach.jpg"
+hero = { type = "video", src = "godot-run.mp4", poster = "godot-beach.jpg" }
+ai = [ { tool = "claude", models = ["opus 5.5", "opus 4.8"] } ]
+credits = ["unity version (2018): niall, programming; hayley, music; concept art by the whole group"]
+facts = [["status", "in progress"], ["plays on", "windows"], ["first version", "unity, college team, 2018 to 2019"]]
+gallery = [
+  { src = "godot-beach.jpg", group = "godot version, 2025 to 2026" },
+  { src = "godot-boat.jpg", group = "godot version, 2025 to 2026" },
+  { src = "godot-shore.jpg", group = "godot version, 2025 to 2026" },
+  { src = "unity-2019-footage.mp4", group = "unity version, 2018 to 2019" },
+  { src = "unity-battle.mp4", group = "unity version, 2018 to 2019" },
+  { src = "unity-menu.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-forest.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-hub.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-level.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-pause.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-shop.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-goblin.jpg", group = "unity version, 2018 to 2019" },
+  { src = "unity-cover-shot.jpg", group = "unity version, 2018 to 2019" },
+  { src = "idle-giant.mp4", group = "unity version, 2018 to 2019", caption = "idle loop" },
+  { src = "idle-goblin.mp4", group = "unity version, 2018 to 2019", caption = "idle loop" },
+  { src = "idle-skeleton.mp4", group = "unity version, 2018 to 2019", caption = "idle loop" },
+  { src = "render-giant.jpg", group = "unity version, 2018 to 2019", caption = "model render", contain = true },
+  { src = "render-skeleton.jpg", group = "unity version, 2018 to 2019", caption = "model render", contain = true },
+  { src = "render-goblin.jpg", group = "unity version, 2018 to 2019", caption = "model render", contain = true },
+  { src = "render-mask.jpg", group = "unity version, 2018 to 2019", caption = "model render", contain = true },
+  { src = "concept-logo.png", group = "concept art, unity version", contain = true },
+  { src = "concept-giant.jpg", group = "concept art, unity version", contain = true },
+  { src = "concept-character.png", group = "concept art, unity version", contain = true },
+  { src = "concept-goblin.png", group = "concept art, unity version", contain = true },
+  { src = "concept-wizard.png", group = "concept art, unity version", contain = true },
+  { src = "concept-relics.png", group = "concept art, unity version", contain = true },
+  { src = "concept-main-menu.png", group = "concept art, unity version", contain = true },
+  { src = "concept-battle.png", group = "concept art, unity version", contain = true },
+  { src = "concept-intro-area.png", group = "concept art, unity version", contain = true },
+  { src = "concept-tree.png", group = "concept art, unity version", contain = true },
+  { src = "concept-stump.png", group = "concept art, unity version", contain = true },
+  { src = "concept-potion.png", group = "concept art, unity version", contain = true },
+  { src = "concept-chest.png", group = "concept art, unity version", contain = true },
+  { src = "concept-wall.png", group = "concept art, unity version", contain = true },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "1 september 2026" },
+  { src = "dev-02.jpg", caption = "1 september 2026" },
+  { src = "dev-03.jpg", caption = "version 0.02, 12 september 2026" },
+  { src = "dev-04.jpg", caption = "24 september 2026" },
+  { src = "dev-05.jpg", caption = "25 september 2026" },
+  { src = "dev-06.jpg", caption = "25 september 2026" },
+]

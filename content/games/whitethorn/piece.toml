@@ -1,0 +1,23 @@
+title = "whitethorn systems"
+year = "2026"
+updated = "2026-07-20"
+made_with = ["godot 4"]
+lead = true
+order = 7
+blurb = ""
+thumb = "mound.jpg"
+hero = { type = "video", src = "run.mp4", poster = "mound.jpg" }
+ai = [ { tool = "claude", models = ["opus 4.8", "sonnet 5", "fable 5"] } ]
+credits = ["crow and cat models: animalmesh 3d (sketchfab), cc by 4.0"]
+facts = [["status", "prototype, builds 0.1 and 0.2"], ["plays on", "windows"]]
+gallery = [
+  { src = "title.jpg" },
+  { src = "stones.jpg" },
+  { src = "log.jpg" },
+  { src = "teeth.jpg" },
+  { src = "diagram.png", caption = "diagram", contain = true },
+]
+dev = [
+  { src = "dev-01.jpg", caption = "version 0.1, 2 july 2026" },
+  { src = "dev-02.jpg", caption = "version 0.2, 8 july 2026" },
+]

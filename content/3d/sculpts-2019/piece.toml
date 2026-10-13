@@ -1,0 +1,17 @@
+title = "sculpts"
+year = "2019"
+updated = "2019-11-04"
+made_with = ["blender"]
+lead = false
+order = 22
+blurb = ""
+
+thumb = "2019-dinosaur-left34.jpg"
+hero = { type = "image", src = "2019-dinosaur-left34.jpg" }
+gallery = [
+  { src = "2019-dinosaur-right34.jpg" },
+  { src = "2019-dinosaur-low.jpg" },
+  { src = "2019-rabbit-left34.jpg" },
+  { src = "2019-rabbit-right34.jpg" },
+  { src = "2019-rabbit-low.jpg" },
+]

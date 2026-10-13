@@ -1,0 +1,9 @@
+title = "tasario map"
+year = "2017"
+updated = "2017-01-14"
+made_with = []
+lead = true
+order = 4
+blurb = ""
+thumb = "tasario.png"
+hero = { type = "image", src = "tasario.png", alt = "map of the tasario islands, coloured in pastel with hand-written labels" }

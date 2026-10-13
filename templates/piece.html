@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }} · ren's emporium{% endblock %}
+{% block description %}{{ p.blurb }}{% endblock %}
+{% macro strip(items) %}
+  <div class="strip">
+    {% for g in items %}
+    <figure>{% if g.youtube %}<iframe class="yt" src="https://www.youtube-nocookie.com/embed/{{ g.youtube }}?rel=0" title="{{ g.caption or p.title }}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      {% elif g.src.endswith((".mp4", ".webm")) %}<video src="{{ g.src }}" muted loop playsinline autoplay preload="metadata"></video>
+      {% else %}<a href="{{ g.src }}"><img src="{{ g.src }}" alt="{{ g.caption or '' }}" loading="lazy"{% if g.contain %} class="contain"{% endif %}></a>{% endif %}{% if g.caption %}<figcaption>{{ g.caption }}</figcaption>{% endif %}</figure>
+    {% endfor %}
+  </div>
+{% endmacro %}
+{% block aitoggle %}{% endblock %}
+{% block main %}
+<article class="piece">
+  <header class="piece-head">
+    <h1>{{ p.title }}</h1>
+    <p class="facts"><span>{{ p.year }}</span></p>
+    {% if p.facts %}<dl class="factrow">{% for k, v in p.facts %}<div><dt>{{ k }}</dt><dd>{{ v }}</dd></div>{% endfor %}</dl>{% endif %}
+    {% if p.tags %}
+    <div class="tags">{% for t in p.tags %}<span class="tag{% if t.ai %} tag-ai{% endif %}">{{ t.text }}</span>{% endfor %}</div>
+    {% endif %}
+  </header>
+
+  {% if p.hero %}
+  <div class="hero">
+    {% if p.hero.type == "video" %}<video src="{{ p.hero.src }}" {% if p.hero.poster %}poster="{{ p.hero.poster }}"{% endif %} autoplay muted loop playsinline></video>
+    {% elif p.hero.type == "audio" %}<div class="audio">{% if p.hero.poster %}<img src="{{ p.hero.poster }}" alt="">{% endif %}<audio controls preload="none" src="{{ p.hero.src }}"></audio></div>
+    {% elif p.hero.type == "youtube" %}<iframe class="yt" src="https://www.youtube-nocookie.com/embed/{{ p.hero.id }}?rel=0" title="{{ p.hero.title or p.title }}" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    {% elif p.hero.type == "iframe" %}<iframe src="{{ p.hero.src }}" title="{{ p.title }}" loading="lazy" allowfullscreen></iframe>
+    {% else %}<img src="{{ p.hero.src }}" alt="{{ p.hero.alt or p.title }}">{% endif %}
+  </div>
+  {% endif %}
+
+  {% if p.links %}
+  <div class="actions">
+    {% for l in p.links %}<a class="button{% if not loop.first %} quiet{% endif %}" href="{{ l.href }}"{% if l.href.startswith("http") %} target="_blank" rel="noopener"{% endif %}>{{ l.label }}</a>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if p.caption or p.body %}
+  <div class="prose">
+    {% if p.caption %}<p>{{ p.caption }}</p>{% endif %}
+    {{ p.body | safe }}
+  </div>
+  {% endif %}
+
+  {% for grp in p.gallery_groups %}
+  {% if grp.title %}<h3 class="group">{{ grp.title }}</h3>{% endif %}
+  {{ strip(grp.pics) }}
+  {% endfor %}
+
+  {% if p.dev %}
+  <section class="dev">
+    <h2>along the way</h2>
+    {{ strip(p.dev) }}
+  </section>
+  {% endif %}
+
+  {% if p.tools %}
+  <section class="made-with" aria-label="made with">
+    <span class="mw-label">made with</span>
+    <ul>{% for t in p.tools %}<li title="{{ t.title }}">{{ t.svg | safe }}<span>{{ t.label }}</span></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if p.credits %}
+  <p class="credits">{% for c in p.credits %}{{ c }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+  {% endif %}
+</article>
+{% endblock %}
+{% block footer %}<p><a href="../">back to {{ branch.label }}</a></p>{% endblock %}

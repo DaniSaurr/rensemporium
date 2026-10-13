@@ -1,0 +1,25 @@
+title = "desolate churchyard"
+year = "2022"
+updated = "2022-05-08"
+made_with = ["blender"]
+lead = true
+order = 3
+blurb = ""
+thumb = "video-thumb.jpg"
+hero = { type = "youtube", id = "12HtBL1r9FQ", title = "desolate churchyard" }
+facts = [["versions", "church20 to church49"], ["made", "april to may 2022"]]
+gallery = [
+  { src = "diorama-file.jpg" },
+  { src = "dusk-church-left.jpg" },
+  { src = "dusk-yard-left.jpg" },
+  { src = "dusk-church-front.jpg" },
+  { src = "dusk-gate.jpg", caption = "file camera" },
+  { src = "dusk-yard-high.jpg" },
+  { src = "dusk-church-right.jpg" },
+  { src = "dusk-yard-front.jpg" },
+  { src = "dusk-yard-low.jpg" },
+  { src = "orbit.mp4", group = "orbit" },
+  { src = "orbit-church.mp4", group = "orbit" },
+  { src = "progression.jpg", group = "how it was built", caption = "church20, church22cheat, church34cheat, church49cheat, april to may 2022", contain = true },
+
+]

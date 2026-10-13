@@ -1,0 +1,16 @@
+title = "irish level progression"
+year = "2026"
+updated = "2026-09-23"
+made_with = ["blender"]
+lead = false
+order = 55
+blurb = ""
+
+thumb = "level11-left.jpg"
+hero = { type = "image", src = "level11-left.jpg", alt = "a coastal island level with green terraces, white paths and blue water" }
+gallery = [
+  { src = "progression.jpg", caption = "level 5, 6, 7, 8, 10 and 11, september 2026, same camera", contain = true },
+  { src = "level11-high.jpg", caption = "level 11" },
+  { src = "level11-front.jpg" },
+  { src = "level11-right.jpg" },
+]

@@ -1,0 +1,14 @@
+title = "street corner"
+year = "2020"
+updated = "2021-06-10"
+made_with = ["blender"]
+lead = true
+order = 5
+blurb = ""
+
+thumb = "blockout7-file.jpg"
+hero = { type = "image", src = "blockout7-file.jpg", alt = "a fox-faced figure sitting on a stone wall at a brick street corner, with an electrical box beside it" }
+gallery = [
+  { src = "scene-file.jpg", caption = "scene, november 2020" },
+  { src = "blockout7-left.jpg", caption = "blockout7" },
+]

@@ -1,0 +1,11 @@
+title = "pink squares"
+year = "2023"
+updated = "2023-07-28"
+made_with = ["javascript"]
+lead = false
+order = 14
+blurb = "a cellular automata algorithm simulator. its not perfect but it took a lot of effort to get it to work at all so i'm happy"
+caption = "a cellular automata algorithm simulator. its not perfect but it took a lot of effort to get it to work at all so i'm happy"
+links = [ { label = "play", href = "play/" } ]
+thumb = "shot.jpg"
+hero = { type = "image", src = "shot.jpg" }

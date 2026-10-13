@@ -1,0 +1,16 @@
+title = "pool room"
+year = "2026"
+updated = "2026-07-21"
+made_with = ["blender"]
+lead = true
+order = 10
+blurb = ""
+
+thumb = "pool-file.jpg"
+hero = { type = "image", src = "pool-file.jpg", alt = "a round pool in a tiled room with glass-block windows" }
+gallery = [
+  { src = "gorger-left.jpg", caption = "gorger2" },
+  { src = "gorger-right.jpg" },
+  { src = "greentower-left.jpg", caption = "greentower" },
+  { src = "fractal-front.jpg", caption = "splitting fractal" },
+]

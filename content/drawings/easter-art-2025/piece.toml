@@ -1,0 +1,19 @@
+title = "easter art 2025"
+year = "2025"
+updated = "2025-04-20"
+made_with = []
+lead = false
+order = 1
+blurb = ""
+hero = { type = "image", src = "easter-2025-01.png", alt = "pastel pink and blue swirl sky over a green hill" }
+gallery = [
+  { src = "easter-2025-02.png" },
+  { src = "easter-2025-03.png" },
+  { src = "easter-2025-04.png" },
+  { src = "easter-2025-05.png" },
+  { src = "easter-2025-06.png" },
+  { src = "easter-2025-07.png" },
+  { src = "easter-2025-08.png" },
+  { src = "easter-2025-09.png" },
+  { src = "easter-2025-10.png" },
+]

@@ -1,0 +1,19 @@
+title = "scripted scenes"
+year = "2026"
+updated = "2026-07-23"
+made_with = ["blender 5.1", "python"]
+lead = true
+order = 6
+blurb = ""
+thumb = "poster.jpg"
+hero = { type = "video", src = "recursive-city.mp4", poster = "poster.jpg" }
+ai = [ { tool = "claude", models = ["fable 5", "opus 4.8"] } ]
+gallery = [
+  { src = "recursive-city.mp4", caption = "recursive city" },
+  { src = "murmuration.mp4", caption = "murmuration" },
+  { src = "recursive-city-still.jpg", caption = "recursive city, 215 towers" },
+  { src = "island-town.jpg", caption = "island town" },
+  { src = "island.jpg" },
+  { src = "dome.jpg", caption = "dome building" },
+  { src = "houses.jpg", caption = "house kit" },
+]

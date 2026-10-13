@@ -1,0 +1,10 @@
+title = "radial sculpture"
+year = "2026"
+updated = "2026-07-03"
+made_with = ["blender"]
+lead = false
+order = 24
+blurb = ""
+
+thumb = "sculpture-file.jpg"
+hero = { type = "image", src = "sculpture-file.jpg" }

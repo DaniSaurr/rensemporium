@@ -1,0 +1,17 @@
+title = "node based textured plane"
+year = "2022"
+updated = "2022-05-11"
+made_with = ["blender"]
+lead = false
+order = 33
+blurb = ""
+
+thumb = "plane8-file.jpg"
+hero = { type = "image", src = "plane8-file.jpg", alt = "a grey castle with many towers beside green hills and water" }
+gallery = [
+  { src = "plane8-left.jpg", caption = "node based textured plane8" },
+  { src = "plane4-file.jpg", caption = "node based textured plane4" },
+  { src = "plane4-left.jpg" },
+  { src = "plane2-left.jpg", caption = "node based textured plane2" },
+  { src = "plane2-file.jpg" },
+]

@@ -1,0 +1,18 @@
+title = "vertex paintings"
+year = "2026"
+updated = "2026-09-28"
+made_with = ["godot 4.7"]
+lead = true
+thumb = "sheet.png"
+order = 3
+blurb = ""
+hero = { type = "image", src = "sheet.png", alt = "sheet of painted wall panels in several styles" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "shot-brick-day.png" },
+  { src = "shot-nagai-day.png" },
+  { src = "shot-stars-night.png" },
+  { src = "shot-king-night.png" },
+  { src = "shot-wedges-day.png" },
+  { src = "shot-relief-night.png" },
+]

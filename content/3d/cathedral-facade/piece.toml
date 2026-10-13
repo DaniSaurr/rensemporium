@@ -1,0 +1,20 @@
+title = "cathedral facade"
+year = "2026"
+updated = "2026-07-29"
+made_with = ["blender 5.1", "python"]
+lead = false
+order = 35
+blurb = ""
+thumb = "v10.jpg"
+hero = { type = "image", src = "v10.jpg", alt = "a low poly gothic church facade at night with a glowing rose window" }
+ai = [ { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+gallery = [
+  { src = "v10.jpg", caption = "mesh v10", contain = true },
+  { src = "v9.jpg", caption = "mesh v9", contain = true },
+  { src = "v2.jpg", caption = "mesh v2", contain = true },
+  { src = "v3.jpg", caption = "mesh v3", contain = true },
+  { src = "v4.jpg", caption = "mesh v4", contain = true },
+  { src = "v6.jpg", caption = "mesh v6", contain = true },
+  { src = "v8.jpg", caption = "mesh v8", contain = true },
+  { src = "first-facade.jpg", caption = "first facade", contain = true },
+]
