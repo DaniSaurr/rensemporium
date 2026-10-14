@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ branch.label }} · ren's emporium{% endblock %}
 {% block description %}{{ branch.intro }}{% endblock %}
-{% block aitoggle %}{% if branch.key != "games" %}{{ super() }}{% endif %}{% endblock %}
+{% block aitoggle %}{% if branch.key not in ("games", "tools") %}{{ super() }}{% endif %}{% endblock %}
 {% block main %}
 <header class="room-head">
   <h1>{{ branch.label }}</h1>

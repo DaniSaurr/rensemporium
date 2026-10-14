@@ -141,7 +141,7 @@ def load_piece(folder, branch_key):
     p["tags"] = [{"text": t, "ai": False} for t in p.get("tags", [])]
     p["tools"] = tool_row(p["made_with"], p.get("ai"))
     # the show/hide-ai toggle never applies to games (Dani, 2026-10-13)
-    p["is_ai"] = bool(p.get("ai")) and branch_key != "games"
+    p["is_ai"] = bool(p.get("ai")) and branch_key not in ("games", "tools")
     p["sort_date"] = sort_date(p)
     # gallery items can carry group = "..."; consecutive items with the same group share a heading
     groups = []
