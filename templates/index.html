@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block back %}{% endblock %}
 {% block bodyclass %}home{% endblock %}
+{% block aitoggle %}{% endblock %}
 {% block main %}
 <h1 class="site-title"><a id="site-title-link" href="{{ root }}">ren's emporium</a></h1>
 <p class="byline">dani deetvleet</p>
@@ -13,7 +14,7 @@
 <section class="lately">
   <h2>lately</h2>
   <ul>{% for p in lately %}
-    <li{% if p.is_ai %} data-ai="1"{% endif %}><a href="{{ p.room }}/{{ p.slug }}/"><span class="mini"><img src="{{ p.room }}/{{ p.slug }}/{{ p.thumb }}" alt=""></span><span class="t">{{ p.title }}</span><span class="y">{{ p.room_label }} · {{ p.year }}</span></a></li>
+    <li><a href="{{ p.room }}/{{ p.slug }}/"><span class="mini"><img src="{{ p.room }}/{{ p.slug }}/{{ p.thumb }}" alt=""></span><span class="t">{{ p.title }}</span><span class="y">{{ p.room_label }} · {{ p.year }}</span></a></li>
   {% endfor %}</ul>
 </section>
 {% endif %}

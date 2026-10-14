@@ -6,8 +6,18 @@ lead = false
 order = 25
 blurb = "i've been getting really into ancient mesopatamia and i thought it would be fun to play with three.js"
 caption = "i've been getting really into ancient mesopatamia and i thought it would be fun to play with three.js"
-links = [ { label = "play", href = "play/" } ]
+links = [ { label = "play babylon 3", href = "play/", big = true } ]
 ai = [ { tool = "claude", models = ["fable 5", "opus 4.8", "sonnet 5"] } ]
 credits = ["three.js 0.165.0 (MIT), loaded from jsdelivr"]
-thumb = "shot.jpg"
-hero = { type = "image", src = "shot.jpg" }
+thumb = "babylon-3.jpg"
+hero = { type = "image", src = "babylon-3.jpg", alt = "babylon 3, the reed and the river: the title card" }
+gallery = [
+  { src = "babylon-3-start.jpg", caption = "babylon 3, year 0" },
+]
+versions = [
+  { label = "grid automaton", date = "9 july 2026", href = "v/grid-automaton/", shot = "v-grid-automaton.jpg" },
+  { label = "the old emporium version", date = "11 july 2026", href = "v/old-emporium/", shot = "v-old-emporium.jpg" },
+  { label = "river and temple", date = "12 july 2026", href = "v/river-temple/", shot = "v-river-temple.jpg" },
+  { label = "god game", date = "14 july 2026", href = "v/god-game/", shot = "v-god-game.jpg" },
+  { label = "babylon 3", date = "20 july 2026", href = "play/", shot = "babylon-3.jpg" },
+]

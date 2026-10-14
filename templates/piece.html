@@ -38,6 +38,20 @@
   </div>
   {% endif %}
 
+  {% if p.versions %}
+  <section class="versions">
+    <h2>versions</h2>
+    <div class="vgrid">
+    {% for v in p.versions %}
+      <a class="vcard" href="{{ v.href }}">
+        {% if v.shot %}<span class="mini"><img src="{{ v.shot }}" alt="" loading="lazy"></span>{% endif %}
+        <span class="t">{{ v.label }}</span><span class="y">{{ v.date }}</span>
+      </a>
+    {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {% if p.caption or p.body %}
   <div class="prose">
     {% if p.caption %}<p>{{ p.caption }}</p>{% endif %}

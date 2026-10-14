@@ -30,6 +30,7 @@ gallery = [
   { src = "c.jpg", group = "unity version" },   # consecutive items sharing a group get a small heading
 ]
 draft = true                      # optional: only shows in local builds (serve.bat / build.py --drafts), never published
+versions = [ { label = "first version", date = "9 july 2026", href = "v/first/", shot = "v-first.jpg" } ]   # optional: playable older versions, shown as small cards
 dev = [ { src = "wip-01.png", caption = "march 2024" } ]   # optional "along the way" strip: mid-development shots, same format as gallery
 ```
 
