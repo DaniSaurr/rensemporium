@@ -380,6 +380,23 @@ def watched_town():
     return s
 
 
+
+def toolshed():
+    """tools: a shed with a hammer and a wrench crossed on the front"""
+    s = shape(rect(-86, -118, 172, 118), CREAM)
+    s += shape([(-100, -114), (-60, -168), (100, -150), (100, -114)], SKY)
+    s += shape(rect(-24, -64, 48, 64), PEACH)                                  # door
+    s += dot(14, -32, 3.5, NAVY)
+    # wrench
+    s += line((-70, -24), (-30, -96), w=6, ink="#8a8fa8")
+    s += shape(ellipse(-28, -100, 11, 11), "#c9cde0", w=3.5)
+    s += dot(-28, -104, 4.5, CREAM)
+    # hammer
+    s += line((70, -24), (36, -92), w=6, ink="#a07a50")
+    s += shape([(22, -98), (40, -112), (58, -96), (42, -84)], "#8a8fa8", w=3.5)
+    return s
+
+
 PLACES = {
     # key: (drawing, label, href, label size, scale)
     "games": (arcade, "games", "games/", 46, 1),
@@ -388,6 +405,7 @@ PLACES = {
     "writing": (library, "writing", "writing/", 46, 1),
     "experiments": (lab, "experiments", "experiments/", 40, 1),
     "sound": (bandstand, "sound", "sound/", 40, 1),
+    "tools": (toolshed, "tools", "tools/", 38, .82),
     "gazetteer": (signpost, "gazetteer", "gazetteer/", 34, 1),
     "old": (ruin, "the old emporium", "https://rensemporium.neocities.org/", 30, 1),
     "private": (hill, "private", "writing/private/", 22, 1),
@@ -407,14 +425,14 @@ LAYOUTS = {
         "size": (1900, 1220),
         "island": (930, 620, 700, 450),
         "plaza": (930, 680),
-        "pos": {"experiments": (930, 320), "games": (470, 450), "3d": (1425, 450), "churchyard": (1180, 325),
+        "pos": {"experiments": (930, 320), "games": (470, 450), "tools": (700, 345), "3d": (1425, 450), "churchyard": (1180, 325),
                 "gazetteer": (930, 710), "hotel": (700, 800), "zoo": (1160, 810), "private": (1590, 660),
                 "drawings": (470, 920), "writing": (1385, 940), "sound": (930, 1050),
                 "petislands": (200, 200), "thou": (1730, 210), "whitethorn": (210, 1090), "old": (1730, 1100),
                 "watched": (112, 650)},
         "islet": (1730, 1105, 150, 60),
         "notes": [(-34, -226, .55), (16, -244, .6), (58, -222, .5)],
-        "trees": [(650, 260, 24), (715, 335, 18), (300, 650, 24), (255, 750, 18), (1560, 520, 20), (1540, 820, 18),
+        "trees": [(300, 650, 24), (255, 750, 18), (1560, 520, 20), (1540, 820, 18),
                   (1110, 1060, 18), (745, 1060, 22), (1060, 560, 16), (790, 560, 16)],
     },
     "tall": {
@@ -423,7 +441,7 @@ LAYOUTS = {
         "plaza": (400, 1250),
         "pos": {"experiments": (400, 420), "games": (215, 760), "3d": (595, 770), "churchyard": (590, 1020),
                 "hotel": (210, 1110), "gazetteer": (400, 1270), "private": (165, 1300),
-                "drawings": (215, 1560), "writing": (595, 1580), "zoo": (235, 1820), "sound": (480, 1970),
+                "drawings": (215, 1560), "writing": (595, 1580), "zoo": (235, 1820), "sound": (440, 1975), "tools": (650, 1800),
                 "petislands": (190, 150), "thou": (610, 160), "whitethorn": (150, 2150), "old": (640, 2160),
                 "watched": (395, 2310)},
         "islet": (640, 2165, 150, 50),
