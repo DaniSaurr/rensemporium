@@ -18,6 +18,6 @@ gallery = [
   { src = "diagram.png", caption = "diagram", contain = true },
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "version 0.1, 2 july 2026" },
-  { src = "dev-02.jpg", caption = "version 0.2, 8 july 2026" },
+  { src = "dev-01.jpg", caption = "version 0.1" },
+  { src = "dev-02.jpg", caption = "version 0.2" },
 ]

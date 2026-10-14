@@ -29,12 +29,12 @@ gallery = [
   { src = "version-0.05.jpg", group = "every version, 0.01 to 0.05", caption = "0.05" },
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "2 october 2026" },
-  { src = "dev-02.jpg", caption = "2 october 2026" },
-  { src = "dev-03.jpg", caption = "4 october 2026" },
-  { src = "dev-04.jpg", caption = "4 october 2026" },
-  { src = "dev-05.jpg", caption = "4 october 2026" },
-  { src = "dev-06.jpg", caption = "4 october 2026" },
-  { src = "dev-07.jpg", caption = "5 october 2026" },
-  { src = "dev-08.jpg", caption = "6 october 2026" },
+  { src = "dev-01.jpg" },
+  { src = "dev-02.jpg" },
+  { src = "dev-03.jpg" },
+  { src = "dev-04.jpg" },
+  { src = "dev-05.jpg" },
+  { src = "dev-06.jpg" },
+  { src = "dev-07.jpg" },
+  { src = "dev-08.jpg" },
 ]

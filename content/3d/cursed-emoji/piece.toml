@@ -10,7 +10,7 @@ thumb = "turntable-poster.jpg"
 hero = { type = "video", src = "turntable.mp4", poster = "turntable-poster.jpg" }
 gallery = [
   { src = "painted-front.jpg", caption = "painted" },
-  { src = "sculpt-progression.jpg", caption = "base mesh, sculpt 1, sculpt 7 and the final sculpt, october 2019", contain = true },
+  { src = "sculpt-progression.jpg", caption = "base mesh, sculpt 1, sculpt 7 and the final sculpt", contain = true },
   { src = "painted-left.jpg", caption = "painted" },
   { src = "painted-right.jpg" },
   { src = "final-clay-front.jpg", caption = "final sculpt, clay" },

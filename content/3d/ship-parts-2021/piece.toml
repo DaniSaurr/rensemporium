@@ -8,10 +8,10 @@ blurb = ""
 thumb = "parts.jpg"
 hero = { type = "image", src = "parts.jpg", alt = "a pile of modular spaceship parts" }
 gallery = [
-  { src = "ship-1.jpg", caption = "june 2021" },
-  { src = "ship-2.jpg", caption = "june 2021" },
-  { src = "fattie.jpg", caption = "june 2021" },
-  { src = "staro.jpg", caption = "june 2021" },
+  { src = "ship-1.jpg" },
+  { src = "ship-2.jpg" },
+  { src = "fattie.jpg" },
+  { src = "staro.jpg" },
   { src = "katamari-space-shooting-2.jpg", caption = "in the game, wave 1" },
   { src = "katamari-space-shooting-4.jpg", caption = "in the game, wave 3" },
 ]

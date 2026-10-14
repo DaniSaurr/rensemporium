@@ -8,6 +8,6 @@ blurb = ""
 thumb = "heavenhound.jpg"
 hero = { type = "image", src = "heavenhound.jpg", alt = "a tan hound character with a golden sword" }
 gallery = [
-  { src = "heavenhound-2.jpg", caption = "heavenhound, october 2020" },
-  { src = "hellhound.jpg", caption = "hellhound, october 2020" },
+  { src = "heavenhound-2.jpg", caption = "heavenhound" },
+  { src = "hellhound.jpg", caption = "hellhound" },
 ]

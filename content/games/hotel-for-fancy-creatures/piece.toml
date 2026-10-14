@@ -27,7 +27,7 @@ gallery = [
   { src = "pixel-rat.png", group = "pixel art, 2020 to 2021", contain = true },
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "mockup, december 2020" },
-  { src = "dev-02.jpg", caption = "floor plan, may 2021", contain = true },
-  { src = "dev-03.png", caption = "texture atlas, may 2022", contain = true },
+  { src = "dev-01.jpg", caption = "mockup" },
+  { src = "dev-02.jpg", caption = "floor plan", contain = true },
+  { src = "dev-03.png", caption = "texture atlas", contain = true },
 ]

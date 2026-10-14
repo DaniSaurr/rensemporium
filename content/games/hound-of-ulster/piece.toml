@@ -47,10 +47,10 @@ gallery = [
   { src = "concept-wall.png", group = "concept art, unity version", contain = true },
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "1 september 2026" },
-  { src = "dev-02.jpg", caption = "1 september 2026" },
-  { src = "dev-03.jpg", caption = "version 0.02, 12 september 2026" },
-  { src = "dev-04.jpg", caption = "24 september 2026" },
-  { src = "dev-05.jpg", caption = "25 september 2026" },
-  { src = "dev-06.jpg", caption = "25 september 2026" },
+  { src = "dev-01.jpg" },
+  { src = "dev-02.jpg" },
+  { src = "dev-03.jpg", caption = "version 0.02" },
+  { src = "dev-04.jpg" },
+  { src = "dev-05.jpg" },
+  { src = "dev-06.jpg" },
 ]

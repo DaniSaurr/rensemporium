@@ -31,7 +31,7 @@ gallery = [
 ]
 draft = true                      # optional: only shows in local builds (serve.bat / build.py --drafts), never published
 versions = [ { label = "first version", date = "9 july 2026", href = "v/first/", shot = "v-first.jpg" } ]   # optional: playable older versions, shown as small cards
-dev = [ { src = "wip-01.png", caption = "march 2024" } ]   # optional "along the way" strip: mid-development shots, same format as gallery
+dev = [ { src = "wip-01.png", caption = "march 2024" } ]   # optional "in progress" strip: mid-development shots, same format as gallery
 ```
 
 Optional `body.html` holds longer text as plain HTML (`<h2>`, `<p>`, `<figure>`). Any subfolder, such as `play/` for a browser game, is copied as it is.

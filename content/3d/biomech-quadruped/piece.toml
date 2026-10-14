@@ -26,6 +26,6 @@ gallery = [
   { src = "kit-joint.jpg", caption = "joint kit part" },
 ]
 dev = [
-  { src = "dev-first-blockout.jpg", caption = "first blockout, 25 july 2026" },
+  { src = "dev-first-blockout.jpg", caption = "first blockout" },
   { src = "dev-blockout.jpg", caption = "blockout with hand edits" },
 ]

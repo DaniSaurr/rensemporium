@@ -16,8 +16,8 @@ gallery = [
   { src = "dusk-high.jpg" },
   { src = "dusk-back.jpg" },
   { src = "dusk-low.jpg" },
-  { src = "progression.jpg", caption = "church2, church4, church5, church6, church7 and church8, may 2025, same camera", contain = true },
+  { src = "progression.jpg", caption = "church2, church4, church5, church6, church7 and church8, same camera", contain = true },
   { src = "day-left.jpg" },
   { src = "day-front.jpg" },
-  { src = "small-church.jpg", caption = "small church, may 2025" },
+  { src = "small-church.jpg", caption = "small church" },
 ]

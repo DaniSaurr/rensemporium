@@ -17,6 +17,6 @@ gallery = [
   { src = "nibbler-left.jpg", caption = "nibbler" },
   { src = "nibbler-front.jpg" },
   { src = "ice-rink-left.jpg", caption = "ice rink" },
-  { src = "little-mouse-man-left.jpg", caption = "little mouse man, 2020" },
+  { src = "little-mouse-man-left.jpg", caption = "little mouse man" },
   { src = "cute-castle-front.jpg", caption = "cute castle" },
 ]

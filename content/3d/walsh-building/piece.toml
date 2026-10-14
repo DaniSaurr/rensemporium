@@ -12,5 +12,5 @@ gallery = [
   { src = "walsh5-right.jpg", caption = "walshBuilding5" },
   { src = "walsh5-left.jpg" },
   { src = "walsh5-low.jpg" },
-  { src = "blockout6-file.jpg", caption = "blockout6, november 2020" },
+  { src = "blockout6-file.jpg", caption = "blockout6" },
 ]

@@ -8,7 +8,7 @@ blurb = ""
 thumb = "heightmap-1.jpg"
 hero = { type = "image", src = "heightmap-1.jpg", alt = "a dark canyon terrain under a starry sky" }
 gallery = [
-  { src = "heightmap-2.jpg", caption = "june 2021" },
-  { src = "heightmap-5.jpg", caption = "june 2021" },
+  { src = "heightmap-2.jpg" },
+  { src = "heightmap-5.jpg" },
   { src = "heightmap-nodes.jpg", caption = "node setup" },
 ]

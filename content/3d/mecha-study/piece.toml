@@ -18,8 +18,8 @@ gallery = [
   { src = "manashpere-left.jpg" },
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "carve tool 1, june 2021 (clay render)" },
-  { src = "dev-02.jpg", caption = "carve tool 3, june 2021 (clay render)" },
-  { src = "dev-03.jpg", caption = "carve tool 5, june 2021 (clay render)" },
-  { src = "dev-04.jpg", caption = "carve tool 7, june 2021 (clay render)" },
+  { src = "dev-01.jpg", caption = "carve tool 1 (clay render)" },
+  { src = "dev-02.jpg", caption = "carve tool 3 (clay render)" },
+  { src = "dev-03.jpg", caption = "carve tool 5 (clay render)" },
+  { src = "dev-04.jpg", caption = "carve tool 7 (clay render)" },
 ]

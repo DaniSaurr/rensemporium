@@ -15,8 +15,8 @@ gallery = [
   { src = "clown-low.jpg" },
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "wip, may 2022 (clay render)" },
-  { src = "dev-02.jpg", caption = "wip2, may 2022 (clay render)" },
-  { src = "dev-03.jpg", caption = "low poly 1, may 2022 (clay render)" },
-  { src = "dev-04.jpg", caption = "low poly colored 2, may 2022 (clay render)" },
+  { src = "dev-01.jpg", caption = "wip (clay render)" },
+  { src = "dev-02.jpg", caption = "wip2 (clay render)" },
+  { src = "dev-03.jpg", caption = "low poly 1 (clay render)" },
+  { src = "dev-04.jpg", caption = "low poly colored 2 (clay render)" },
 ]

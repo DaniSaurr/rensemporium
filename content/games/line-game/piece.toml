@@ -7,5 +7,5 @@ order = 26
 blurb = ""
 hero = { type = "image", src = "linegame.gif", alt = "coloured pipes and lines filling a grid" }
 gallery = [
-  { src = "cart-label.png", caption = "pico-8 cart image, 2024", contain = true },
+  { src = "cart-label.png", caption = "pico-8 cart image", contain = true },
 ]

@@ -20,6 +20,6 @@ gallery = [
   { src = "dusk-yard-low.jpg" },
   { src = "orbit.mp4", group = "orbit" },
   { src = "orbit-church.mp4", group = "orbit" },
-  { src = "progression.jpg", group = "how it was built", caption = "church20, church22cheat, church34cheat, church49cheat, april to may 2022", contain = true },
+  { src = "progression.jpg", group = "how it was built", caption = "church20, church22cheat, church34cheat, church49cheat", contain = true },
 
 ]

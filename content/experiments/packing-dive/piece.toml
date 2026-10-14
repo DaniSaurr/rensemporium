@@ -13,7 +13,7 @@ credits = [
   "circles in a circle: packomania",
 ]
 dev = [
-  { src = "dev-01.jpg", caption = "8 october 2026", contain = true },
-  { src = "dev-02.jpg", caption = "8 october 2026", contain = true },
-  { src = "dev-03.jpg", caption = "8 october 2026" },
+  { src = "dev-01.jpg", contain = true },
+  { src = "dev-02.jpg", contain = true },
+  { src = "dev-03.jpg" },
 ]

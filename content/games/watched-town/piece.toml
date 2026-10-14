@@ -31,6 +31,6 @@ gallery = [
   { src = "pose-get.jpg", caption = "pose: get" },
 ]
 dev = [
-  { src = "dev-island-town.jpg", caption = "island town, 22 july 2026" },
-  { src = "dev-wing-sketch.jpg", caption = "wing sketch, 22 july 2026" },
+  { src = "dev-island-town.jpg", caption = "island town" },
+  { src = "dev-wing-sketch.jpg", caption = "wing sketch" },
 ]
