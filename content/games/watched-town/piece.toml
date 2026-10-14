@@ -5,7 +5,7 @@ made_with = ["godot 4.7", "blender"]
 lead = true
 order = 8
 blurb = ""
-links = [ { label = "download for windows (40 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/WatchedTown-windows.zip", big = true } ]
+links = [ { label = "play in browser", href = "play/", big = true }, { label = "download for windows (40 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/WatchedTown-windows.zip", big = true } ]
 thumb = "approach-poster.jpg"
 hero = { type = "video", src = "approach.mp4", poster = "approach-poster.jpg" }
 ai = [ { tool = "claude", models = ["fable 5", "opus 4.8"] }, { tool = "gpt", models = ["gpt-5.6-terra"] } ]
