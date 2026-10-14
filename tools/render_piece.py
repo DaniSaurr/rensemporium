@@ -5,7 +5,8 @@ Run:  blender -b <file> --python tools/render_piece.py -- --out renders/<slug> [
 Never saves the .blend. Prints one JSON summary line (starts with {"file").
 Options:
   --out DIR              output dir (required)
-  --mode auto|mat|clay|both   default auto: both for files from Blender < 2.90, else mat
+  --mode auto|mat|clay|copper|both   default auto: both for files from Blender < 2.90, else mat
+                         (copper = metallic copper override on every object)
   --include-ground       count huge flat ground planes when framing
   --relight              force the 3-point area rig + lavender world, mute the file's lights
   --dusk                 lighting preset: low warm key, cool fill and rim, dark blue-grey world.
@@ -502,6 +503,34 @@ def clay_material():
     return m
 
 
+def copper_material():
+    """Metallic copper with a little hammered variation (noise in roughness and bump)."""
+    m = bpy.data.materials.new("PIECE_Copper")
+    m.use_nodes = True
+    nt = m.node_tree
+    b = nt.nodes.get("Principled BSDF")
+    if not b:
+        return m
+    b.inputs["Base Color"].default_value = (0.93, 0.50, 0.32, 1.0)
+    b.inputs["Metallic"].default_value = 1.0
+    b.inputs["Roughness"].default_value = 0.32
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 38.0
+    noise.inputs["Detail"].default_value = 6.0
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.35
+    ramp.color_ramp.elements[0].color = (0.22, 0.22, 0.22, 1)
+    ramp.color_ramp.elements[1].position = 0.75
+    ramp.color_ramp.elements[1].color = (0.48, 0.48, 0.48, 1)
+    nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], b.inputs["Roughness"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.08
+    nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+    return m
+
+
 # ---------------------------------------------------------------- render helpers
 def setup_render(scene, a):
     r = scene.render
@@ -742,15 +771,14 @@ def main():
                 scene.view_settings.exposure = a["exposure"]
 
     outputs, stats = [], {}
-    clay = None
+    overrides = {}
 
     def set_mode(m):
-        nonlocal clay
         vl = bpy.context.view_layer
-        if m == "clay":
-            if clay is None:
-                clay = clay_material()
-            vl.material_override = clay
+        if m in ("clay", "copper"):
+            if m not in overrides:
+                overrides[m] = clay_material() if m == "clay" else copper_material()
+            vl.material_override = overrides[m]
         else:
             vl.material_override = None
 
@@ -773,7 +801,7 @@ def main():
 
     # ---- turntable
     if a["turntable"] > 0:
-        tm = a["tmode"] or ("clay" if modes == ["clay"] else "mat")
+        tm = a["tmode"] or (modes[0] if modes[0] in ("clay", "copper") else "mat")
         set_mode(tm)
         if a["tsamples"]:
             scene.eevee.taa_render_samples = a["tsamples"]

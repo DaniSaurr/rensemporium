@@ -10,7 +10,6 @@ thumb = "bull-guy.jpg"
 hero = { type = "image", src = "bull-guy.jpg", alt = "the head of a black horned figure with gold glowing eyes and chest" }
 gallery = [
   { src = "boots-guy-left.jpg", caption = "boots guy 3" },
-  { src = "boofer-desert.jpg", caption = "boofer 4" },
   { src = "big-sword-left.jpg", caption = "big sword" },
   { src = "silly-dog.jpg", caption = "silly dog dance" },
   { src = "harpoon-left.jpg", caption = "harpoon" },

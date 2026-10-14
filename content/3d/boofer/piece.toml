@@ -1,0 +1,17 @@
+title = "boofer"
+year = "2023"
+updated = "2023-07-23"
+made_with = ["blender"]
+lead = false
+order = 30
+blurb = ""
+thumb = "boofer-front.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "boofer-front.jpg" }
+gallery = [
+  { src = "boofer-front.jpg" },
+  { src = "boofer-three-quarter.jpg" },
+  { src = "boofer-side.jpg" },
+  { src = "boofer-back.jpg" },
+  { src = "boofer-sword.jpg" },
+  { src = "boofer-desert.jpg" },
+]

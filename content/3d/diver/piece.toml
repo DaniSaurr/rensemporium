@@ -6,11 +6,12 @@ lead = true
 order = 4
 blurb = ""
 
-thumb = "front.jpg"
-hero = { type = "video", src = "turntable.mp4", poster = "front.jpg" }
+thumb = "copper-front.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "copper-front.jpg" }
 gallery = [
-  { src = "front.jpg", caption = "clay render" },
-  { src = "helmet.jpg", caption = "helmet" },
-  { src = "high.jpg" },
-  { src = "back.jpg" },
+  { src = "copper-front.jpg" },
+  { src = "copper-helmet.jpg", caption = "helmet" },
+  { src = "copper-three-quarter.jpg" },
+  { src = "copper-side.jpg" },
+  { src = "copper-high.jpg" },
 ]
