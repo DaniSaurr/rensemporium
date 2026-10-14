@@ -1,0 +1,19 @@
+title = "bull guy"
+year = "2023"
+updated = "2023-08-02"
+made_with = ["blender"]
+lead = false
+order = 30
+blurb = ""
+thumb = "bull-glow.jpg"
+hero = { type = "video", src = "turntable.mp4", poster = "bull-front.jpg" }
+gallery = [
+  { src = "bull-glow.jpg" },
+  { src = "bull-short.jpg" },
+  { src = "bull-front.jpg" },
+  { src = "bull-low.jpg" },
+  { src = "bull-three-quarter.jpg" },
+  { src = "bull-three-quarter-2.jpg" },
+  { src = "bull-side.jpg" },
+  { src = "bull-back.jpg" },
+]

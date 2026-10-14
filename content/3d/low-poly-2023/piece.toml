@@ -6,8 +6,8 @@ lead = true
 order = 8
 blurb = ""
 
-thumb = "bull-guy.jpg"
-hero = { type = "image", src = "bull-guy.jpg", alt = "the head of a black horned figure with gold glowing eyes and chest" }
+thumb = "silly-dog.jpg"
+hero = { type = "image", src = "silly-dog.jpg" }
 gallery = [
   { src = "boots-guy-left.jpg", caption = "boots guy 3" },
   { src = "big-sword-left.jpg", caption = "big sword" },
