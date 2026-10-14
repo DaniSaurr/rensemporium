@@ -18,7 +18,7 @@ hero = { type = "image", src = "hero.jpg", alt = "..." }
 #      type is "image", "video" (mp4/webm, autoplays muted and loops, optional poster), "iframe",
 #      "audio": hero = { type = "audio", src = "song.mp3", poster = "cover.jpg" }  (poster optional)
 #      or "youtube": hero = { type = "youtube", id = "12HtBL1r9FQ" }  (gallery items can be { youtube = "id" } too)
-links = [ { label = "play", href = "play/" } ]       # first one is the green button
+links = [ { label = "play", href = "play/" } ]       # first one is the green button; add big = true for a large one
 tags = ["college project"]        # optional plain tags
 ai = [ { tool = "claude", models = ["opus 5.5"] } ]  # adds a claude logo to the "made with" row; models show on hover
 facts = [["status", "in progress, v0.05"], ["plays on", "windows"]]   # optional small facts row under the title

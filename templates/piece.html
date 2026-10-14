@@ -34,7 +34,7 @@
 
   {% if p.links %}
   <div class="actions">
-    {% for l in p.links %}<a class="button{% if not loop.first %} quiet{% endif %}" href="{{ l.href }}"{% if l.href.startswith("http") %} target="_blank" rel="noopener"{% endif %}>{{ l.label }}</a>{% endfor %}
+    {% for l in p.links %}<a class="button{% if not loop.first %} quiet{% endif %}{% if l.big %} big{% endif %}" href="{{ l.href }}"{% if l.href.startswith("http") %} target="_blank" rel="noopener"{% endif %}>{{ l.label }}</a>{% endfor %}
   </div>
   {% endif %}
 

@@ -1,0 +1,20 @@
+title = "rens ripper"
+year = "2026"
+updated = "2026-07-02"
+made_with = ["javascript", "html"]
+lead = true
+order = 1
+blurb = ""
+thumb = "in-use-03.jpg"
+hero = { type = "image", src = "in-use-03.jpg", alt = "rens ripper tracing a bent pipe in a photo, with the flattened texture beside it" }
+links = [ { label = "open rens ripper", href = "play/", big = true } ]
+gallery = [
+  { src = "in-use-01.jpg", group = "in use, june 2026" },
+  { src = "in-use-02.jpg", group = "in use, june 2026" },
+  { src = "in-use-04.jpg", group = "in use, june 2026" },
+  { src = "in-use-05.jpg", group = "in use, june 2026" },
+  { src = "in-use-06.jpg", group = "in use, june 2026" },
+  { src = "in-use-07.jpg", group = "the textures in blender" },
+  { src = "in-use-08.jpg", group = "the textures in blender" },
+  { src = "ripper.jpg", group = "version 3", caption = "empty, before any images are added" },
+]

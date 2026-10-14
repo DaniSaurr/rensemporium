@@ -380,3 +380,6 @@ h3.group { max-width: var(--wide); margin: 34px auto -14px; font: 400 24px var(-
 
 .about-links { list-style: none; padding: 0; margin: 28px auto 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: var(--measure); }
 .footer a { color: var(--ink-soft); }
+
+.button.big { font-size: 32px; padding: 18px 44px; box-shadow: 0 5px 0 var(--green-dark); }
+.button.big:hover { transform: translateY(-3px) rotate(-1deg); }

@@ -1,0 +1,21 @@
+title = "ren's shaper"
+year = "2026"
+updated = "2026-07-28"
+made_with = ["javascript", "html"]
+lead = true
+order = 2
+blurb = ""
+thumb = "rose-window.jpg"
+hero = { type = "image", src = "rose-window.jpg", alt = "the shaper with the rose window composition loaded" }
+links = [ { label = "open ren's shaper", href = "play/", big = true } ]
+ai = [ { tool = "claude", models = ["opus 5"] }, { tool = "gpt", models = ["gpt-5.6-sol", "gpt-5.6-terra"] } ]
+gallery = [
+  { src = "mandala-dense.jpg", caption = "mandala dense" },
+  { src = "peacock-fan.jpg", caption = "peacock fan" },
+  { src = "moth.jpg", caption = "moth" },
+  { src = "archipelago.jpg", caption = "archipelago" },
+  { src = "gothic-window.jpg", caption = "gothic window" },
+  { src = "iron-gate.jpg", caption = "iron gate" },
+  { src = "three-pools.jpg", caption = "three pools" },
+  { src = "mandala.jpg", caption = "mandala" },
+]
