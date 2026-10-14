@@ -6,5 +6,10 @@ lead = false
 order = 24
 blurb = ""
 
-thumb = "sculpture-file.jpg"
-hero = { type = "image", src = "sculpture-file.jpg" }
+thumb = "radial-c.jpg"
+hero = { type = "image", src = "radial-c.jpg" }
+gallery = [
+  { src = "radial-a.jpg" },
+  { src = "radial-d.jpg" },
+  { src = "sculpture-file.jpg" },
+]

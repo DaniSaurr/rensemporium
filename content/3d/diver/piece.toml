@@ -13,5 +13,4 @@ gallery = [
   { src = "helmet.jpg", caption = "helmet" },
   { src = "high.jpg" },
   { src = "back.jpg" },
-  { src = "mariner6-short-camera-file.jpg", caption = "through the file's own camera" },
 ]

@@ -11,7 +11,6 @@ hero = { type = "image", src = "little-scene.jpg", alt = "a low-poly lake scene 
 gallery = [
   { src = "rocks.jpg", caption = "rocks" },
   { src = "house.jpg", caption = "house" },
-  { src = "staff.jpg", caption = "staff" },
   { src = "tsuchiniko.jpg", caption = "tsuchiniko" },
   { src = "eyebot.jpg", caption = "eyebot" },
   { src = "donut.jpg", caption = "donut" },

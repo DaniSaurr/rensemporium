@@ -10,6 +10,5 @@ thumb = "uvdemo-left.jpg"
 hero = { type = "image", src = "uvdemo-left.jpg", alt = "a hotel interior block with a red patterned carpet and gold trim" }
 gallery = [
   { src = "hotel-walls-left.jpg", caption = "modeularHotelWalls" },
-  { src = "snow-left.jpg", caption = "snow mesh" },
   { src = "level2-left.jpg", caption = "level2" },
 ]

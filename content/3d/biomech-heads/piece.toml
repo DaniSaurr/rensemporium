@@ -6,12 +6,12 @@ lead = false
 order = 21
 blurb = ""
 
-thumb = "heads-sohead3-left34.jpg"
-hero = { type = "image", src = "heads-sohead3-left34.jpg" }
+thumb = "sohead3-d.jpg"
+hero = { type = "image", src = "sohead3-d.jpg" }
 gallery = [
-  { src = "heads-sohead3-right34.jpg" },
-  { src = "heads-sohead4-left34.jpg" },
-  { src = "heads-sohead4-right34.jpg" },
-  { src = "heads-sohead5-left34.jpg" },
-  { src = "heads-sohead5-right34.jpg" },
+  { src = "sohead3-f.jpg" },
+  { src = "sohead4-c.jpg" },
+  { src = "sohead4-f.jpg" },
+  { src = "sohead5-c.jpg" },
+  { src = "sohead5-a.jpg" },
 ]

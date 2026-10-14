@@ -10,5 +10,4 @@ thumb = "timmy-file.jpg"
 hero = { type = "image", src = "timmy-file.jpg", alt = "a small pale skull-faced figure in a black top hat with a red band, sitting" }
 gallery = [
   { src = "timmy-right.jpg", caption = "tophat timmy, sitting" },
-  { src = "timmy-left.jpg" },
 ]
