@@ -5,6 +5,7 @@ made_with = ["pico-8"]
 lead = false
 order = 26
 blurb = ""
+links = [ { label = "play in browser", href = "play/", big = true } ]
 hero = { type = "image", src = "linegame.gif", alt = "coloured pipes and lines filling a grid" }
 gallery = [
   { src = "cart-label.png", caption = "pico-8 cart image", contain = true },

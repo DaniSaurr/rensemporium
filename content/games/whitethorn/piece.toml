@@ -5,6 +5,7 @@ made_with = ["godot 4"]
 lead = true
 order = 7
 blurb = ""
+links = [ { label = "download for windows (97 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/Whitethorn-0.2-windows.zip", big = true } ]
 thumb = "mound.jpg"
 hero = { type = "video", src = "run.mp4", poster = "mound.jpg" }
 ai = [ { tool = "claude", models = ["opus 4.8", "sonnet 5", "fable 5"] } ]

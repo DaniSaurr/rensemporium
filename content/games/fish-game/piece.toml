@@ -5,6 +5,7 @@ made_with = ["pico-8"]
 lead = false
 order = 17
 blurb = ""
+links = [ { label = "play in browser", href = "play/", big = true } ]
 hero = { type = "image", src = "fishgame-4.gif", alt = "fishing line dropped into water with a fish nearby" }
 gallery = [
   { src = "fishgame-0.gif", caption = "pico-8 sprite editor" },

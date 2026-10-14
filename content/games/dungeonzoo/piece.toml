@@ -5,6 +5,7 @@ made_with = ["godot 4"]
 lead = true
 order = 2
 blurb = "first-person dungeon crawling where you catch the monsters in a net."
+links = [ { label = "download for windows (49 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/DungeonZoo-0.05-windows.zip", big = true } ]
 thumb = "pup.png"
 hero = { type = "video", src = "run.mp4", poster = "pup.png" }
 ai = [ { tool = "claude", models = ["opus 5.5", "sonnet 5.5"] } ]
