@@ -397,6 +397,19 @@ def toolshed():
     return s
 
 
+
+def sailboat(sail, flip=False):
+    """a little boat for the open water; it rocks when you hover (css .boat)"""
+    k = -1 if flip else 1
+    s = shape([(-46 * k, -8), (46 * k, -8), (30 * k, 14), (-30 * k, 14)], "#c99a6e", w=4)   # hull
+    s += line((-36 * k, -2), (36 * k, -2), w=2.5, ink="#8a6a5a")
+    s += line((2 * k, -8), (2 * k, -78), w=4)                                            # mast
+    s += shape([(6 * k, -74), (6 * k, -14), (40 * k, -14)], sail, w=3.5)                 # sail
+    s += shape([(-2 * k, -74), (-2 * k, -24), (-28 * k, -24)], CREAM, w=3)               # jib
+    s += shape([(2 * k, -78), (2 * k, -92), (20 * k, -85)], PINK, w=2.5, amp=0.6)         # flag
+    return s
+
+
 PLACES = {
     # key: (drawing, label, href, label size, scale)
     "games": (arcade, "games", "games/", 46, 1),
@@ -431,6 +444,8 @@ LAYOUTS = {
                 "petislands": (200, 200), "thou": (1730, 210), "whitethorn": (210, 1090), "old": (1730, 1100),
                 "watched": (112, 650)},
         "islet": (1730, 1105, 150, 60),
+        "boats": [(600, 100, PINK, False, .8), (1430, 95, MINT, True, .7), (90, 450, SKY, False, .7),
+                  (1815, 610, PEACH, True, .75), (1150, 1170, LAV, False, .7)],
         "notes": [(-34, -226, .55), (16, -244, .6), (58, -222, .5)],
         "trees": [(300, 650, 24), (255, 750, 18), (1560, 520, 20), (1540, 820, 18),
                   (1110, 1060, 18), (745, 1060, 22), (1060, 560, 16), (790, 560, 16)],
@@ -445,6 +460,7 @@ LAYOUTS = {
                 "petislands": (190, 150), "thou": (610, 160), "whitethorn": (150, 2150), "old": (640, 2160),
                 "watched": (395, 2310)},
         "islet": (640, 2165, 150, 50),
+        "boats": [(405, 85, PINK, False, .7), (95, 2350, MINT, True, .65), (720, 2360, SKY, False, .65)],
         "notes": [(-40, -246, .8), (32, -270, .9), (80, -238, .7)],
         "trees": [(130, 520, 22), (660, 520, 24), (330, 900, 16), (480, 910, 16), (330, 1410, 18), (480, 1410, 18),
                   (110, 1930, 20), (690, 1820, 20)],
@@ -481,6 +497,10 @@ def draw(layout):
         if ((x - cx) / (rx + 60)) ** 2 + ((y - cy) / (ry + 60)) ** 2 < 1:
             continue
         out.append(line((x, y), (x + 14, y - 6), (x + 28, y), (x + 42, y - 6), w=3, ink=WATER, amp=1))
+
+    # boats on the open water (decoration; they rock on hover)
+    for bx, by, sail, flip, bk in L.get("boats", []):
+        out.append(f'<g class="boat" transform="translate({bx},{by}) scale({bk})"><g class="rock">{sailboat(sail, flip)}</g></g>')
 
     # island, shallow-water ring, islet
     cx, cy, rx, ry = L["island"]

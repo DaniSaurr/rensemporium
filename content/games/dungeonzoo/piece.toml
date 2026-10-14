@@ -4,8 +4,9 @@ updated = "2026-10-07"
 made_with = ["godot 4"]
 lead = true
 order = 2
-blurb = "first-person dungeon crawling where you catch the monsters in a net."
-links = [ { label = "download for windows (49 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/DungeonZoo-0.05-windows.zip", big = true } ]
+blurb = ""
+caption = "after making pet island i really wanted to re-use the pet models and put them in a \"real\" game instead of just a roblox clone, so I set up a dungeon generation system and simple roguelike bump gameplay in godot. opus provided the catching mechanic and I fell in love. I kept working on it with opus for about a week, adding improvements and ideas as i tested the game and found places to improve it."
+links = [ { label = "play in browser", href = "play/", big = true }, { label = "download for windows (49 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/DungeonZoo-0.05-windows.zip", big = true } ]
 thumb = "pup.png"
 hero = { type = "video", src = "run.mp4", poster = "pup.png" }
 ai = [ { tool = "claude", models = ["opus 5.5", "sonnet 5.5"] } ]

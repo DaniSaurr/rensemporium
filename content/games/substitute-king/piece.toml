@@ -5,6 +5,7 @@ made_with = ["godot 4"]
 lead = true
 order = 3
 blurb = ""
+caption = "after using opus to add turn based combat to my new thou project, I wanted to see what AI could do if i let it loose on it's own project and make most of the decisions itself. It didn't turn out great, but it gave me a something a little inspiring and I kept pushing it and giving it ideas until it formed into something vaguely playable. It lacked a main hook and wasn't all that fun to work on since the main idea came from claude, so I haven't been working on it for a while."
 thumb = "court.jpg"
 hero = { type = "video", src = "mind.mp4", poster = "court.jpg" }
 ai = [ { tool = "claude", models = ["opus 5.5"] } ]

@@ -5,6 +5,7 @@ made_with = ["roblox"]
 lead = true
 order = 5
 blurb = ""
+caption = "I wanted to figure out how to make games in roblox, so decided to clone the roblox game i played the most of and add improvements(to my tastes). it's got cute collectable pets you can evolve, grindy gameplay, eggs, and raid boss battles inspired by Everwing"
 thumb = "store-beach.jpg"
 hero = { type = "image", src = "store-beach.jpg", alt = "store thumbnail for evolve a pet!, the beach island" }
 links = [ { label = "play on roblox", href = "https://www.roblox.com/games/89842755787656/Evolve-All-Pets" } ]

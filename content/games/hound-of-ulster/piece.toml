@@ -5,6 +5,7 @@ made_with = ["unity", "godot 4"]
 lead = true
 order = 6
 blurb = ""
+caption = "2026 version: based on the godot 3rd person platformer demo with my own models and gameplay, currently working on the blockout for the level and figuring out the gameplay loop. most recently i added back turn based combat inspired by smt"
 links = [ { label = "download for windows (66 MB)", href = "https://github.com/DaniSaurr/rensemporium/releases/download/games-2026-10-14/HoundOfUlster-0.03-windows.zip", big = true } ]
 thumb = "godot-beach.jpg"
 hero = { type = "video", src = "godot-run.mp4", poster = "godot-beach.jpg" }

@@ -394,3 +394,15 @@ h3.group { max-width: var(--wide); margin: 34px auto -14px; font: 400 24px var(-
 .vcard .mini img { width: 100%; height: 100%; object-fit: cover; }
 .vcard .t { display: block; margin-top: 6px; font: 400 19px/1.1 var(--dani); color: var(--plum); }
 .vcard .y { display: block; font-size: 12px; color: var(--ink-soft); }
+
+/* ---------- boats on the map: they rock and bob when you hover ---------- */
+.map .boat .rock { transform-box: fill-box; transform-origin: 50% 85%; }
+.map .boat:hover .rock { animation: boat-bob 1.4s ease-in-out infinite; }
+@keyframes boat-bob {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(3px, -5px) rotate(-7deg); }
+  50%  { transform: translate(6px, 0) rotate(0deg); }
+  75%  { transform: translate(3px, -4px) rotate(6deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) { .map .boat:hover .rock { animation: none; } }
