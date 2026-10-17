@@ -1,0 +1,62 @@
+@font-face {
+  font-family: 'DaniFont';
+  src: url('fonts/danifont.TTF');
+}
+
+body {
+  background-image: url("gradient.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: helvetica, arial, sans-serif;
+  text-align: center;
+  letter-spacing: 2px;
+  margin: 0;
+  padding: 40px 20px;
+  color: #2f3552;
+}
+
+h1,
+.site-title a:link,
+.site-title a:visited,
+.site-title a:hover,
+.site-title a:active {
+  text-decoration: none;
+  color: inherit;
+}
+
+.site-title {
+  font-family: 'DaniFont', sans-serif;
+  font-size: 72pt;
+  color: #2ecc71;
+  letter-spacing: 0;
+  text-shadow:
+    -2px -2px 0 #0a3d1a,
+     2px -2px 0 #0a3d1a,
+    -2px  2px 0 #0a3d1a,
+     2px  2px 0 #0a3d1a,
+     0px  4px 6px rgba(0,0,0,0.2);
+}
+
+.dani {
+  font-family: 'DaniFont', sans-serif;
+  letter-spacing: 1px;
+  color: #990066;
+}
+
+.dani:hover {
+  display: inline-block;
+}
+
+.image-stack {
+  text-align: center;
+}
+
+.image-stack img {
+  display: block;
+  margin: 20px auto;
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  border-radius: 6px;
+}

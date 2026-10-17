@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mouse game!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+    <script>
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    var player;
+    var mouse = {
+      position:[0,0]
+    };
+
+    class Circle
+    {
+      constructor(position,radius,colour)
+      {
+        this.position = [0,0];
+        this.radius = radius;
+        this.colour = colour;
+      }
+    }
+
+    setInterval(Update, 1);
+
+    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener("mousemove", mouseMove);
+
+    player = new Circle([0,0],50,randomColour());
+    player2 = new Circle([0,0],50,randomColour());
+    player3 = new Circle([0,0],50,randomColour());
+    player4 = new Circle([0,0],50,randomColour());
+
+
+    function Update() //is called at the beginning of every frame
+    {
+      Follow(player,mouse) //updates the players coords to match those of the mouse
+      Follow(player2,player)
+      Follow(player3,player2)
+      Follow(player4,player3)
+      render(); //render the visuals every frame
+    }
+    function render()
+    {
+      ctx.clearRect(0,0,canvas.width, canvas.height); //clears the entire canvas
+      drawCircle(); // draws the player's circle
+    }
+    function drawCircle()
+    {
+      ctx.beginPath();
+      ctx.arc(player.position[0],player.position[1],player.radius,0,Math.PI * 2);
+      ctx.fillStyle = player.colour;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(player2.position[0],player2.position[1],player2.radius-5,0,Math.PI * 2);
+      ctx.fillStyle = player2.colour;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(player3.position[0],player3.position[1],player3.radius-10,0,Math.PI * 2);
+      ctx.fillStyle = player3.colour;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(player4.position[0],player4.position[1],player4.radius-15,0,Math.PI * 2);
+      ctx.fillStyle = player4.colour;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(player4.position[0],player4.position[1],player4.radius-20,0,Math.PI * 2);
+      ctx.fillStyle = player4.colour;
+      ctx.fill();
+    }
+
+    function Follow(follower,leader)
+    {
+      var difference = [
+        leader.position[0] - follower.position[0],
+        leader.position[1] - follower.position[1]
+      ];
+      var trail = [
+        difference[0] * 0.03,
+        difference[1] * 0.03
+      ];
+
+      follower.position[0] += trail[0];
+      follower.position[1] += trail[1];
+    }
+
+    function handleClick(event)
+    {
+
+    }
+
+    function mouseMove(event)
+    {
+      mouse.position[0] = event.offsetX;
+      mouse.position[1] = event.offsetY;
+    }
+
+    function drawUI()
+    {
+      ctx.font = "50px Comic Sans MS";
+      ctx.fillStyle = "black";
+    }
+
+    function randomRange(min, max) //utility function, just picks a random number
+    {
+      return Math.floor(Math.random()*(max-min+1))+min;
+    }
+    function randomColour() //picks a random colour ofc
+    {
+      let num = Math.floor(Math.random()*(16777215-1+1))+1;
+      return '#'+num.toString(16);
+    }
+    </script>
+  </body>
+</html>

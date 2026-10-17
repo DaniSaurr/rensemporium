@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gazetteer · ren's emporium</title>
+<meta name="description" content="every page on ren's emporium">
+
+<link rel="icon" href="../static/img/icon.png">
+<link rel="stylesheet" href="../static/css/site.css?v=ed93c98f">
+</head>
+<body class="">
+
+<button class="ai-toggle" id="ai-toggle" type="button" aria-pressed="false">ai assisted: <span>shown</span></button>
+<script>
+(function () {
+  const btn = document.getElementById("ai-toggle"), root = document.documentElement;
+  function paint() { const hid = root.classList.contains("hide-ai"); btn.querySelector("span").textContent = hid ? "hidden" : "shown"; btn.setAttribute("aria-pressed", hid); }
+  btn.addEventListener("click", function () {
+    root.classList.toggle("hide-ai");
+    try { localStorage.setItem("ren-hide-ai", root.classList.contains("hide-ai") ? "1" : "0"); } catch (e) {}
+    paint();
+  });
+  paint();
+})();
+</script>
+
+
+<a class="back" href="../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<header class="room-head">
+  <h1>gazetteer</h1>
+  <p>everything on the site, in one list.</p>
+</header>
+<div class="gaz">
+
+  <section>
+    <h2><a href="../games/">games</a></h2>
+    <ol>
+    
+      <li><a href="../games/dungeonzoo/">dungeonzoo</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/petislands/">petislands</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/substitute-king/">substitute king</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/hound-of-ulster/">the hound of ulster</a><span class="yr">2018, 2025 to 2026</span></li>
+    
+      <li><a href="../games/watched-town/">watched town</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/hotel-for-fancy-creatures/">hotel for fancy creatures</a><span class="yr">2018 to 2026</span></li>
+    
+      <li><a href="../games/whitethorn/">whitethorn systems</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/god-game/">citybuilder</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/cosmic-crash/">cosmic crash</a><span class="yr">2019, 2026</span></li>
+    
+      <li><a href="../games/pelet-game/">pelet game</a><span class="yr">2022</span></li>
+    
+      <li><a href="../games/confractus/">confractus</a><span class="yr">2026</span></li>
+    
+      <li><a href="../games/polygonate/">polygonate</a><span class="yr">2024</span></li>
+    
+      <li><a href="../games/fish-game/">fish game</a><span class="yr">2024</span></li>
+    
+      <li><a href="../games/line-game/">line game</a><span class="yr">2024</span></li>
+    
+      <li><a href="../games/pink-squares/">pink squares</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/egg-game/">egg game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/pet-game/">pet game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/triangle-game/">triangle game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/block-game/">block game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/square-game/">square game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/mouse-game/">mouse game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/ball-game/">ball game</a><span class="yr">2023</span></li>
+    
+      <li><a href="../games/webapp/">webapp</a><span class="yr">2023</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2><a href="../3d/">3d</a></h2>
+    <ol>
+    
+      <li><a href="../3d/irish-level/">irish level progression</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/setanta/">setanta</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/hollowgate/">hollowgate</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/blackwood/">blackwood</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/biomech-quadruped/">biomechanical quadruped</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/cathedral-facade/">cathedral facade</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/reliquary-engine/">reliquary engine</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/robot-builds/">robot builds</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../3d/bot-project/">bot project</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/july-2026/">pool room</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/godot-3d-models/">godot 3d models</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/inspired-by-bryce/">inspired by bryce</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/radial-sculpture/">radial sculpture</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/texture-doodle/">cat and crow</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/misc-sketches/">misc</a><span class="yr">2023 to 2026</span></li>
+    
+      <li><a href="../3d/face-medals/">face medals</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/pillar/">pillar</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/shapes-zoom/">shapes zoom</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/superposition/">superposition</a><span class="yr">2026</span></li>
+    
+      <li><a href="../3d/gothic-church-2025/">gothic church</a><span class="yr">2025</span></li>
+    
+      <li><a href="../3d/diver/">diver</a><span class="yr">2024</span></li>
+    
+      <li><a href="../3d/airplane-bots/">airplane bots</a><span class="yr">2024</span></li>
+    
+      <li><a href="../3d/biomech-heads/">biomech heads</a><span class="yr">2023</span></li>
+    
+      <li><a href="../3d/low-poly-2023/">low poly 2023</a><span class="yr">2023</span></li>
+    
+      <li><a href="../3d/bull-guy/">bull guy</a><span class="yr">2023</span></li>
+    
+      <li><a href="../3d/boofer/">boofer</a><span class="yr">2023</span></li>
+    
+      <li><a href="../3d/hffc-hotel/">hffc hotel</a><span class="yr">2022</span></li>
+    
+      <li><a href="../3d/jester-clown/">jester clown</a><span class="yr">2022</span></li>
+    
+      <li><a href="../3d/node-textured-plane/">node based textured plane</a><span class="yr">2022</span></li>
+    
+      <li><a href="../3d/church-diorama/">desolate churchyard</a><span class="yr">2022</span></li>
+    
+      <li><a href="../3d/character-blockouts/">character blockouts</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/beetle/">beetle</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/kalabu/">kalabu</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/tophat-timmy/">tophat timmy</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/mecha-study/">mecha study</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/ship-parts-2021/">ship parts</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/street-corner/">street corner</a><span class="yr">2020</span></li>
+    
+      <li><a href="../3d/heightmap-fun/">heightmap fun</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/robots/">robots</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/nephilim/">nephilim</a><span class="yr">2021</span></li>
+    
+      <li><a href="../3d/modular-walls/">modular walls</a><span class="yr">2020 to 2021</span></li>
+    
+      <li><a href="../3d/walsh-building/">walsh building</a><span class="yr">2020</span></li>
+    
+      <li><a href="../3d/hellhound/">hellhound</a><span class="yr">2020</span></li>
+    
+      <li><a href="../3d/spooktober-2020/">spooktober 2020</a><span class="yr">2020</span></li>
+    
+      <li><a href="../3d/maya-2019/">maya 2019</a><span class="yr">2019 to 2020</span></li>
+    
+      <li><a href="../3d/cosmic-crash-models/">cosmic crash models</a><span class="yr">2019</span></li>
+    
+      <li><a href="../3d/sculpts-2019/">sculpts</a><span class="yr">2019</span></li>
+    
+      <li><a href="../3d/robot-head-sculpt/">robot head sculpt</a><span class="yr">2019</span></li>
+    
+      <li><a href="../3d/cursed-emoji/">cursed emoji</a><span class="yr">2019</span></li>
+    
+      <li><a href="../3d/dinosaur-stages/">dinosaur stages</a><span class="yr">2019</span></li>
+    
+      <li><a href="../3d/july-2018/">july 2018</a><span class="yr">2018</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2><a href="../drawings/">drawings</a></h2>
+    <ol>
+    
+      <li data-ai="1"><a href="../drawings/characters-2026/">characters</a><span class="yr">2026</span></li>
+    
+      <li><a href="../drawings/art-2026/">2026</a><span class="yr">2026</span></li>
+    
+      <li><a href="../drawings/shapes-journey/">shapes journey</a><span class="yr">2026</span></li>
+    
+      <li><a href="../drawings/choodle/">choodle</a><span class="yr">2026</span></li>
+    
+      <li><a href="../drawings/logogram/">logogram</a><span class="yr">2026</span></li>
+    
+      <li><a href="../drawings/easter-art-2026/">easter art 2026</a><span class="yr">2026</span></li>
+    
+      <li><a href="../drawings/art-2025/">2025</a><span class="yr">2025</span></li>
+    
+      <li><a href="../drawings/misc/">misc</a><span class="yr"></span></li>
+    
+      <li><a href="../drawings/easter-art-2025/">easter art 2025</a><span class="yr">2025</span></li>
+    
+      <li><a href="../drawings/archive-2015-18/">archive 2015–18</a><span class="yr">2015–18</span></li>
+    
+      <li><a href="../drawings/walk-cycles/">walk cycles</a><span class="yr">2017</span></li>
+    
+      <li><a href="../drawings/tasario-map/">tasario map</a><span class="yr">2017</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2><a href="../writing/">writing</a></h2>
+    <ol>
+    
+      <li><a href="../writing/whitethorn-stump-part-2/">whitethorn stump - part 2</a><span class="yr">2026</span></li>
+    
+      <li><a href="../writing/whitethorn-stump/">whitethorn stump</a><span class="yr">2026</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2><a href="../experiments/">experiments</a></h2>
+    <ol>
+    
+      <li data-ai="1"><a href="../experiments/wordwood/">wordwood</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/packing-dive/">packing dive</a><span class="yr">2026</span></li>
+    
+      <li><a href="../experiments/ballpoint/">ballpoint</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/vertex-paintings/">vertex paintings</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/reliquaries/">reliquaries</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/concept-images/">concept images</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/character-sheets/">character sheets</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/masks/">masks</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/retro-bots/">retro bots</a><span class="yr">2026</span></li>
+    
+      <li data-ai="1"><a href="../experiments/scripted-scenes/">scripted scenes</a><span class="yr">2026</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2><a href="../sound/">sound</a></h2>
+    <ol>
+    
+      <li><a href="../sound/stare-into-the-sun/">stare into the sun</a><span class="yr">2026</span></li>
+    
+      <li><a href="../sound/crashing-waves/">crashing waves</a><span class="yr">2026</span></li>
+    
+      <li><a href="../sound/the-glass-wall/">the glass wall</a><span class="yr">2026</span></li>
+    
+      <li><a href="../sound/uncomprehending/">uncomprehending</a><span class="yr">2023</span></li>
+    
+      <li><a href="../sound/spermatozoa/">spermatozoa</a><span class="yr">2022</span></li>
+    
+      <li><a href="../sound/epeolatry/">epeolatry</a><span class="yr">2022</span></li>
+    
+      <li><a href="../sound/blood-brain-barrier-2/">blood brain barrier 2</a><span class="yr">2022</span></li>
+    
+      <li><a href="../sound/drums2/">drums2</a><span class="yr">2022</span></li>
+    
+      <li><a href="../sound/huh/">huh</a><span class="yr">2022</span></li>
+    
+      <li><a href="../sound/idk-some-shit/">idk some shit</a><span class="yr">2022</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2><a href="../tools/">tools</a></h2>
+    <ol>
+    
+      <li><a href="../tools/rens-shaper/">ren&#39;s shaper</a><span class="yr">2026</span></li>
+    
+      <li><a href="../tools/rens-ripper/">rens ripper</a><span class="yr">2026</span></li>
+    
+    </ol>
+  </section>
+
+  <section>
+    <h2>elsewhere</h2>
+    <ol>
+      <li><a href="../about/">about</a><span class="yr"></span></li>
+      <li><a href="https://rensemporium.neocities.org/">the old emporium</a><span class="yr">2022–26</span></li>
+    </ol>
+  </section>
+</div>
+
+</main>
+<footer class="footer">
+  
+  <p><a href="../about/">about</a> · <a href="../gazetteer/">gazetteer</a></p>
+</footer>
+</body>
+</html>
