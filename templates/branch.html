@@ -6,8 +6,7 @@
 <header class="room-head">
   <h1>{{ branch.label }}</h1>
   {% if branch.intro %}<p>{{ branch.intro }}</p>{% endif %}
-  {% if branch.pieces %}<p class="count">{{ branch.pieces | length }} {{ "piece" if branch.pieces | length == 1 else "pieces" }}{% if branch.span %} · {{ branch.span }}{% endif %}</p>
-  {% else %}<p class="count">nothing in here yet.</p>{% endif %}
+  {% if not branch.pieces %}<p class="count">nothing in here yet.</p>{% endif %}
 </header>
 
 {% if branch.timeline %}
