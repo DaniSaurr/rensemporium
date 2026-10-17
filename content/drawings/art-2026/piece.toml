@@ -1,0 +1,43 @@
+title = "2026"
+year = "2026"
+updated = "2026-08-10"
+made_with = []
+lead = true
+order = 1
+blurb = ""
+thumb = "thumbs/2026-07.webp"
+hero = { type = "image", src = "full/2026-07.webp", alt = "" }
+gallery = [
+  { src = "full/2026-01.webp", thumb = "thumbs/2026-01.webp", group = "pen and ink" },
+  { src = "full/2026-03.webp", thumb = "thumbs/2026-03.webp", group = "pen and ink" },
+  { src = "full/2026-04.webp", thumb = "thumbs/2026-04.webp", group = "pen and ink" },
+  { src = "full/2026-06.webp", thumb = "thumbs/2026-06.webp", group = "pen and ink" },
+  { src = "full/2026-08.webp", thumb = "thumbs/2026-08.webp", group = "pen and ink" },
+  { src = "full/2026-09.webp", thumb = "thumbs/2026-09.webp", group = "pen and ink" },
+  { src = "full/2026-10.webp", thumb = "thumbs/2026-10.webp", group = "pen and ink" },
+  { src = "full/2026-24.webp", thumb = "thumbs/2026-24.webp", group = "pen and ink" },
+  { src = "full/2026-25.webp", thumb = "thumbs/2026-25.webp", group = "pen and ink" },
+  { src = "full/2026-26.webp", thumb = "thumbs/2026-26.webp", group = "pen and ink" },
+  { src = "full/2026-27.webp", thumb = "thumbs/2026-27.webp", group = "pen and ink" },
+  { src = "full/2026-07.webp", thumb = "thumbs/2026-07.webp", group = "paint" },
+  { src = "full/2026-11.webp", thumb = "thumbs/2026-11.webp", group = "paint" },
+  { src = "full/2026-15.webp", thumb = "thumbs/2026-15.webp", group = "paint" },
+  { src = "full/2026-16.webp", thumb = "thumbs/2026-16.webp", group = "paint" },
+  { src = "full/2026-31.webp", thumb = "thumbs/2026-31.webp", group = "paint" },
+  { src = "full/2026-32.webp", thumb = "thumbs/2026-32.webp", group = "paint" },
+  { src = "full/2026-02.webp", thumb = "thumbs/2026-02.webp", group = "mixed media" },
+  { src = "full/2026-05.webp", thumb = "thumbs/2026-05.webp", group = "mixed media" },
+  { src = "full/2026-13.webp", thumb = "thumbs/2026-13.webp", group = "mixed media" },
+  { src = "full/2026-14.webp", thumb = "thumbs/2026-14.webp", group = "mixed media" },
+  { src = "full/2026-17.webp", thumb = "thumbs/2026-17.webp", group = "mixed media" },
+  { src = "full/2026-18.webp", thumb = "thumbs/2026-18.webp", group = "mixed media" },
+  { src = "full/2026-19.webp", thumb = "thumbs/2026-19.webp", group = "mixed media" },
+  { src = "full/2026-20.webp", thumb = "thumbs/2026-20.webp", group = "logograms" },
+  { src = "full/2026-21.webp", thumb = "thumbs/2026-21.webp", group = "logograms" },
+  { src = "full/2026-22.webp", thumb = "thumbs/2026-22.webp", group = "logograms" },
+  { src = "full/2026-23.webp", thumb = "thumbs/2026-23.webp", group = "logograms" },
+  { src = "full/2026-12.webp", thumb = "thumbs/2026-12.webp", group = "foil and carving" },
+  { src = "full/2026-28.webp", thumb = "thumbs/2026-28.webp", group = "foil and carving" },
+  { src = "full/2026-29.webp", thumb = "thumbs/2026-29.webp", group = "foil and carving" },
+  { src = "full/2026-30.webp", thumb = "thumbs/2026-30.webp", group = "foil and carving" },
+]

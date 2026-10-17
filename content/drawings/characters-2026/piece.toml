@@ -1,0 +1,14 @@
+title = "characters"
+year = "2026"
+updated = "2026-10-17"
+made_with = []
+ai = [ { tool = "gpt" } ]
+lead = false
+order = 4
+blurb = ""
+thumb = "thumbs/2026-33.webp"
+hero = { type = "image", src = "full/2026-33.webp", alt = "" }
+gallery = [
+  { src = "full/2026-33.webp", thumb = "thumbs/2026-33.webp" },
+  { src = "full/2026-34.webp", thumb = "thumbs/2026-34.webp" },
+]
