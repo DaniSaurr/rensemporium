@@ -1,0 +1,15 @@
+title = "2025"
+year = "2025"
+updated = "2025-06-30"
+made_with = []
+lead = false
+order = 2
+blurb = ""
+thumb = "thumbs/2025-01.webp"
+hero = { type = "image", src = "full/2025-01.webp", alt = "" }
+gallery = [
+  { src = "full/2025-01.webp", thumb = "thumbs/2025-01.webp" },
+  { src = "full/2025-02.webp", thumb = "thumbs/2025-02.webp" },
+  { src = "full/2025-04.webp", thumb = "thumbs/2025-04.webp" },
+  { src = "full/2025-05.webp", thumb = "thumbs/2025-05.webp" },
+]
