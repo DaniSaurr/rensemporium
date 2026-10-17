@@ -1,0 +1,41 @@
+title = "archive 2015–18"
+year = "2015–18"
+updated = "2018-12-31"
+made_with = []
+lead = false
+order = 3
+blurb = ""
+thumb = "thumbs/archive-06.webp"
+hero = { type = "image", src = "full/archive-06.webp", alt = "" }
+gallery = [
+  { src = "full/archive-06.webp", thumb = "thumbs/archive-06.webp", group = "finished" },
+  { src = "full/archive-13.webp", thumb = "thumbs/archive-13.webp", group = "finished" },
+  { src = "full/archive-16.webp", thumb = "thumbs/archive-16.webp", group = "finished" },
+  { src = "full/archive-22.webp", thumb = "thumbs/archive-22.webp", group = "finished" },
+  { src = "full/archive-26.webp", thumb = "thumbs/archive-26.webp", group = "finished" },
+  { src = "full/archive-27.webp", thumb = "thumbs/archive-27.webp", group = "finished" },
+  { src = "full/archive-28.webp", thumb = "thumbs/archive-28.webp", group = "finished" },
+  { src = "full/archive-29.webp", thumb = "thumbs/archive-29.webp", group = "finished" },
+  { src = "full/archive-01.webp", thumb = "thumbs/archive-01.webp", group = "sketchbook" },
+  { src = "full/archive-02.webp", thumb = "thumbs/archive-02.webp", group = "sketchbook" },
+  { src = "full/archive-03.webp", thumb = "thumbs/archive-03.webp", group = "sketchbook" },
+  { src = "full/archive-04.webp", thumb = "thumbs/archive-04.webp", group = "sketchbook" },
+  { src = "full/archive-05.webp", thumb = "thumbs/archive-05.webp", group = "sketchbook" },
+  { src = "full/archive-07.webp", thumb = "thumbs/archive-07.webp", group = "sketchbook" },
+  { src = "full/archive-08.webp", thumb = "thumbs/archive-08.webp", group = "sketchbook" },
+  { src = "full/archive-09.webp", thumb = "thumbs/archive-09.webp", group = "sketchbook" },
+  { src = "full/archive-10.webp", thumb = "thumbs/archive-10.webp", group = "sketchbook" },
+  { src = "full/archive-11.webp", thumb = "thumbs/archive-11.webp", group = "sketchbook" },
+  { src = "full/archive-12.webp", thumb = "thumbs/archive-12.webp", group = "sketchbook" },
+  { src = "full/archive-14.webp", thumb = "thumbs/archive-14.webp", group = "sketchbook" },
+  { src = "full/archive-15.webp", thumb = "thumbs/archive-15.webp", group = "sketchbook" },
+  { src = "full/archive-17.webp", thumb = "thumbs/archive-17.webp", group = "sketchbook" },
+  { src = "full/archive-18.webp", thumb = "thumbs/archive-18.webp", group = "sketchbook" },
+  { src = "full/archive-19.webp", thumb = "thumbs/archive-19.webp", group = "sketchbook" },
+  { src = "full/archive-20.webp", thumb = "thumbs/archive-20.webp", group = "sketchbook" },
+  { src = "full/archive-21.webp", thumb = "thumbs/archive-21.webp", group = "sketchbook" },
+  { src = "full/archive-23.webp", thumb = "thumbs/archive-23.webp", group = "sketchbook" },
+  { src = "full/archive-24.webp", thumb = "thumbs/archive-24.webp", group = "sketchbook" },
+  { src = "full/archive-25.webp", thumb = "thumbs/archive-25.webp", group = "sketchbook" },
+  { src = "full/archive-30.webp", thumb = "thumbs/archive-30.webp", group = "sketchbook" },
+]

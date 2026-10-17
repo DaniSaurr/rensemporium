@@ -6,7 +6,7 @@
     {% for g in items %}
     <figure>{% if g.youtube %}<iframe class="yt" src="https://www.youtube-nocookie.com/embed/{{ g.youtube }}?rel=0" title="{{ g.caption or p.title }}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
       {% elif g.src.endswith((".mp4", ".webm")) %}<video src="{{ g.src }}" muted loop playsinline autoplay preload="metadata"></video>
-      {% else %}<a href="{{ g.src }}"><img src="{{ g.src }}" alt="{{ g.caption or '' }}" loading="lazy"{% if g.contain %} class="contain"{% endif %}></a>{% endif %}{% if g.caption %}<figcaption>{{ g.caption }}</figcaption>{% endif %}</figure>
+      {% else %}<a href="{{ g.src }}"><img src="{{ g.thumb or g.src }}" alt="{{ g.caption or '' }}" loading="lazy"{% if g.contain %} class="contain"{% endif %}></a>{% endif %}{% if g.caption %}<figcaption>{{ g.caption }}</figcaption>{% endif %}</figure>
     {% endfor %}
   </div>
 {% endmacro %}
@@ -82,5 +82,6 @@
   <p class="credits">{% for c in p.credits %}{{ c }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
   {% endif %}
 </article>
+<script src="{{ root }}static/js/lightbox.js" defer></script>
 {% endblock %}
 {% block footer %}<p><a href="../">back to {{ branch.label }}</a></p>{% endblock %}
