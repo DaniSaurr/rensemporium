@@ -1,0 +1,12 @@
+title = "diorama dungeon"
+year = "2026"
+updated = "2026-10-18"
+made_with = ["godot 4.7.1", "python"]
+lead = true
+order = 1
+blurb = ""
+thumb = "room-lit.jpg"
+hero = { type = "image", src = "room-alive.gif", alt = "a voxel crypt lit magenta, two masks circling in the middle while candles flicker" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+credits = ["sprites drafted with retro diffusion", "models stored in kenney shape's .kenshape format"]
+tags = ["in progress"]
