@@ -209,6 +209,7 @@
       <button class="tbtn modebtn" data-mode="voxel" title="Voxel field (3)"><svg viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span class="lbl">Voxel</span></button>
       <button class="tbtn modebtn" data-mode="prop" title="Props: lathed vessels and slab panels (5)"><svg viewBox="0 0 24 24"><path d="M10 3h4M11 3v3M9 6h6l1 3-2 3 2 4-1 5H9l-1-5 2-4-2-3z"/></svg><span class="lbl">Prop</span></button>
       <button class="tbtn modebtn" data-mode="creature" title="Creatures: front and back, domed both ways (6)"><svg viewBox="0 0 24 24"><path d="M5 18c-1-6 2-12 7-12s8 6 7 12c-2-2-4-2-7-2s-5 0-7 2z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/></svg><span class="lbl">Creature</span></button>
+      <button class="tbtn modebtn" data-mode="witch" title="Witch outfits and wands (7)"><svg viewBox="0 0 24 24"><path d="M12 2 8 11h8z"/><path d="M5 11h14"/><circle cx="12" cy="14" r="2.5"/><path d="M9 21l1.5-4h3L15 21"/></svg><span class="lbl">Witch</span></button>
       <button class="tbtn modebtn" data-mode="edit" title="Edit the pick pixel by pixel (4)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></svg><span class="lbl">Edit</span></button>
       <div class="sep edtool"></div>
       <button class="tbtn edtool" data-tool="pencil" title="Pencil (B)"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="6" height="6"/><rect x="13" y="13" width="6" height="6"/></svg><span class="lbl">Pencil</span></button>
@@ -263,6 +264,7 @@
             <button class="btn" id="exVox" title="MagicaVoxel">.vox</button>
             <button class="btn" id="exObj" title="Mesh with vertex colours">.obj</button>
             <button class="btn" id="exJson" title="Cells and colours">.json</button>
+            <button class="btn" id="exOutfit" title="A zip for art/witch/sets/: every slot front and back, and the set with its wand">Outfit .zip</button>
           </div>
           <label class="field" id="artDirRow" title="Where the recipe says the PNGs live, inside the dungeon project"><span>Recipe PNG folder</span><input type="text" id="artDir" spellcheck="false" style="width:170px"></label>
         </div>
@@ -316,6 +318,7 @@ const DEFAULTS = {
   voxel:  { w: 12, h: 12, d: 12, thumb: 120, density: 55, core: 60, smooth: 2, mirrorX: true, mirrorZ: false, cleanup: true },
   prop:   { kind: 'vessel', style: 'any', w: 13, h: 22, thumb: 120, detail: 50, depth: 2, frame: 2, stripes: false },
   creature: { w: 12, h: 12, thumb: 120, density: 55, core: 40, front: 4, back: 3, backStyle: 'plain' },
+  witch:  { px: 3, hat: true, back: true, hand: true, showBack: true },
   edit: null, artDir: 'art/sprites-hatcher',
   colour: { palette: 'random', n: 3, roles: true, eyes: true, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
             custom: '#2b1b2e #6b2d5c #b0306a #f06c9b #ffd0e0 #3a6b8c #9ad1d4' },
@@ -354,10 +357,14 @@ FIELDS.creature = [
   ['density', 'Fill %', 0, 100], ['core', 'Pull to middle %', 0, 100],
   ['front', 'Front depth', 1, 12], ['back', 'Back depth', 0, 12], ['backStyle', 'Back', 'select', ['plain', 'spots', 'stripe', 'same']],
 ];
+FIELDS.witch = [
+  ['px', 'Pixel size', 1, 8], ['hat', 'Hats', 'check'], ['back', 'Capes, wings and bows', 'check'], ['hand', 'Wands', 'check'], ['showBack', 'Show the back beside it', 'check'],
+];
 const MODE_NOTE = {
   sprite: 'Only half of each sprite is random. The mirror does the rest.',
   net: 'Laid out as top / left front right back / bottom, the same as boxnet.gd. The front faces you in the fold under Picked.',
   voxel: 'A cube of cells, each filled or not, mirrored like the sprites and shown from the front. Drag the pick to turn it.',
+  witch: 'Outfits for the witch, drawn slot by slot on her 28 × 56 body with the same shapes as draw_witch_sets.py. Outfit saves a zip for art/witch/sets/.',
   prop: 'Vessels are lathed like the candles and urns. Panels are slabs with a depth for each colour, like the doors, windows and curtains.',
   creature: 'A front picture domed forward and a back picture domed backward, like the jellies and eyeballs. Same makes the back match the front.',
 };
@@ -940,6 +947,14 @@ function nudgeColour(colors, rng){ const j = ri(rng, colors.length); colors[j] =
 function mutate(item, seed, strength){
   const rng = mulberry32(seed), edits = Math.max(1, Math.round(strength * (.6 + rng() * .8)));
   const colors = item.colors.map(c => c.slice());
+  if (item.witch){
+    const def = JSON.parse(JSON.stringify(item.witch.def)), on = SLOTS.filter(s2 => def.enabled[s2] !== false);
+    const k = Math.max(1, Math.round(strength / 3));
+    for (let i = 0; i < k; i++) def.slotSeeds[on[ri(rng, on.length)]] = hash32((seed ^ hash32(i + 101)) >>> 0);
+    if (rng() < .3){ const keys = ['main', 'alt', 'hair', 'band']; const key = keys[ri(rng, keys.length)]; def.colours[key] = hex(unhex(def.colours[key]).map(v => clamp255(v + ri(rng, 71) - 35))); }
+    def.seed = seed;
+    return witchFrom(def);
+  }
   if (item.kind === 'sprite' || item.kind === 'built'){
     const p = item.p, w = item.w, h = item.h, f = item.frames[0].slice();
     const set = (x, y, v) => {
@@ -1024,6 +1039,236 @@ function netFaces(w, h, d){ return [[d, 0, w, d], [0, d, d, h], [d, d, w, h], [d
 function itemFromRec(rec){
   if (rec.mutation) return mutate(itemFromRec(rec.mutation.parent), rec.mutation.seed, rec.mutation.strength);
   return withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params));
+}
+
+/* ---------- the witch ----------
+   draw_witch.py and draw_witch_sets.py, ported: the same 28 x 56 body, the same anchor rows and
+   the same shape helpers, with Python's round() (halves to even) and int() (towards zero). */
+const WW = 28, WH = 56, WCX = 13.5, HEAD_TOP = 13, CHIN = 24, SHOULDER = 26, WAIST = 34, HIP = 37, KNEE = 45, ANKLE = 52;
+const SKIN = '#f6dcc8', SKIN_D = '#e0b8a4', INK = '#1a0f1f', WHITE = '#fff6fb';
+const SLOTS = ['back', 'legs', 'bottom', 'top', 'hair', 'hat', 'hand'];
+const pyRound = v => { const f = Math.floor(v), d = v - f; return d > .5 + 1e-9 ? f + 1 : d < .5 - 1e-9 ? f : (f % 2 === 0 ? f : f + 1); };
+class Pen {
+  constructor(pal){ this.pal = pal; this.px = new Int16Array(WW * WH).fill(-1); }
+  idx(c){ const k = c.toLowerCase(); let i = this.pal.keys.indexOf(k); if (i < 0){ this.pal.keys.push(k); this.pal.colors.push(unhex(k)); i = this.pal.keys.length - 1; } return i; }
+  put(x, y, c){ x = Math.trunc(x); y = Math.trunc(y); if (x >= 0 && y >= 0 && x < WW && y < WH) this.px[y * WW + x] = this.idx(c); }
+  span(y, x0, x1, c){ for (let x = Math.trunc(x0); x < Math.trunc(x1); x++) this.put(x, y, c); }
+  rowC(y, hw, c){ this.span(y, pyRound(WCX - hw + .5), pyRound(WCX + hw + .5), c); }
+}
+function witchBody(pal, side){
+  const p = new Pen(pal);
+  for (let y = HEAD_TOP; y <= CHIN; y++){
+    const t = (y - HEAD_TOP) / (CHIN - HEAD_TOP);
+    p.rowC(y, 4.5 + .6 * Math.sin(t * Math.PI) - (t > .75 ? 1.4 * (t - .75) / .25 : 0), SKIN);
+  }
+  p.rowC(CHIN + 1, 1, SKIN_D);
+  for (let y = SHOULDER; y <= HIP; y++) p.rowC(y, y < WAIST ? 3.5 : 3.0 + (y - WAIST) * .35, SKIN);
+  for (let y = SHOULDER; y < WAIST + 2; y++){ p.put(WCX - 5, y, SKIN); p.put(WCX + 5, y, SKIN_D); }
+  p.put(WCX - 5, WAIST + 2, SKIN_D); p.put(WCX + 5, WAIST + 2, SKIN_D);
+  for (let y = HIP + 1; y < ANKLE; y++){ p.span(y, WCX - 3, WCX - .5, SKIN); p.span(y, WCX + 1.5, WCX + 4, SKIN_D); }
+  for (let y = ANKLE; y < WH; y++){ p.span(y, WCX - 3.5, WCX - .5, SKIN_D); p.span(y, WCX + 1.5, WCX + 4.5, SKIN_D); }
+  if (side === 'front'){
+    for (const ex of [WCX - 2.5, WCX + 1.5]){ p.put(ex, 19, INK); p.put(ex + 1, 19, INK); p.put(ex, 20, INK); p.put(ex + 1, 20, WHITE); }
+    p.put(WCX - 3.5, 22, '#f0a0b8'); p.put(WCX + 3, 22, '#f0a0b8'); p.put(WCX, 22, '#c05070');
+  }
+  return p;
+}
+function witchHat(p, main, band, brim = 8.5, tall = 11, lean = 0, shade = null){
+  p.rowC(HEAD_TOP + 1, brim, main); p.rowC(HEAD_TOP + 2, brim + .5, shade || main);
+  for (let k = 0; k < tall; k++){
+    const y = HEAD_TOP - k, hw = Math.max(.6, 4.5 - k * .4), x0 = WCX - hw + k * lean;
+    p.span(y, pyRound(x0 + .5), pyRound(x0 + 2 * hw + .5), main);
+  }
+  p.rowC(HEAD_TOP - 1, 4.2, band);
+}
+function witchHair(p, side, col, dark, light, length, fringe = true, buns = false, tails = false){
+  for (let y = HEAD_TOP - 2; y < HEAD_TOP + 6; y++){
+    const t = (y - (HEAD_TOP - 2)) / 8;
+    p.rowC(y, 4 + 2.6 * Math.sin(Math.min(1, t * 1.6) * Math.PI / 2), col);
+    p.put(WCX - 2 + (((y % 3) + 3) % 3), y, y < HEAD_TOP + 2 ? light : col);
+  }
+  for (let y = HEAD_TOP + 6; y <= length; y++){
+    const hw = 6.6 - Math.max(0, y - CHIN - 2) * .15;
+    for (let x = pyRound(WCX - hw + .5); x < pyRound(WCX + hw + .5); x++){
+      if (side === 'back') p.put(x, y, (x + y * 2) % 7 === 0 ? dark : col);
+      else if ((Math.abs(x - WCX) >= 4.6 || y >= CHIN + 2) && (Math.abs(x - WCX) >= 3.6 || y < CHIN + 2)) p.put(x, y, Math.abs(x - WCX) < 5.6 ? col : dark);
+    }
+  }
+  if (side === 'front' && fringe)
+    for (let x = Math.trunc(WCX - 5); x < Math.trunc(WCX + 6); x++) for (let y = HEAD_TOP + 5; y < HEAD_TOP + 7 + (x % 3 === 0 ? 1 : 0); y++) p.put(x, y, col);
+  if (buns) for (const bx of [WCX - 6, WCX + 6]){
+    for (let dy = -4; dy < 1; dy++) for (let dx = -2; dx < 3; dx++) if (dx * dx + (dy + 2) ** 2 <= 5) p.put(bx + dx, HEAD_TOP + dy, col);
+    p.put(bx, HEAD_TOP - 1, light);
+  }
+  if (tails) for (const bx of [WCX - 6, WCX + 6]) for (let y = HEAD_TOP + 2; y < WAIST + 2; y++)
+    p.put(bx + (bx > WCX ? 1 : -1) * (y > SHOULDER ? 1 : 0), y, y % 4 ? col : dark);
+}
+function witchBodice(p, colourAt, sleeve, puff = true){
+  for (let y = SHOULDER; y <= WAIST; y++) for (let x = pyRound(WCX - 3.2); x < pyRound(WCX + 4.2); x++){ const c = colourAt(x, y); if (c) p.put(x, y, c); }
+  for (let y = SHOULDER; y < SHOULDER + (puff ? 5 : 8); y++) for (const ax of [WCX - 5, WCX + 5]){
+    p.put(ax, y, sleeve);
+    if (puff && y < SHOULDER + 3) p.put(ax + (ax < WCX ? -1 : 1), y, sleeve);
+  }
+}
+function witchSkirt(p, colourAt, to = HIP + 3, flare = .7){
+  for (let y = WAIST; y <= to; y++){
+    const hw = 3.8 + (y - WAIST) * flare;
+    for (let x = pyRound(WCX - hw + .5); x < pyRound(WCX + hw + .5); x++){ const c = colourAt(x, y, hw); if (c) p.put(x, y, c); }
+  }
+}
+function witchStockings(p, colourAt, shoe, boot = 1, toe = null){
+  for (let y = HIP + 2; y < ANKLE; y++){ const c = colourAt(y); if (c){ p.span(y, WCX - 3, WCX - .5, c); p.span(y, WCX + 1.5, WCX + 4, c); } }
+  for (let y = ANKLE - boot; y < WH; y++){ p.span(y, WCX - 3.5, WCX - .5, shoe); p.span(y, WCX + 1.5, WCX + 4.5, shoe); }
+  if (toe){ p.put(WCX - 4, WH - 1, toe); p.put(WCX + 5, WH - 1, toe); }
+}
+const heldX = side => side === 'front' ? WCX + 7 : WCX - 7;
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const WITCH_NAMES = ['chandler', 'glazier', 'milliner', 'apothecary', 'lamplighter', 'spinster', 'tinker', 'beekeeper', 'gravedigger', 'seamstress',
+  'pickler', 'ferryman', 'nursemaid', 'bellringer', 'candlewright', 'mothkeeper', 'bonesetter', 'wicktrimmer', 'sugarer', 'lacemaker'];
+const WAND_WORDS = [['bone', 'sugar', 'glass', 'moth', 'wax', 'thorn', 'pearl', 'soot', 'honey', 'brass', 'jelly', 'grave'], ['staff', 'wand', 'rod', 'dropper', 'sprig', 'spindle', 'pin', 'crook']];
+
+// one slot, front or back; each slot has its own seed so a family can change one and keep the rest
+function drawSlot(slot, side, seed, c, pal){
+  const rng = mulberry32(seed), p = new Pen(pal), pick = a => a[ri(rng, a.length)];
+  let info = {};
+  if (slot === 'hat'){
+    const kind = pick(['witch', 'witch', 'witch', 'crown', 'bow', 'horns', 'hood']);
+    info.kind = kind;
+    if (kind === 'witch'){
+      witchHat(p, c.main, c.band, 7 + rng() * 2.5, 7 + ri(rng, 6), pick([-.3, -.15, 0, .15, .25, .3]), c.shade);
+      const orn = pick(['none', 'buckle', 'goggles', 'feather']);
+      if (side === 'front' && orn === 'buckle'){ for (const dx of [-1, 0, 1]) p.put(WCX + dx, HEAD_TOP - 1, c.trim); p.put(WCX, HEAD_TOP - 1, c.alt); }
+      if (side === 'front' && orn === 'goggles') for (const gx of [WCX - 2, WCX + 2]){ p.put(gx, HEAD_TOP - 1, '#f2b23a'); p.put(gx + 1, HEAD_TOP - 1, '#f2b23a'); p.put(gx, HEAD_TOP - 2, '#9be8ff'); }
+      if (orn === 'feather') for (let k = 0; k < 4; k++) p.put(WCX + 4 + (k > 1 ? 1 : 0), HEAD_TOP - 1 - k, k % 2 ? c.light : c.alt);
+    } else if (kind === 'crown'){
+      for (let y = HEAD_TOP - 2; y <= HEAD_TOP; y++) p.rowC(y, 3.5, c.trim);
+      for (let x = Math.trunc(WCX - 3); x <= WCX + 3; x += 2) p.put(x, HEAD_TOP - 3, c.trim);
+      if (side === 'front') p.put(WCX, HEAD_TOP - 1, c.alt);
+    } else if (kind === 'bow'){
+      const bx = WCX + pick([-3, 3]);
+      for (const [dx, dy] of [[-2, 0], [-1, -1], [-1, 1], [-1, 0], [0, 0], [1, 0], [1, -1], [1, 1], [2, 0]]) p.put(bx + dx, HEAD_TOP + dy, dx === 0 ? c.alt : c.band);
+    } else if (kind === 'horns'){
+      for (let k = 0; k < 6; k++) for (const sgn of [-1, 1]) p.put(WCX + sgn * (4 + k * .5) + (sgn > 0 ? 1 : 0), HEAD_TOP + 1 - k, k > 3 ? c.trim : c.light);
+    } else {
+      for (let y = HEAD_TOP - 1; y <= CHIN + 1; y++){
+        const hw = y < HEAD_TOP + 3 ? 4.5 + (y - HEAD_TOP + 1) * .6 : 6.4;
+        for (let x = pyRound(WCX - hw + .5); x < pyRound(WCX + hw + .5); x++){
+          if (side === 'front' && Math.abs(x - WCX) < 4.2 && y > HEAD_TOP + 2) continue;   // the face shows through
+          p.put(x, y, Math.abs(x - WCX) > 5 ? c.shade : c.main);
+        }
+      }
+    }
+  } else if (slot === 'hair'){
+    witchHair(p, side, c.hair, c.hair_d, c.hairLight, pick([CHIN + 1, SHOULDER + 1, SHOULDER + 2, WAIST + 1, HIP]), rng() < .8, rng() < .2, rng() < .15);
+  } else if (slot === 'top'){
+    const pat = pick(['plain', 'stripes', 'checker', 'placket', 'apron', 'dots']), sleeve = rng() < .5 ? c.light : c.alt, puff = rng() < .6, ruff = rng() < .2;
+    witchBodice(p, (x, y) => {
+      if (pat === 'stripes') return (y % 2) ? c.main : c.alt;
+      if (pat === 'checker') return ((x + y) % 2) ? c.main : c.alt;
+      if (pat === 'placket') return side === 'front' && Math.abs(x - WCX) <= 1 ? c.trim : c.main;
+      if (pat === 'apron') return side === 'front' && Math.abs(x - WCX) <= 2 && y >= SHOULDER + 2 ? c.trim : c.main;
+      if (pat === 'dots') return (x % 3 === 0 && y % 3 === 0) ? c.light : c.main;
+      return c.main;
+    }, sleeve, puff);
+    if (ruff) for (let x = Math.trunc(WCX - 5); x < Math.trunc(WCX + 6); x++) p.put(x, SHOULDER - 1, x % 2 ? c.trim : WHITE);
+  } else if (slot === 'bottom'){
+    const to = pick([HIP + 3, HIP + 4, KNEE, KNEE + 3, ANKLE - 1]), flare = to <= HIP + 4 ? .6 + rng() * .2 : .35 + rng() * .2;
+    const pat = pick(['plain', 'vstripes', 'bands', 'hem', 'apron', 'checker']);
+    witchSkirt(p, (x, y) => {
+      if (y >= to - 1 && (pat === 'hem' || pat === 'bands')) return c.trim;
+      if (pat === 'vstripes') return Math.floor((x - Math.trunc(WCX)) / 2) % 2 ? c.main : c.alt;
+      if (pat === 'bands') return Math.floor((y - WAIST) / 3) % 2 ? c.alt : c.main;
+      if (pat === 'apron' && side === 'front' && Math.abs(x - WCX - .5) <= 2.5) return c.trim;
+      if (pat === 'checker') return ((x + y) % 2) ? c.main : c.alt;
+      return c.main;
+    }, to, flare);
+  } else if (slot === 'legs'){
+    const pat = pick(['none', 'plain', 'stripes', 'socks', 'fishnet']), toe = rng() < .2 ? c.shoe : null;
+    witchStockings(p, y => pat === 'plain' ? c.alt : pat === 'stripes' ? ((Math.floor(y / 2) % 2) ? c.trim : c.main)
+      : pat === 'socks' ? (y > KNEE + 1 ? c.trim : null) : pat === 'fishnet' ? (y % 2 ? c.alt : c.main) : null, c.shoe, 1 + ri(rng, 4), toe);
+  } else if (slot === 'back'){
+    const kind = pick(['cape', 'cape', 'bow', 'ribbons', 'wings']); info.kind = kind;
+    if (kind === 'cape'){
+      const to = pick([HIP + 2, HIP + 6, KNEE + 4]);
+      for (let y = SHOULDER; y <= to; y++) p.rowC(y, 4.5 + (y - SHOULDER) * .3, side === 'front' ? c.hair_d : c.alt);
+    } else if (kind === 'bow'){
+      if (side === 'back'){
+        for (const [dx, dy] of [[-3, 0], [-2, -1], [-2, 1], [-1, 0], [1, 0], [2, -1], [2, 1], [3, 0]]) p.put(WCX + dx, WAIST + dy, c.band);
+        for (let y = WAIST + 1; y < HIP + 6; y++){ p.put(WCX - 1, y, c.band); p.put(WCX + 1, y, c.band); }
+      }
+    } else if (kind === 'ribbons'){
+      for (let y = SHOULDER - 2; y < WAIST + 2; y++) p.put(WCX + 6 + ((y % 3 === 0) ? 1 : 0), y, y % 2 ? c.light : c.main);
+    } else {
+      // wings from the shoulder blades, veined
+      for (let y = SHOULDER - 5; y <= WAIST + 3; y++){
+        const t = (y - (SHOULDER - 5)) / (WAIST + 8 - SHOULDER), reach = Math.round(1 + 8 * Math.sin(Math.PI * Math.min(1, t * 1.1)));
+        for (let k = 0; k < reach; k++) for (const sgn of [-1, 1]){
+          const x = sgn > 0 ? WCX + 4.5 + k : WCX - 4.5 - k;
+          p.put(x, y, k === reach - 1 || y % 3 === 0 ? c.shade : c.light);
+        }
+      }
+    }
+  } else if (slot === 'hand'){
+    const kind = pick(['staff', 'short', 'star', 'orb', 'dropper']), x = heldX(side); info.kind = kind;
+    if (kind === 'staff' || kind === 'orb'){
+      for (let y = HEAD_TOP - 2; y < ANKLE; y++) p.put(x, y, '#7d6f78');
+      if (kind === 'staff'){ for (let dy = -2; dy < 2; dy++) for (let dx = -1; dx < 2; dx++) p.put(x + dx, HEAD_TOP - 3 + dy, c.trim); p.put(x, HEAD_TOP - 6, c.light); }
+      else for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) p.put(x + dx, HEAD_TOP - 4 + dy, dx === -1 && dy === -1 ? WHITE : c.alt);
+    } else if (kind === 'short'){
+      for (let y = WAIST - 6; y < WAIST + 2; y++) p.put(x, y, c.main);
+      p.put(x, WAIST - 7, c.trim); p.put(x, WAIST - 8, c.light);
+    } else if (kind === 'star'){
+      for (let y = SHOULDER; y < WAIST + 2; y++) p.put(x, y, c.trim);
+      for (const [dx, dy] of [[0, -3], [-1, -2], [0, -2], [1, -2], [-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1], [-1, 0], [1, 0]]) p.put(x + dx, SHOULDER - 1 + dy, '#ffe08a');
+    } else {
+      for (let y = SHOULDER; y < WAIST + 1; y++) p.put(x, y, c.light);
+      for (let dy = -2; dy <= 0; dy++) for (let dx = -1; dx <= 1; dx++) p.put(x + dx, SHOULDER - 1 + dy, c.alt);
+    }
+  }
+  return { px: p.px, info };
+}
+function genWitch(seed, p){
+  const rng = mulberry32(seed), cs = makeColors(rng, 5);
+  const colours = {
+    main: hex(cs[0]), shade: hex(mul(cs[0], .62)), alt: hex(cs[1]), trim: hex(mix(cs[2], [255, 246, 235], .6)), light: hex(mix(cs[0], [255, 255, 255], .45)),
+    hair: hex(cs[3]), hair_d: hex(mul(cs[3], .6)), hairLight: hex(mix(cs[3], [255, 255, 255], .5)), shoe: hex(mul(cs[4], .45)), band: hex(cs[4]),
+  };
+  const slotSeeds = {}; SLOTS.forEach((s2, k) => slotSeeds[s2] = hash32((seed ^ hash32(k + 11)) >>> 0));
+  const label = WITCH_NAMES[ri(rng, WITCH_NAMES.length)], wandSeed = hash32(seed ^ 0x9e37);
+  return witchFrom({ seed, colours, slotSeeds, label, wandSeed, enabled: { hat: p.hat, back: p.back, hand: p.hand } });
+}
+function witchFrom(def){
+  const pal = { keys: [], colors: [] }, c = def.colours, slots = {}, front = witchBody(pal, 'front').px, back = witchBody(pal, 'back').px;
+  for (const s2 of SLOTS){
+    if (def.enabled[s2] === false) continue;
+    slots[s2] = { front: drawSlot(s2, 'front', def.slotSeeds[s2], c, pal), back: drawSlot(s2, 'back', def.slotSeeds[s2], c, pal) };
+  }
+  // front: the back slot behind the body, then the rest back to front; back: the back slot on top
+  const lay = (dst, src) => { for (let i = 0; i < dst.length; i++) if (src[i] >= 0) dst[i] = src[i]; };
+  const F = new Int16Array(WW * WH).fill(-1); if (slots.back) lay(F, slots.back.front.px); lay(F, front);
+  const B = new Int16Array(WW * WH).fill(-1); lay(B, back);
+  for (const s2 of SLOTS.slice(1)) if (slots[s2]){ lay(F, slots[s2].front.px); if (s2 !== 'hand') lay(B, slots[s2].back.px); }
+  if (slots.back) lay(B, slots.back.back.px);
+  if (slots.hand) lay(B, slots.hand.back.px);
+  // the wand: how it shoots follows what is held
+  let wand = null;
+  if (slots.hand){
+    const r = mulberry32(def.wandSeed), kind = slots.hand.front.info.kind;
+    const shape = { staff: 'orb', orb: 'orb', short: 'needle', dropper: 'needle', star: 'star' }[kind];
+    const heavy = kind === 'staff' || kind === 'orb';
+    wand = {
+      name: WAND_WORDS[0][ri(r, 12)] + ' ' + { staff: 'staff', orb: 'staff', short: 'wand', dropper: 'dropper', star: 'wand' }[kind],
+      rate: +(heavy ? .5 + r() * .4 : 1 + r() * .6).toFixed(2), speed: +(heavy ? .7 + r() * .3 : 1 + r() * .4).toFixed(2),
+      dmg: heavy ? 2 + ri(r, 2) : 1, bounce: ri(r, 4) === 0 ? 1 : 0, pierce: ri(r, 5) === 0 ? 1 : 0,
+      shots: kind === 'dropper' ? 2 : kind === 'star' ? 1 + ri(r, 3) : 1, spread: kind === 'star' || kind === 'dropper' ? +(4 + r() * 8).toFixed(1) : 0,
+      life: +(heavy ? 2.4 + r() * .8 : 1.4 + r() * .8).toFixed(1), flash: c.light.slice(1),
+      shot: { shape, colours: [c.alt.slice(1), c.trim.slice(1)] },
+    };
+  }
+  const set = { order: 10, label: def.label, note: "made in ren's hatcher", ...(wand ? { wand } : {}) };
+  return { kind: 'built', seed: def.seed, w: WW, h: WH, frames: [F, B], colors: pal.colors, col: { outline: 'none', shade: false },
+           build: { ...DEFAULT_BUILD, type: 'relief', depth: 3, back: 'picture', backDepth: 3 }, witch: { def, slots, set, pal }, style: def.label,
+           p: { w: WW, h: WH, mirrorX: true, mirrorY: false, cleanup: false } };
 }
 
 /* ---------- props: vessels for the lathe, panels for the slab ---------- */
@@ -1220,6 +1465,7 @@ function makeItem(mode, seed, params){
   if (mode === 'edit') return editItem(params);
   if (mode === 'prop') return genProp(seed, params);
   if (mode === 'creature') return genCreature(seed, params);
+  if (mode === 'witch') return genWitch(seed, params);
   return genVox(seed, params);
 }
 function rgbaCanvas(w, h, rgba){
@@ -1248,6 +1494,7 @@ function cellSize(){
   const m = P.mode, p = breed ? { ...P[m], w: breed.rec.params.w, h: breed.rec.params.h, d: breed.rec.params.d } : P[m];
   if (m === 'sprite') return [(p.w + 2 * p.gap) * p.px, (p.h + 2 * p.gap) * p.px];
   if (m === 'net') return [(2 * p.d + 2 * p.w + 2) * p.px, (2 * p.d + p.h + 2) * p.px];
+  if (m === 'witch') return [(WW * (p.showBack ? 2 : 1) + 3) * p.px, (WH + 3) * p.px];
   return [p.thumb, p.thumb];   // voxels, props and creatures
 }
 function relayout(){
@@ -1265,6 +1512,14 @@ function getItem(i){
 }
 function drawCell(ctx, i, x, y, cw, ch, frame){
   const item = getItem(i);
+  if (item.witch){
+    const cvs = itemCanvases(item), two = P.witch.showBack, k = Math.max(1, Math.floor(Math.min(cw / (WW * (two ? 2 : 1) + 3), ch / (WH + 2))));
+    const gw = WW * k * (two ? 2 : 1) + (two ? k : 0), ox = Math.round(x + (cw - gw) / 2), oy = Math.round(y + (ch - WH * k) / 2);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(cvs[0], ox, oy, WW * k, WH * k);
+    if (two) ctx.drawImage(cvs[1], ox + WW * k + k, oy, WW * k, WH * k);
+    return;
+  }
   if (item.kind === 'built'){ ctx.drawImage(thumb3D(item, Math.round(cw)), x, y, cw, ch); return; }
   const cvs = itemCanvases(item, Math.round(cw));
   const cv = cvs[Math.min(frame, cvs.length - 1)];
@@ -1336,7 +1591,7 @@ function startBreed(){
 function endBreed(){
   if (!breed) return;
   breed = null; $('#breedBar').hidden = true;
-  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', edit: 'EDIT' }[P.mode];
+  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', witch: 'WITCH', edit: 'EDIT' }[P.mode];
   regen();
 }
 function cellAt(e){
@@ -1370,7 +1625,7 @@ function pick(rec, item){
   $('#pickBadge').textContent = rec.mode;
   $('#pickSeed').textContent = '#' + rec.seed;
   const it = picked.item, p = rec.params;
-  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + (it.build ? it.build.type : '')) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : it.kind === 'built' ? `${it.w}×${it.h} ${it.style || it.build.type}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
+  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + (it.build ? it.build.type : '')) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : it.witch ? `${it.witch.set.label}${it.witch.set.wand ? ', ' + it.witch.set.wand.name : ''}` : it.kind === 'built' ? `${it.w}×${it.h} ${it.style || it.build.type}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
   const show = (id, on) => { $(id).hidden = !on; };
   const flat = rec.mode === 'sprite' || it.kind === 'built' || (rec.mode === 'edit' && it.fold === 'sprite'), netty = rec.mode === 'net' || (rec.mode === 'edit' && it.fold === 'net');
   show('#exBitsy', flat); show('#exShape', flat);
@@ -1378,6 +1633,8 @@ function pick(rec, item){
   show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
   show('#editBtn', !rec.live);
   show('#breedBtn', !rec.live && rec.mode !== 'edit');
+  show('#exOutfit', !!it.witch);
+  if (it.witch){ show('#exRecipe', false); show('#editBtn', false); show('#exBitsy', false); show('#exShape', false); }
   if (!item || rec.mode !== 'edit') $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1;
   drawPick();
 }
@@ -1408,10 +1665,26 @@ function drawPick(){
       pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
       pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
+    if (item.witch && item.witch.set.wand) drawShot(pctx, item.witch.set.wand, W);
     drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (flat ? W * .08 : 0), voxScale(V, W * (flat ? .72 : .9)),
       item.fold === 'voxel' && rec.live ? V.d - 1 - item.frame + .5 : undefined);
   }
 }
+// the shot a wand fires, in the Picked corner: its shape in its two colours, and the numbers
+function drawShot(ctx, wand, W){
+  const x = W - 70, y = 60, [a, b] = wand.shot.colours.map(h => '#' + h);
+  ctx.save(); ctx.lineCap = 'round';
+  if (wand.shot.shape === 'orb'){ ctx.fillStyle = a; ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = b; ctx.beginPath(); ctx.arc(x - 6, y - 6, 6, 0, Math.PI * 2); ctx.fill(); }
+  else if (wand.shot.shape === 'needle'){ ctx.strokeStyle = a; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(x - 26, y + 14); ctx.lineTo(x + 26, y - 14); ctx.stroke(); ctx.strokeStyle = b; ctx.lineWidth = 3; ctx.stroke(); }
+  else { ctx.fillStyle = a; ctx.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? 9 : 22, t = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(x + r * Math.cos(t), y + r * Math.sin(t)); } ctx.closePath(); ctx.fill(); ctx.fillStyle = b; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = '#e6e6e6'; ctx.font = '22px ui-monospace,Consolas,monospace'; ctx.textAlign = 'right';
+  ctx.fillText(wand.name, W - 16, 120);
+  ctx.fillStyle = '#9a9a9a'; ctx.font = '18px ui-monospace,Consolas,monospace';
+  ctx.fillText(`rate ${wand.rate} · dmg ${wand.dmg} · shots ${wand.shots}`, W - 16, 146);
+  if (wand.bounce || wand.pierce) ctx.fillText(`${wand.bounce ? 'bounces ' : ''}${wand.pierce ? 'pierces' : ''}`.trim(), W - 16, 170);
+  ctx.restore();
+}
+
 let drag = null;
 function setSpin(on){ view.spin = on; $('#spinChk').checked = on; }
 $('#spinChk').onchange = e => setSpin(e.target.checked);
@@ -1523,6 +1796,40 @@ function picCanvas(w, h, px, colors){
   return rgbaCanvas(w, h, out);
 }
 // PNGs at one pixel each and a recipe in the dungeon's format; drop them into the project as named
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+function crc32(u8){ let c = ~0; for (const b of u8) c = CRC_TABLE[(c ^ b) & 255] ^ (c >>> 8); return ~c >>> 0; }
+// a plain zip (no compression): local headers, the files, a central directory, an end record
+function makeZip(files){
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  for (const [name, data] of files){
+    const nm = enc.encode(name), crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+    parts.push(new Uint8Array(h.buffer), nm, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true);
+    c.setUint16(28, nm.length, true); c.setUint32(42, offset, true);
+    central.push(new Uint8Array(c.buffer), nm);
+    offset += 30 + nm.length + data.length;
+  }
+  const size = central.reduce((t, a) => t + a.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+$('#exOutfit').onclick = async () => {
+  if (!picked || !picked.item.witch) return;
+  const wt = picked.item.witch, name = wt.set.label.replace(/[^a-z0-9_]/gi, ''), files = [];
+  for (const s2 of SLOTS){
+    const sl = wt.slots[s2]; if (!sl) continue;
+    for (const side of ['front', 'back']){
+      const blob = await canvasBlob(picCanvas(WW, WH, sl[side].px, wt.pal.colors));
+      files.push([`${name}/${s2}_${side}.png`, new Uint8Array(await blob.arrayBuffer())]);
+    }
+  }
+  files.push([`${name}.json`, new TextEncoder().encode(JSON.stringify(wt.set, null, 1))]);
+  download(`${name}_outfit.zip`, makeZip(files));
+  toast('unzip into art/witch/sets/, then run python tools/draw_witch.py');
+};
+
 $('#exRecipe').onclick = async () => {
   if (!picked) return;
   const it = picked.item, name = baseName(picked.rec), dir = (P.artDir || 'art/sprites-hatcher').replace(/\/+$/, '');
@@ -1587,7 +1894,8 @@ $('#sheetBtn').onclick = async () => {
   const c = cv.getContext('2d'); paintBg(c, cv.width, cv.height);
   for (let i = 0; i < L.cols * L.rows; i++){
     const item = getItem(i);
-    if (item.kind === 'vox' || item.kind === 'built'){ const V = voxOf(item); drawVox(c, V, VIEW_YAW, VIEW_PITCH, (i % L.cols) * cw + cw / 2, Math.floor(i / L.cols) * ch + ch / 2, voxScale(V, cw)); }
+    if (item.witch) drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
+    else if (item.kind === 'vox' || item.kind === 'built'){ const V = voxOf(item); drawVox(c, V, VIEW_YAW, VIEW_PITCH, (i % L.cols) * cw + cw / 2, Math.floor(i / L.cols) * ch + ch / 2, voxScale(V, cw)); }
     else drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
   }
   download(`hatcher_${P.mode}_sheet_${P.seed}.png`, await canvasBlob(cv));
@@ -1664,6 +1972,11 @@ let regenTimer = 0;
 const regenSoon = () => { clearTimeout(regenTimer); regenTimer = setTimeout(() => { regen(); saveState(); }, P.mode === 'voxel' ? 120 : 0); };
 /* shape presets and shuffling. Display settings (pixel size, gap, thumb size, frames) are never touched */
 const PRESETS = {
+  witch: {
+    'everything': { hat: true, back: true, hand: true },
+    'no hats':    { hat: false, back: true, hand: true },
+    'plain':      { hat: false, back: false, hand: true },
+  },
   prop: {
     candle:   { kind: 'vessel', style: 'candle', w: 9, h: 24, detail: 40 },
     urn:      { kind: 'vessel', style: 'urn', w: 15, h: 22, detail: 60 },
@@ -1717,9 +2030,10 @@ const SHUFFLE = {
 SHUFFLE.prop = () => { const kind = chance(.55) ? 'vessel' : 'panel';
   return { kind, style: 'any', w: kind === 'vessel' ? 2 * between(3, 9) + 1 : 2 * between(4, 11) + 1, h: between(kind === 'vessel' ? 12 : 14, 34), detail: between(20, 80), depth: between(1, 4), frame: between(1, 4), stripes: chance(.3) }; };
 SHUFFLE.creature = () => ({ w: between(8, 20), h: between(8, 20), density: between(40, 70), core: between(20, 70), front: between(2, 7), back: between(0, 6), backStyle: ['plain', 'spots', 'stripe', 'same'][between(0, 3)] });
-const SHAPE_KEYS = { prop: ['kind', 'style', 'w', 'h', 'detail', 'depth', 'frame', 'stripes'], creature: ['w', 'h', 'density', 'core', 'front', 'back', 'backStyle'], sprite: ['w', 'h', 'density', 'core', 'mirrorX', 'mirrorY', 'cleanup'], net: ['w', 'h', 'd', 'density', 'core', 'matched', 'rim', 'holes', 'front', 'wrap'],
+SHUFFLE.witch = () => ({ hat: chance(.85), back: chance(.6), hand: chance(.9) });
+const SHAPE_KEYS = { witch: ['hat', 'back', 'hand'], prop: ['kind', 'style', 'w', 'h', 'detail', 'depth', 'frame', 'stripes'], creature: ['w', 'h', 'density', 'core', 'front', 'back', 'backStyle'], sprite: ['w', 'h', 'density', 'core', 'mirrorX', 'mirrorY', 'cleanup'], net: ['w', 'h', 'd', 'density', 'core', 'matched', 'rim', 'holes', 'front', 'wrap'],
                      voxel: ['w', 'h', 'd', 'density', 'core', 'smooth', 'mirrorX', 'mirrorZ', 'cleanup'] };
-const shapeHistory = { sprite: [], net: [], voxel: [], prop: [], creature: [] }, shapeName = {};
+const shapeHistory = { sprite: [], net: [], voxel: [], prop: [], creature: [], witch: [] }, shapeName = {};
 function setShape(values, name){
   const m = P.mode, p = P[m];
   shapeHistory[m].push({ values: { ...p }, name: shapeName[m] });
@@ -2436,7 +2750,7 @@ function setMode(m){
   if (m === 'edit') $('#editCol').appendChild($('#panelShape'));
   else $('#props').insertBefore($('#panelShape'), $('#panelColour'));
   document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  $('#modeBadge').textContent = breed ? 'FAMILY' : { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', edit: 'EDIT' }[m];
+  $('#modeBadge').textContent = breed ? 'FAMILY' : { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', witch: 'WITCH', edit: 'EDIT' }[m];
   buildShape(); regen(); saveState();
   if (m === 'edit') edRefresh(false);
 }
@@ -2476,7 +2790,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'e') $('#sheetBtn').click();
   else if (k === 'h') $('#helpBtn').click();
   else if (k === 'escape') $('#help').classList.remove('show');
-  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '5') setMode('prop'); else if (k === '6') setMode('creature'); else if (k === '4') toEdit();
+  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '5') setMode('prop'); else if (k === '6') setMode('creature'); else if (k === '7') setMode('witch'); else if (k === '4') toEdit();
 });
 function saveState(){ try { localStorage.setItem('hatcher.state', JSON.stringify(P)); } catch (e) {} }
 try {
@@ -2495,6 +2809,8 @@ $('#help').innerHTML = `
   <p>Vessels are profiles spun on the dungeon's lathe: candles with a flame, urns, pillars, bottles, eggs and stacks. Panels are slabs with a depth for each material: doors with planks, straps and a handle, leaded windows, framed portraits with a creature in them, curtains in folds, banners. Recipe writes the picture and the recipe the game reads.</p>
   <h3>Creatures</h3>
   <p>A front picture domed forward and a back picture domed backward, built the way the jellies and eyeballs are. The back can be plain, spotted, striped down the spine, or the same as the front. Edit opens both, as Front and Back.</p>
+  <h3>Witch</h3>
+  <p>Whole outfits on the witch's own body: a hat (pointed, crown, bow, horns or hood), hair, a bodice, a skirt, stockings and shoes, something on the back (a cape, wings, a bow, ribbons) and a wand. They are drawn with the same shapes and anchor rows as the dungeon's outfit scripts, each slot front and back. The wand's shot follows what she holds: staffs fire orbs, short wands and droppers needles, star wands stars. Outfit saves a zip of the slot pictures and the set JSON. More like this changes a slot or two and keeps the rest.</p>
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
   <h3>More like this</h3>
@@ -2511,7 +2827,7 @@ $('#help').innerHTML = `
     <tr><td><span class="kbd">K</span></td><td>save the pick</td></tr>
     <tr><td><span class="kbd">B</span></td><td>more like this (Esc goes back to all)</td></tr>
     <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
-    <tr><td><span class="kbd">1</span>–<span class="kbd">6</span></td><td>sprites, nets, voxels, edit, props, creatures</td></tr>
+    <tr><td><span class="kbd">1</span>–<span class="kbd">7</span></td><td>sprites, nets, voxels, edit, props, creatures, witch</td></tr>
     <tr><td><span class="kbd">B</span> <span class="kbd">E</span> <span class="kbd">G</span> <span class="kbd">I</span> <span class="kbd">M</span></td><td>in edit: pencil, eraser, fill, pick colour, mirror</td></tr>
     <tr><td><span class="kbd">S</span> <span class="kbd">L</span> <span class="kbd">V</span></td><td>in edit: box select, lasso, move</td></tr>
     <tr><td><span class="kbd">Ctrl+Z</span></td><td>in edit: undo (Ctrl+Shift+Z redoes)</td></tr>
