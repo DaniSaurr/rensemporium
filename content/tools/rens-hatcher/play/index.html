@@ -37,6 +37,20 @@
   #toolbar{background:var(--region);border-right:1px solid var(--line);padding:6px 0;display:flex;flex-direction:column;
     align-items:center;gap:3px;overflow-y:auto;}
   #toolbar .sep{width:46px;height:1px;background:var(--line-soft);margin:5px 0;}
+  #toolbar .edtool{display:none;}
+  body.editing #toolbar .edtool{display:flex;}
+  body.editing #toolbar .sep.edtool{display:block;}
+  body.editing #stage{cursor:crosshair;}
+  body.editing #hint{display:none;}
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:5px;margin-bottom:8px;}
+  .swatch{aspect-ratio:1/1;border:2px solid var(--line);border-radius:5px;cursor:pointer;padding:0;}
+  .swatch.on{border-color:var(--select);box-shadow:0 0 0 1px var(--select);}
+  .swatch.add{background:var(--widget);color:var(--text);font-size:15px;}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;}
+  .seg button{height:28px;background:var(--widget);color:var(--muted);border:1px solid var(--line);cursor:pointer;font:inherit;font-size:12px;margin-left:-1px;}
+  .seg button:first-child{margin-left:0;border-radius:5px 0 0 5px;}
+  .seg button:last-child{border-radius:0 5px 5px 0;}
+  .seg button.on{background:var(--accent);border-color:var(--accent-hi);color:#fff;position:relative;z-index:1;}
   .tbtn{width:60px;padding:7px 2px 5px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--muted);
     cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;}
   .tbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
@@ -161,6 +175,15 @@
       <button class="tbtn modebtn on" data-mode="sprite" title="Sprites (1)"><svg viewBox="0 0 24 24"><path d="M8 4h8v3h3v6h-2v3h2v4h-4v-3H9v3H5v-4h2v-3H5V7h3z"/><path d="M9.5 10h1M13.5 10h1"/></svg><span class="lbl">Sprite</span></button>
       <button class="tbtn modebtn" data-mode="net" title="Box nets (2)"><svg viewBox="0 0 24 24"><path d="M8 3h5v5H8zM3 8h5v6H3zM8 8h5v6H8zM13 8h5v6h-5zM18 8h3v6h-3M8 14h5v5H8z"/></svg><span class="lbl">Net</span></button>
       <button class="tbtn modebtn" data-mode="voxel" title="Voxel field (3)"><svg viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span class="lbl">Voxel</span></button>
+      <button class="tbtn modebtn" data-mode="edit" title="Edit the pick pixel by pixel (4)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></svg><span class="lbl">Edit</span></button>
+      <div class="sep edtool"></div>
+      <button class="tbtn edtool" data-tool="pencil" title="Pencil (B)"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="6" height="6"/><rect x="13" y="13" width="6" height="6"/></svg><span class="lbl">Pencil</span></button>
+      <button class="tbtn edtool" data-tool="erase" title="Eraser (E), or right-click"><svg viewBox="0 0 24 24"><path d="M8 20h12M5 15l8-8 6 6-5 5H8z"/></svg><span class="lbl">Erase</span></button>
+      <button class="tbtn edtool" data-tool="fill" title="Fill (G)"><svg viewBox="0 0 24 24"><path d="M5 12 12 5l7 7-7 7z"/><path d="M19 15c1 2 2 3 0 4"/></svg><span class="lbl">Fill</span></button>
+      <button class="tbtn edtool" data-tool="pick" title="Pick colour (I), or alt-click"><svg viewBox="0 0 24 24"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg><span class="lbl">Pick</span></button>
+      <button class="tbtn edtool" id="mirrorTool" title="Mirror left / right (M)"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M9 7 4 12l5 5zM15 7l5 5-5 5z"/></svg><span class="lbl">Mirror</span></button>
+      <button class="tbtn edtool" id="undoTool" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg><span class="lbl">Undo</span></button>
+      <button class="tbtn edtool" id="redoTool" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg><span class="lbl">Redo</span></button>
     </nav>
 
     <div id="stageWrap">
@@ -182,6 +205,7 @@
           <div class="pickmeta small"><span id="pickSeed" class="mono"></span><span id="pickSize" class="mono"></span></div>
           <div class="row">
             <button class="btn primary" id="keepBtn" title="Keep (K)">Keep</button>
+            <button class="btn" id="editBtn" title="Open in the editor (4)">Edit</button>
             <label class="field" style="margin:0;flex:1;justify-content:flex-end"><span>PNG scale</span><input type="number" id="pngScale" min="1" max="32" value="1" style="width:64px" /></label>
           </div>
           <div class="exports" id="exports" hidden>
@@ -242,6 +266,7 @@ const DEFAULTS = {
   sprite: { w: 8, h: 8, px: 5, gap: 1, density: 50, core: 30, mirrorX: true, mirrorY: false, cleanup: true, frames: 1 },
   net:    { w: 8, h: 6, d: 5, px: 4, density: 45, core: 20, matched: true, rim: true, holes: false },
   voxel:  { w: 12, h: 12, d: 12, thumb: 120, density: 55, core: 60, smooth: 2, mirrorX: true, mirrorZ: false, cleanup: true },
+  edit: null,
   colour: { palette: 'random', n: 3, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
             custom: '#2b1b2e #6b2d5c #b0306a #f06c9b #ffd0e0 #3a6b8c #9ad1d4' },
 };
@@ -503,7 +528,39 @@ function genVox(seed, p){
   }
   return { kind: 'vox', seed, w, h, d, cells: c, colors, col: { ...col } };
 }
-const voxOf = item => item.kind === 'net' ? (item._vox || (item._vox = netToVox(item))) : item;
+function voxOf(item){
+  if (item.kind === 'vox') return item;
+  if (item._vox) return item._vox;
+  if (item.kind === 'net') return (item._vox = netToVox(item));
+  if (item.kind === 'edit' && item.fold === 'net')
+    return (item._vox = netToVox({ ...item.net, W: item.w, px: item.frames[0], colors: item.colors }));
+  return (item._vox = extrude(item));
+}
+// sprite -> voxels. bulge: thicker away from the outline; slab: one depth; lathe: turned round the middle column
+function extrude(it){
+  const { w, h } = it, f = it.frames[0], D = Math.max(1, it.depth || 2), mode = it.depthMode || 'bulge';
+  if (mode === 'lathe'){
+    const d = w, cells = new Int16Array(w * h * d).fill(-1), c = (w - 1) / 2;
+    for (let y = 0; y < h; y++) for (let Z = 0; Z < d; Z++) for (let X = 0; X < w; X++){
+      const xs = Math.round(c + Math.hypot(X - c, Z - c));
+      if (xs < w) cells[X + w * ((h - 1 - y) + h * Z)] = f[y * w + xs];
+    }
+    return { w, h, d, cells, colors: it.colors };
+  }
+  const dist = new Int16Array(w * h);
+  for (let i = 0; i < w * h; i++) dist[i] = f[i] >= 0 ? 99 : 0;
+  for (let pass = 0; pass < D; pass++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = y * w + x; if (!dist[i]) continue;
+    dist[i] = Math.min(dist[i], 1 + Math.min(x > 0 ? dist[i - 1] : 0, x < w - 1 ? dist[i + 1] : 0, y > 0 ? dist[i - w] : 0, y < h - 1 ? dist[i + w] : 0));
+  }
+  const d = 2 * D - 1, cells = new Int16Array(w * h * d).fill(-1);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = y * w + x; if (f[i] < 0) continue;
+    const t = mode === 'slab' ? D : Math.min(dist[i], D);
+    for (let z = D - t; z <= D - 2 + t; z++) cells[x + w * ((h - 1 - y) + h * z)] = f[i];
+  }
+  return { w, h, d, cells, colors: it.colors };
+}
 
 /* ---------- voxel renderer (orthographic, painter's sort) ---------- */
 const FACES = [
@@ -554,6 +611,7 @@ const voxScale = (V, size) => size / (Math.hypot(V.w, V.h, V.d) * 1.05);
 function makeItem(mode, seed, params){
   if (mode === 'sprite') return genSprite(seed, params);
   if (mode === 'net') return genNet(seed, params);
+  if (mode === 'edit') return editItem(params);
   return genVox(seed, params);
 }
 function rgbaCanvas(w, h, rgba){
@@ -562,7 +620,7 @@ function rgbaCanvas(w, h, rgba){
 }
 function itemCanvases(item, thumb){
   if (item._cv) return item._cv;
-  if (item.kind === 'sprite') item._cv = item.frames.map((_, f) => rgbaCanvas(item.w, item.h, spriteRGBA(item, f)));
+  if (item.kind === 'sprite' || item.kind === 'edit') item._cv = item.frames.map((_, f) => rgbaCanvas(item.w, item.h, spriteRGBA(item, f)));
   else if (item.kind === 'net') item._cv = [rgbaCanvas(item.W, item.H, netRGBA(item))];
   else {
     const cv = document.createElement('canvas'); cv.width = cv.height = thumb;
@@ -590,7 +648,7 @@ function relayout(){
   layout = { cw, ch, cols, rows, ox: Math.floor((stage.width - cols * cw) / 2), oy: Math.floor((stage.height - rows * ch) / 2), dpr };
   $('#countInfo').textContent = cols * rows + ' on screen';
 }
-function regen(){ cache = new Map(); pickIdx = -1; relayout(); drawStage(); }
+function regen(){ if (P.mode === 'edit') { edResize(); return; } cache = new Map(); pickIdx = -1; relayout(); drawStage(); }
 function getItem(i){
   if (!cache.has(i)) cache.set(i, makeItem(P.mode, itemSeed(i), P[P.mode]));
   return cache.get(i);
@@ -655,12 +713,14 @@ function cellAt(e){
   return c < L.cols && rr < L.rows ? rr * L.cols + c : -1;
 }
 stage.addEventListener('mousemove', e => {
+  if (P.mode === 'edit') return;
   const i = cellAt(e); if (i === hoverIdx) return;
   const old = hoverIdx; hoverIdx = i; redrawCell(old); if (old === pickIdx) markRect(pickIdx, '#e8912b');
   drawMarks();
 });
-stage.addEventListener('mouseleave', () => { const old = hoverIdx; hoverIdx = -1; redrawCell(old); drawMarks(); });
+stage.addEventListener('mouseleave', () => { if (P.mode === 'edit') return; const old = hoverIdx; hoverIdx = -1; redrawCell(old); drawMarks(); });
 stage.addEventListener('click', e => {
+  if (P.mode === 'edit') return;
   const i = cellAt(e); if (i < 0) return;
   const old = pickIdx; pickIdx = i; redrawCell(old);
   pick({ mode: P.mode, seed: itemSeed(i), params: { ...P[P.mode] }, colour: { ...P.colour } }, getItem(i));
@@ -676,12 +736,13 @@ function pick(rec, item){
   $('#pickBadge').textContent = rec.mode;
   $('#pickSeed').textContent = '#' + rec.seed;
   const it = picked.item, p = rec.params;
-  $('#pickSize').textContent = rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
+  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : ' ' + it.depthMode) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
   const show = (id, on) => { $(id).hidden = !on; };
-  show('#exBitsy', rec.mode === 'sprite'); show('#exShape', rec.mode === 'sprite'); show('#exRecipe', rec.mode === 'net');
+  const flat = rec.mode === 'sprite' || (rec.mode === 'edit' && it.fold !== 'net'), netty = rec.mode === 'net' || (rec.mode === 'edit' && it.fold === 'net');
+  show('#exBitsy', flat); show('#exShape', flat); show('#exRecipe', netty);
   show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
-  $('#pngScale').value = rec.mode === 'voxel' ? 4 : rec.mode === 'net' ? 1 : 1;
-  view.spin = true;
+  show('#editBtn', rec.mode !== 'voxel' && !rec.live);
+  if (!item || rec.mode !== 'edit') { $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1; view.spin = true; }
   drawPick();
 }
 function withColour(col, fn){ const old = colourOverride; colourOverride = col; try { return fn(); } finally { colourOverride = old; } }
@@ -697,13 +758,14 @@ function drawPick(){
     pctx.drawImage(cv, (W - item.w * k) / 2, (W - item.h * k) / 2, item.w * k, item.h * k);
   } else {
     const V = voxOf(item);
-    if (item.kind === 'net'){
-      // flat net in the corner, folded box in the middle
-      const cv = itemCanvases(item)[0], k = Math.max(1, Math.floor(W * .3 / Math.max(item.W, item.H)));
+    const flat = item.kind !== 'vox';
+    if (flat){
+      // the flat picture in the corner, the 3D one in the middle
+      const cv = itemCanvases(item)[0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
       pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
-      pctx.drawImage(cv, 10, 10, item.W * k, item.H * k); pctx.globalAlpha = 1;
+      pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
-    drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (item.kind === 'net' ? W * .08 : 0), voxScale(V, W * (item.kind === 'net' ? .72 : .9)));
+    drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (flat ? W * .08 : 0), voxScale(V, W * (flat ? .72 : .9)));
   }
 }
 let drag = null;
@@ -737,11 +799,11 @@ function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add(
 const baseName = rec => `hatcher_${rec.mode}_${rec.seed}`;
 function itemPNG(item, rec, scale){
   let cv;
-  if (item.kind === 'sprite'){
+  if (item.kind === 'sprite' || item.kind === 'edit'){
     const cvs = itemCanvases(item); cv = document.createElement('canvas');
     cv.width = item.w * cvs.length * scale; cv.height = item.h * scale;
     const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
-    if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, cv.width, cv.height); }
+    if (!rec.colour.transparent && item.fold !== 'net'){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, cv.width, cv.height); }
     cvs.forEach((f, i) => c.drawImage(f, i * item.w * scale, 0, item.w * scale, item.h * scale));
   } else if (item.kind === 'net'){
     // nets stay transparent outside the cross so boxnet.gd reads them as-is
@@ -843,12 +905,13 @@ $('#exObj').onclick = () => {
 $('#exJson').onclick = () => {
   if (!picked) return;
   const it = picked.item, rec = picked.rec, out = { mode: rec.mode, seed: rec.seed, settings: rec.params, colour: rec.colour, colors: it.colors.map(hex) };
-  if (it.kind === 'sprite'){ out.size = [it.w, it.h]; out.frames = it.frames.map(f => { const rows = []; for (let y = 0; y < it.h; y++) rows.push(Array.from(f.slice(y * it.w, y * it.w + it.w))); return rows; }); }
+  if (it.kind === 'sprite' || it.kind === 'edit'){ out.size = [it.w, it.h]; out.frames = it.frames.map(f => { const rows = []; for (let y = 0; y < it.h; y++) rows.push(Array.from(f.slice(y * it.w, y * it.w + it.w))); return rows; }); }
   else { const V = voxOf(it); out.size = [V.w, V.h, V.d]; out.cells = voxList(V); }
   download(baseName(rec) + '.json', new Blob([JSON.stringify(out)], { type: 'application/json' }));
 };
 
 $('#sheetBtn').onclick = async () => {
+  if (P.mode === 'edit') { $('#exPng').click(); return; }
   const L = layout, cv = document.createElement('canvas');
   const [cw, ch] = cellSize(); cv.width = L.cols * cw; cv.height = L.rows * ch;
   const c = cv.getContext('2d'); paintBg(c, cv.width, cv.height);
@@ -868,7 +931,7 @@ function keepPicked(){
   if (!picked) return;
   const r = picked.rec;
   if (kept.some(k => k.mode === r.mode && k.seed === r.seed && JSON.stringify(k.params) === JSON.stringify(r.params) && JSON.stringify(k.colour) === JSON.stringify(r.colour))) { toast('already kept'); return; }
-  kept.push(JSON.parse(JSON.stringify(r))); saveKept(); renderKept(); toast('kept');
+  const copy = JSON.parse(JSON.stringify(r)); delete copy.live; kept.push(copy); saveKept(); renderKept(); toast('kept');
 }
 function renderKept(){
   const list = $('#keptList'); list.innerHTML = '';
@@ -924,7 +987,9 @@ function scrubify(inp, onChange){
 let regenTimer = 0;
 const regenSoon = () => { clearTimeout(regenTimer); regenTimer = setTimeout(() => { regen(); saveState(); }, P.mode === 'voxel' ? 120 : 0); };
 function buildShape(){
+  if (P.mode === 'edit') { buildEditPanels(); return; }
   const body = $('#shapeBody'); body.innerHTML = ''; const p = P[P.mode];
+  $('#panelShape .panel-head').firstChild.textContent = 'Shape ';
   $('#shapeBadge').textContent = P.mode;
   for (const [key, label, a, b, step] of FIELDS[P.mode]){
     if (a === 'check'){
@@ -987,6 +1052,260 @@ function coloursFromImage(file, done){
 }
 document.querySelectorAll('.panel-head').forEach(h => h.onclick = () => h.parentElement.classList.toggle('collapsed'));
 
+/* ---------- editor ---------- */
+const ed = { tool: 'pencil', cur: 0, down: null, last: null, before: '', undo: [], redo: [], hover: null, lay: null };
+function blankEdit(){
+  const colors = makeColors(mulberry32(P.seed), 3);
+  return { id: P.seed, w: 8, h: 8, frames: [Array(64).fill(-1)], colors: colors.map(hex), fold: 'sprite', net: null, depthMode: 'bulge', depth: 2, mirror: true, frame: 0 };
+}
+function editItem(e){
+  return { kind: 'edit', seed: e.id, w: e.w, h: e.h, frames: e.frames.map(f => Int16Array.from(f)), colors: e.colors.map(unhex),
+           fold: e.fold, net: e.net, depthMode: e.depthMode, depth: e.depth, col: { outline: 'none', shade: false } };
+}
+function openEditor(){
+  if (!picked) return;
+  const { item, rec } = picked; let e;
+  if (item.kind === 'edit') e = JSON.parse(JSON.stringify(rec.params));
+  else if (item.kind === 'net'){
+    e = { w: item.W, h: item.H, frames: [Array.from(item.px, v => v < 0 ? -1 : v)], colors: item.colors.map(hex), fold: 'net', net: { w: item.w, h: item.h, d: item.d }, mirror: true };
+  } else if (item.kind === 'sprite'){
+    // outline and shadow become real pixels, so every colour on screen is a swatch
+    const keys = [];
+    const frames = item.frames.map((_, f) => {
+      const rgba = spriteRGBA(item, f), out = [];
+      for (let i = 0; i < item.w * item.h; i++){
+        if (!rgba[i * 4 + 3]) { out.push(-1); continue; }
+        const k = hex([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]]);
+        let ci = keys.indexOf(k); if (ci < 0) { keys.push(k); ci = keys.length - 1; }
+        out.push(ci);
+      }
+      return out;
+    });
+    e = { w: item.w, h: item.h, frames, colors: keys.length ? keys : ['#e6e6e6'], fold: 'sprite', net: null, mirror: rec.params.mirrorX !== false };
+  } else return;
+  P.edit = { depthMode: 'bulge', depth: 2, ...e, frame: 0, id: rec.seed };
+  ed.undo = []; ed.redo = []; ed.cur = 0;
+  setMode('edit');
+}
+$('#editBtn').onclick = openEditor;
+
+function edRefresh(save = true){
+  const rec = { mode: 'edit', seed: P.edit.id, params: P.edit, colour: { ...P.colour }, live: true };
+  pick(rec, editItem(P.edit));
+  drawEditor();
+  if (save) saveState();
+}
+function edResize(){
+  const r = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  stage.width = Math.round(r.width * dpr); stage.height = Math.round(r.height * dpr);
+  $('#countInfo').textContent = P.edit.w + '×' + P.edit.h;
+  $('#status').textContent = 'editing';
+  drawEditor();
+}
+function edFaces(){
+  const e = P.edit; if (e.fold !== 'net') return null;
+  const { w, h, d } = e.net;
+  return [[d, 0, w, d], [0, d, d, h], [d, d, w, h], [d + w, d, d, h], [2 * d + w, d, w, h], [d, d + h, w, d]];
+}
+function edFaceAt(x, y){ const F = edFaces(); return F ? F.find(([fx, fy, fw, fh]) => x >= fx && y >= fy && x < fx + fw && y < fy + fh) || null : [0, 0, P.edit.w, P.edit.h]; }
+function edMirror(x, y){ const f = edFaceAt(x, y); return f ? f[0] + f[2] - 1 - (x - f[0]) : null; }
+function drawEditor(){
+  if (P.mode !== 'edit') return;
+  const e = P.edit, f = e.frames[e.frame] || e.frames[0];
+  const k = Math.max(1, Math.floor(Math.min(stage.width * .92 / e.w, stage.height * .92 / e.h)));
+  const L = ed.lay = { k, ox: Math.floor((stage.width - e.w * k) / 2), oy: Math.floor((stage.height - e.h * k) / 2) };
+  sctx.fillStyle = '#1d1d1d'; sctx.fillRect(0, 0, stage.width, stage.height);
+  const F = edFaces();
+  const back = (x, y, w, h) => {
+    if (P.colour.transparent || F) checker(sctx, L.ox + x * k, L.oy + y * k, w * k, h * k);
+    else { sctx.fillStyle = P.colour.bg; sctx.fillRect(L.ox + x * k, L.oy + y * k, w * k, h * k); }
+  };
+  if (F) F.forEach(r => back(...r)); else back(0, 0, e.w, e.h);
+  if (e.frames.length > 1){
+    // the other frame shows faintly underneath
+    const o = e.frames[1 - e.frame]; sctx.globalAlpha = .2;
+    o.forEach((v, i) => { if (v >= 0 && f[i] < 0){ sctx.fillStyle = e.colors[v]; sctx.fillRect(L.ox + (i % e.w) * k, L.oy + Math.floor(i / e.w) * k, k, k); } });
+    sctx.globalAlpha = 1;
+  }
+  f.forEach((v, i) => { if (v >= 0){ sctx.fillStyle = e.colors[v]; sctx.fillRect(L.ox + (i % e.w) * k, L.oy + Math.floor(i / e.w) * k, k, k); } });
+  if (k >= 6){
+    sctx.strokeStyle = 'rgba(255,255,255,.07)'; sctx.lineWidth = 1; sctx.beginPath();
+    for (let x = 0; x <= e.w; x++){ sctx.moveTo(L.ox + x * k + .5, L.oy); sctx.lineTo(L.ox + x * k + .5, L.oy + e.h * k); }
+    for (let y = 0; y <= e.h; y++){ sctx.moveTo(L.ox, L.oy + y * k + .5); sctx.lineTo(L.ox + e.w * k, L.oy + y * k + .5); }
+    sctx.stroke();
+  }
+  const faces = F || [[0, 0, e.w, e.h]];
+  if (F){ sctx.strokeStyle = 'rgba(91,136,204,.7)'; sctx.lineWidth = 1.5; F.forEach(([x, y, w, h]) => sctx.strokeRect(L.ox + x * k, L.oy + y * k, w * k, h * k)); }
+  if (e.mirror){
+    sctx.strokeStyle = 'rgba(232,145,43,.55)'; sctx.lineWidth = 1.5; sctx.setLineDash([4, 4]); sctx.beginPath();
+    faces.forEach(([x, y, w, h]) => { const mx = L.ox + (x + w / 2) * k; sctx.moveTo(mx, L.oy + y * k); sctx.lineTo(mx, L.oy + (y + h) * k); });
+    sctx.stroke(); sctx.setLineDash([]);
+  }
+  if (ed.hover){
+    sctx.strokeStyle = '#e8912b'; sctx.lineWidth = 2;
+    sctx.strokeRect(L.ox + ed.hover[0] * k + 1, L.oy + ed.hover[1] * k + 1, k - 2, k - 2);
+  }
+}
+function edCell(ev){
+  const r = stage.getBoundingClientRect(), dpr = stage.width / r.width, L = ed.lay; if (!L) return null;
+  const x = Math.floor(((ev.clientX - r.left) * dpr - L.ox) / L.k), y = Math.floor(((ev.clientY - r.top) * dpr - L.oy) / L.k);
+  if (x < 0 || y < 0 || x >= P.edit.w || y >= P.edit.h || !edFaceAt(x, y)) return null;
+  return [x, y];
+}
+const edSnapshot = () => JSON.stringify({ w: P.edit.w, h: P.edit.h, frames: P.edit.frames, colors: P.edit.colors, frame: P.edit.frame });
+function edRestore(json){ Object.assign(P.edit, JSON.parse(json)); if (P.edit.frame >= P.edit.frames.length) P.edit.frame = 0; buildEditPanels(); edResize(); edRefresh(); }
+function edPush(){ ed.undo.push(edSnapshot()); if (ed.undo.length > 200) ed.undo.shift(); ed.redo = []; }
+function edUndo(){ if (!ed.undo.length) return; ed.redo.push(edSnapshot()); edRestore(ed.undo.pop()); }
+function edRedo(){ if (!ed.redo.length) return; ed.undo.push(edSnapshot()); edRestore(ed.redo.pop()); }
+function edTool(t){ ed.tool = t; document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t)); }
+function edApply(x, y, tool){
+  const e = P.edit, f = e.frames[e.frame], W = e.w;
+  if (tool === 'pick'){ const v = f[y * W + x]; if (v >= 0){ ed.cur = v; buildEditColour(); } edTool('pencil'); return; }
+  if (tool === 'fill'){
+    const target = f[y * W + x], v = ed.cur; if (target === v) return;
+    const flood = (sx, sy) => {
+      const face = edFaceAt(sx, sy), st = [[sx, sy]];
+      while (st.length){
+        const [cx, cy] = st.pop(); const i = cy * W + cx;
+        if (cx < face[0] || cy < face[1] || cx >= face[0] + face[2] || cy >= face[1] + face[3] || f[i] !== target) continue;
+        f[i] = v; st.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+      }
+    };
+    flood(x, y);
+    if (e.mirror){ const mx = edMirror(x, y); if (mx !== null && f[y * W + mx] === target) flood(mx, y); }
+    return;
+  }
+  const v = tool === 'erase' ? -1 : ed.cur;
+  f[y * W + x] = v;
+  if (e.mirror){ const mx = edMirror(x, y); if (mx !== null) f[y * W + mx] = v; }
+}
+stage.addEventListener('pointerdown', ev => {
+  if (P.mode !== 'edit') return;
+  const c = edCell(ev); if (!c) return;
+  ev.preventDefault(); stage.setPointerCapture(ev.pointerId);
+  const tool = ev.button === 2 ? 'erase' : ev.altKey ? 'pick' : ed.tool;
+  ed.before = edSnapshot(); ed.down = tool; ed.last = c;
+  edApply(c[0], c[1], tool);
+  if (tool === 'fill' || tool === 'pick') ed.down = null;
+  edRefresh(false);
+});
+stage.addEventListener('pointermove', ev => {
+  if (P.mode !== 'edit') return;
+  const c = edCell(ev);
+  if (ed.down && c && ed.last){
+    // fill in the cells between two mouse samples so fast strokes stay solid
+    let [x0, y0] = ed.last; const [x1, y1] = c, dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;){ if (edFaceAt(x0, y0)) edApply(x0, y0, ed.down); if (x0 === x1 && y0 === y1) break; const e2 = 2 * err; if (e2 >= dy){ err += dy; x0 += sx; } if (e2 <= dx){ err += dx; y0 += sy; } }
+    ed.last = c; ed.hover = c; edRefresh(false); return;
+  }
+  if (String(c) !== String(ed.hover)){ ed.hover = c; drawEditor(); }
+});
+const edEnd = () => {
+  if (P.mode !== 'edit' || !ed.before) return;
+  if (edSnapshot() !== ed.before){ ed.undo.push(ed.before); if (ed.undo.length > 200) ed.undo.shift(); ed.redo = []; saveState(); }
+  ed.before = ''; ed.down = null; ed.last = null;
+};
+stage.addEventListener('pointerup', edEnd);
+stage.addEventListener('pointercancel', edEnd);
+stage.addEventListener('pointerleave', () => { if (P.mode === 'edit' && !ed.down && ed.hover){ ed.hover = null; drawEditor(); } });
+stage.addEventListener('contextmenu', ev => { if (P.mode === 'edit') ev.preventDefault(); });
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => edTool(b.dataset.tool));
+$('#mirrorTool').onclick = () => { P.edit.mirror = !P.edit.mirror; $('#mirrorTool').classList.toggle('on', P.edit.mirror); drawEditor(); saveState(); };
+$('#undoTool').onclick = edUndo;
+$('#redoTool').onclick = edRedo;
+
+function edCanvasSize(nw, nh){
+  const e = P.edit; if (nw === e.w && nh === e.h) return;
+  edPush();
+  const ox = Math.floor((nw - e.w) / 2), oy = nh - e.h;            // keep it centred and standing on the bottom row
+  e.frames = e.frames.map(f => {
+    const out = Array(nw * nh).fill(-1);
+    for (let y = 0; y < e.h; y++) for (let x = 0; x < e.w; x++){ const X = x + ox, Y = y + oy; if (X >= 0 && Y >= 0 && X < nw && Y < nh) out[Y * nw + X] = f[y * e.w + x]; }
+    return out;
+  });
+  e.w = nw; e.h = nh; edResize(); edRefresh();
+}
+function seg(options, current, onPick){
+  const s = document.createElement('div'); s.className = 'seg';
+  for (const [val, label] of options){
+    const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', val === current);
+    b.onclick = () => onPick(val); s.appendChild(b);
+  }
+  return s;
+}
+function buildEditPanels(){
+  const e = P.edit, body = $('#shapeBody'); body.innerHTML = '';
+  $('#panelShape .panel-head').firstChild.textContent = 'Canvas ';
+  $('#shapeBadge').textContent = e.fold === 'net' ? 'box net' : 'sprite';
+  $('#mirrorTool').classList.toggle('on', !!e.mirror); edTool(ed.tool);
+  const field = (label, val, a, b, set) => {
+    const f = document.createElement('label'); f.className = 'field';
+    f.innerHTML = `<span>${label}</span><input type="number" min="${a}" max="${b}" value="${val}">`;
+    const inp = f.querySelector('input'); scrubify(inp, () => set(Math.max(a, Math.min(b, Math.round(+inp.value || a)))));
+    body.appendChild(f);
+  };
+  const label = t => { const p = document.createElement('p'); p.className = 'hintline'; p.style.margin = '10px 0 5px'; p.textContent = t; body.appendChild(p); };
+  if (e.fold !== 'net'){
+    field('Width', e.w, 1, 32, v => edCanvasSize(v, e.h));
+    field('Height', e.h, 1, 32, v => edCanvasSize(e.w, v));
+  }
+  label('Frames');
+  const fr = e.frames.length > 1 ? [[0, 'Frame 1'], [1, 'Frame 2']] : [[0, 'Frame 1']];
+  body.appendChild(seg(fr, e.frame, v => { e.frame = v; buildEditPanels(); drawEditor(); }));
+  const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
+  if (e.fold !== 'net'){
+    const b = document.createElement('button'); b.className = 'btn';
+    b.textContent = e.frames.length > 1 ? 'Drop frame 2' : 'Add frame 2';
+    b.onclick = () => { edPush(); if (e.frames.length > 1){ e.frames.length = 1; e.frame = 0; } else { e.frames.push(e.frames[0].slice()); e.frame = 1; } buildEditPanels(); edRefresh(); };
+    row.appendChild(b);
+  }
+  const clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear frame';
+  clr.onclick = () => { edPush(); e.frames[e.frame].fill(-1); edRefresh(); };
+  row.appendChild(clr); body.appendChild(row);
+  if (e.fold === 'net'){
+    label(`Folds into a ${e.net.w}×${e.net.h}×${e.net.d} box, the same way boxnet.gd does. Paint inside the blue faces.`);
+  } else {
+    label('3D');
+    body.appendChild(seg([['bulge', 'Bulge'], ['slab', 'Slab'], ['lathe', 'Lathe']], e.depthMode, v => { e.depthMode = v; buildEditPanels(); edRefresh(); }));
+    if (e.depthMode !== 'lathe') field('Depth', e.depth, 1, 12, v => { e.depth = v; edRefresh(); });
+    label(e.depthMode === 'lathe' ? 'Turned round the middle column, like a candle or a pot. The right half sets the profile.'
+      : e.depthMode === 'slab' ? 'The same thickness everywhere, a cut-out.' : 'Thicker the further a pixel is from the outline.');
+  }
+  buildEditColour();
+}
+function buildEditColour(){
+  const e = P.edit, body = $('#colourBody'); body.innerHTML = '';
+  ed.cur = Math.min(ed.cur, e.colors.length - 1);
+  const sw = document.createElement('div'); sw.className = 'swatches';
+  e.colors.forEach((c, i) => {
+    const b = document.createElement('button'); b.className = 'swatch' + (i === ed.cur ? ' on' : ''); b.style.background = c; b.title = c;
+    b.onclick = () => { ed.cur = i; if (ed.tool === 'erase' || ed.tool === 'pick') edTool('pencil'); buildEditColour(); };
+    sw.appendChild(b);
+  });
+  const add = document.createElement('button'); add.className = 'swatch add'; add.textContent = '+'; add.title = 'Add a colour';
+  add.onclick = () => { edPush(); e.colors.push(hex(mul(unhex(e.colors[ed.cur] || '#888888'), 1.25))); ed.cur = e.colors.length - 1; buildEditColour(); saveState(); };
+  sw.appendChild(add); body.appendChild(sw);
+  const f = document.createElement('label'); f.className = 'field';
+  f.innerHTML = `<span>This colour</span><input type="color" value="${e.colors[ed.cur]}">`;
+  const ci = f.querySelector('input');
+  ci.onfocus = () => edPush();
+  ci.oninput = () => { e.colors[ed.cur] = ci.value; sw.children[ed.cur].style.background = ci.value; edRefresh(false); };
+  ci.onchange = () => saveState();
+  body.appendChild(f);
+  const bg = document.createElement('label'); bg.className = 'field';
+  bg.innerHTML = `<span>Background</span><input type="color" value="${P.colour.bg}">`;
+  bg.lastChild.oninput = () => { P.colour.bg = bg.lastChild.value; edRefresh(); };
+  body.appendChild(bg);
+  const tr = document.createElement('label'); tr.className = 'check';
+  tr.innerHTML = `<input type="checkbox"${P.colour.transparent ? ' checked' : ''}> Transparent background`;
+  tr.firstChild.onchange = ev => { P.colour.transparent = ev.target.checked; edRefresh(); };
+  body.appendChild(tr);
+  const p = document.createElement('p'); p.className = 'hintline';
+  p.textContent = 'Changing a swatch recolours every pixel that uses it. Right-click erases, alt-click picks a colour.';
+  body.appendChild(p);
+}
+
 /* ---------- mode, seed, keys ---------- */
 const seedHistory = [];
 function setSeed(s, remember = true){
@@ -994,10 +1313,13 @@ function setSeed(s, remember = true){
   P.seed = s >>> 0; $('#seedIn').value = P.seed; regen(); saveState();
 }
 function setMode(m){
+  if (m === 'edit' && !P.edit) P.edit = blankEdit();
   P.mode = m;
+  document.body.classList.toggle('editing', m === 'edit');
   document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD' }[m];
+  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', edit: 'EDIT' }[m];
   buildShape(); regen(); saveState();
+  if (m === 'edit') edRefresh(false);
 }
 document.querySelectorAll('.modebtn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 $('#shuffleBtn').onclick = () => setSeed((Math.random() * 1e9) >>> 0);
@@ -1007,20 +1329,31 @@ $('#hintX').onclick = () => $('#hint').classList.add('hide');
 $('#helpBtn').onclick = () => $('#help').classList.toggle('show');
 $('#help').onclick = e => { if (e.target.id === 'help') $('#help').classList.remove('show'); };
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.matches('input, textarea, select')) return;
   const k = e.key.toLowerCase();
+  if (P.mode === 'edit'){
+    if ((e.ctrlKey || e.metaKey) && k === 'z'){ e.preventDefault(); e.shiftKey ? edRedo() : edUndo(); return; }
+    if ((e.ctrlKey || e.metaKey) && k === 'y'){ e.preventDefault(); edRedo(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tools = { b: 'pencil', e: 'erase', g: 'fill', i: 'pick' };
+    if (tools[k]) { edTool(tools[k]); return; }
+    if (k === 'm') { $('#mirrorTool').click(); return; }
+    if (k === 'z') { edUndo(); return; }
+    if (k === 'r') return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (k === 'r') $('#shuffleBtn').click();
   else if (k === 'z') $('#backBtn').click();
   else if (k === 'k') keepPicked();
   else if (k === 'e') $('#sheetBtn').click();
   else if (k === 'h') $('#helpBtn').click();
   else if (k === 'escape') $('#help').classList.remove('show');
-  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel');
+  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '4') setMode('edit');
 });
 function saveState(){ try { localStorage.setItem('hatcher.state', JSON.stringify(P)); } catch (e) {} }
 try {
   const s = JSON.parse(localStorage.getItem('hatcher.state') || 'null');
-  if (s) for (const k of Object.keys(DEFAULTS)) if (k in s) P[k] = typeof DEFAULTS[k] === 'object' ? { ...DEFAULTS[k], ...s[k] } : s[k];
+  if (s) for (const k of Object.keys(DEFAULTS)) if (k in s) P[k] = DEFAULTS[k] && typeof DEFAULTS[k] === 'object' ? { ...DEFAULTS[k], ...s[k] } : s[k];
 } catch (e) {}
 
 $('#help').innerHTML = `
@@ -1032,13 +1365,17 @@ $('#help').innerHTML = `
   <p>Six faces laid out as an unfolded box, the same layout the dungeon's boxnet.gd folds. Save the PNG at scale 1, copy the recipe part, and it is a prop.</p>
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
+  <h3>Edit</h3>
+  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Swatches recolour everything that uses them. Right-click erases, alt-click picks a colour, and the second frame shows faintly underneath the first.</p>
   <h3>Keys</h3>
   <table>
     <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
     <tr><td><span class="kbd">Z</span></td><td>previous seed</td></tr>
     <tr><td><span class="kbd">K</span></td><td>keep the pick</td></tr>
     <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
-    <tr><td><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span></td><td>sprites, nets, voxels</td></tr>
+    <tr><td><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span></td><td>sprites, nets, voxels, edit</td></tr>
+    <tr><td><span class="kbd">B</span> <span class="kbd">E</span> <span class="kbd">G</span> <span class="kbd">I</span> <span class="kbd">M</span></td><td>in edit: pencil, eraser, fill, pick colour, mirror</td></tr>
+    <tr><td><span class="kbd">Ctrl+Z</span></td><td>in edit: undo (Ctrl+Shift+Z redoes)</td></tr>
     <tr><td>drag / double-click</td><td>turn the pick / stop it spinning</td></tr>
   </table>
   <h3>Where it comes from</h3>
@@ -1046,7 +1383,7 @@ $('#help').innerHTML = `
 
 $('#seedIn').value = P.seed;
 renderKept();
-window.addEventListener('resize', () => { relayout(); drawStage(); });
+window.addEventListener('resize', () => { if (P.mode === 'edit') edResize(); else { relayout(); drawStage(); } });
 setMode(P.mode);
 </script>
 </body>
