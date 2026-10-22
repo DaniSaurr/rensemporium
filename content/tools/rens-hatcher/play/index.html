@@ -209,7 +209,7 @@
       <div id="modeBadge">—</div>
       <div id="toast"></div>
       <div id="hint"><span class="x" id="hintX">✕</span>
-        Click anything to pick it. <span class="kbd">K</span> keeps the pick. <span class="kbd">R</span> rolls a new seed and <span class="kbd">Z</span> goes back.
+        Click anything to pick it. <span class="kbd">K</span> saves the pick. <span class="kbd">R</span> rolls a new seed and <span class="kbd">Z</span> goes back.
         The grid keeps its seeds while you change settings, so the same creatures stay in place as they change. Drag sideways on a number to scrub it.</div>
       <div id="help"></div>
     </div>
@@ -230,7 +230,8 @@
           <div id="pickWrap"><canvas id="pickCv" width="600" height="600"></canvas><div id="pickEmpty">click something on the left</div></div>
           <div class="pickmeta small"><span id="pickSeed" class="mono"></span><span id="pickSize" class="mono"></span></div>
           <div class="row">
-            <button class="btn primary" id="keepBtn" title="Keep (K)">Keep</button>
+            <button class="btn primary" id="keepBtn" title="Save (K)">Save</button>
+            <label class="check" style="margin:0 4px" title="Turn the 3D view by itself (or double-click it)"><input type="checkbox" id="spinChk" checked> Spin</label>
             <button class="btn" id="editBtn" title="Open in the editor (4)">Edit</button>
             <label class="field" style="margin:0;flex:1;justify-content:flex-end"><span>PNG scale</span><input type="number" id="pngScale" min="1" max="32" value="1" style="width:64px" /></label>
           </div>
@@ -257,15 +258,15 @@
       </section>
 
       <section class="panel" id="panelKept">
-        <div class="panel-head">Kept <span class="badge" id="keptBadge">0</span></div>
+        <div class="panel-head">Saved <span class="badge" id="keptBadge">0</span></div>
         <div class="panel-body">
           <div id="keptList"></div>
           <div class="row">
-            <button class="btn" id="keptSheet" title="Kept items of this mode as one sheet">Sheet PNG</button>
-            <button class="btn" id="keptJson" title="Seeds and settings for everything kept">Seeds .json</button>
+            <button class="btn" id="keptSheet" title="Saved pieces of this mode as one sheet">Sheet PNG</button>
+            <button class="btn" id="keptJson" title="Seeds and settings for everything saved">Seeds .json</button>
             <button class="btn" id="keptClear">Clear</button>
           </div>
-          <p class="hintline">Click a kept one to pick it again. It brings its own settings with it.</p>
+          <p class="hintline">Click a saved one to pick it again. It brings its own settings with it.</p>
         </div>
       </section>
 
@@ -774,7 +775,7 @@ function pick(rec, item){
   show('#exBitsy', flat); show('#exShape', flat); show('#exRecipe', netty);
   show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
   show('#editBtn', !rec.live);
-  if (!item || rec.mode !== 'edit') { $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1; view.spin = true; }
+  if (!item || rec.mode !== 'edit') $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1;
   drawPick();
 }
 function withColour(col, fn){ const old = colourOverride; colourOverride = col; try { return fn(); } finally { colourOverride = old; } }
@@ -807,7 +808,9 @@ function drawPick(){
   }
 }
 let drag = null;
-pickCv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: view.yaw, pitch: view.pitch }; view.spin = false; pickCv.setPointerCapture(e.pointerId); });
+function setSpin(on){ view.spin = on; $('#spinChk').checked = on; }
+$('#spinChk').onchange = e => setSpin(e.target.checked);
+pickCv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: view.yaw, pitch: view.pitch }; setSpin(false); pickCv.setPointerCapture(e.pointerId); });
 pickCv.addEventListener('pointermove', e => {
   if (!drag || !picked || picked.item.kind === 'sprite') return;
   view.yaw = drag.yaw + (e.clientX - drag.x) * .012;
@@ -815,7 +818,7 @@ pickCv.addEventListener('pointermove', e => {
   drawPick();
 });
 pickCv.addEventListener('pointerup', () => { drag = null; });
-pickCv.addEventListener('dblclick', () => { view.spin = !view.spin; });
+pickCv.addEventListener('dblclick', () => setSpin(!view.spin));
 
 setInterval(() => {
   if (picked && picked.item.kind !== 'sprite' && view.spin && !drag){ view.yaw += .03; drawPick(); }
@@ -969,8 +972,8 @@ const saveKept = () => { try { localStorage.setItem('hatcher.kept', JSON.stringi
 function keepPicked(){
   if (!picked) return;
   const r = picked.rec;
-  if (kept.some(k => k.mode === r.mode && k.seed === r.seed && JSON.stringify(k.params) === JSON.stringify(r.params) && JSON.stringify(k.colour) === JSON.stringify(r.colour))) { toast('already kept'); return; }
-  const copy = JSON.parse(JSON.stringify(r)); delete copy.live; kept.push(copy); saveKept(); renderKept(); toast('kept');
+  if (kept.some(k => k.mode === r.mode && k.seed === r.seed && JSON.stringify(k.params) === JSON.stringify(r.params) && JSON.stringify(k.colour) === JSON.stringify(r.colour))) { toast('already saved'); return; }
+  const copy = JSON.parse(JSON.stringify(r)); delete copy.live; kept.push(copy); saveKept(); renderKept(); toast('saved');
 }
 function renderKept(){
   const list = $('#keptList'); list.innerHTML = '';
@@ -988,17 +991,17 @@ function renderKept(){
     rm.onclick = e => { e.stopPropagation(); kept.splice(i, 1); if (keptOn === i) keptOn = -1; saveKept(); renderKept(); };
     el.appendChild(rm);
     // while editing, a kept one goes straight onto the canvas, so Picked always shows what is being edited
-    el.onclick = () => { keptOn = i; pick(rec); if (P.mode === 'edit'){ openEditor(); toast('opened kept piece. Ctrl+Z goes back'); } renderKept(); };
+    el.onclick = () => { keptOn = i; pick(rec); if (P.mode === 'edit'){ openEditor(); toast('opened saved piece. Ctrl+Z goes back'); } renderKept(); };
     list.appendChild(el);
   });
 }
 $('#keepBtn').onclick = keepPicked;
-$('#keptClear').onclick = () => { if (kept.length && confirm('Forget everything kept?')) { kept = []; keptOn = -1; saveKept(); renderKept(); } };
-$('#keptJson').onclick = () => download('hatcher_kept.json', new Blob([JSON.stringify(kept, null, 1)], { type: 'application/json' }));
+$('#keptClear').onclick = () => { if (kept.length && confirm('Forget everything saved?')) { kept = []; keptOn = -1; saveKept(); renderKept(); } };
+$('#keptJson').onclick = () => download('hatcher_saved.json', new Blob([JSON.stringify(kept, null, 1)], { type: 'application/json' }));
 // one sheet per mode, every cell the size of the largest; sprites at 1px so Godot can slice them
 $('#keptSheet').onclick = async () => {
   const recs = kept.filter(k => k.mode === P.mode);
-  if (!recs.length){ toast('nothing kept in this mode'); return; }
+  if (!recs.length){ toast('nothing saved in this mode'); return; }
   const items = recs.map(r => withColour(r.colour, () => makeItem(r.mode, r.seed, r.params)));
   const scale = Math.max(1, +$('#pngScale').value || 1);
   const imgs = items.map((it, i) => itemPNG(it, recs[i], scale));
@@ -1006,7 +1009,7 @@ $('#keptSheet').onclick = async () => {
   const cv = document.createElement('canvas'); cv.width = cw * cols; cv.height = ch * Math.ceil(imgs.length / cols);
   const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
   imgs.forEach((im, i) => c.drawImage(im, (i % cols) * cw + (cw - im.width) / 2 | 0, Math.floor(i / cols) * ch + (ch - im.height) | 0));
-  download(`hatcher_${P.mode}_kept.png`, await canvasBlob(cv));
+  download(`hatcher_${P.mode}_saved.png`, await canvasBlob(cv));
 };
 
 /* ---------- panels ---------- */
@@ -1692,7 +1695,7 @@ try {
 
 $('#help').innerHTML = `
   <h2>Ren's Hatcher</h2>
-  <p>Every square on the left grows from its own seed. Change a setting and the same seeds grow again, so you can watch one creature get taller or lose its colours. Pick the good ones and keep them. Kept ones remember their settings and stay in this browser.</p>
+  <p>Every square on the left grows from its own seed. Change a setting and the same seeds grow again, so you can watch one creature get taller or lose its colours. Pick the good ones and save them. Saved ones remember their settings and stay in this browser.</p>
   <h3>Sprites</h3>
   <p>Half of each sprite is filled at random and then mirrored. Pull to middle makes the middle fill more often than the edges, which gives bodies instead of dust. Two frames makes the bottom rows step outward and back, a walk cycle of sorts. The Bitsy button crops to 8×8 and writes both frames.</p>
   <h3>Box nets</h3>
@@ -1705,7 +1708,7 @@ $('#help').innerHTML = `
   <table>
     <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
     <tr><td><span class="kbd">Z</span></td><td>previous seed</td></tr>
-    <tr><td><span class="kbd">K</span></td><td>keep the pick</td></tr>
+    <tr><td><span class="kbd">K</span></td><td>save the pick</td></tr>
     <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
     <tr><td><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span></td><td>sprites, nets, voxels, edit</td></tr>
     <tr><td><span class="kbd">B</span> <span class="kbd">E</span> <span class="kbd">G</span> <span class="kbd">I</span> <span class="kbd">M</span></td><td>in edit: pencil, eraser, fill, pick colour, mirror</td></tr>
