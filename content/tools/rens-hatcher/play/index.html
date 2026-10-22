@@ -532,6 +532,12 @@ function voxOf(item){
   if (item.kind === 'vox') return item;
   if (item._vox) return item._vox;
   if (item.kind === 'net') return (item._vox = netToVox(item));
+  if (item.kind === 'edit' && item.fold === 'voxel'){
+    // each frame is one layer, front to back, drawn as seen from the front
+    const { w, h } = item, d = item.frames.length, cells = new Int16Array(w * h * d).fill(-1);
+    item.frames.forEach((f, z) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cells[x + w * ((h - 1 - y) + h * z)] = f[y * w + x]; });
+    return (item._vox = { w, h, d, cells, colors: item.colors });
+  }
   if (item.kind === 'edit' && item.fold === 'net')
     return (item._vox = netToVox({ ...item.net, W: item.w, px: item.frames[0], colors: item.colors }));
   return (item._vox = extrude(item));
@@ -736,12 +742,12 @@ function pick(rec, item){
   $('#pickBadge').textContent = rec.mode;
   $('#pickSeed').textContent = '#' + rec.seed;
   const it = picked.item, p = rec.params;
-  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : ' ' + it.depthMode) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
+  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + it.depthMode) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
   const show = (id, on) => { $(id).hidden = !on; };
-  const flat = rec.mode === 'sprite' || (rec.mode === 'edit' && it.fold !== 'net'), netty = rec.mode === 'net' || (rec.mode === 'edit' && it.fold === 'net');
+  const flat = rec.mode === 'sprite' || (rec.mode === 'edit' && it.fold === 'sprite'), netty = rec.mode === 'net' || (rec.mode === 'edit' && it.fold === 'net');
   show('#exBitsy', flat); show('#exShape', flat); show('#exRecipe', netty);
   show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
-  show('#editBtn', rec.mode !== 'voxel' && !rec.live);
+  show('#editBtn', !rec.live);
   if (!item || rec.mode !== 'edit') { $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1; view.spin = true; }
   drawPick();
 }
@@ -758,7 +764,7 @@ function drawPick(){
     pctx.drawImage(cv, (W - item.w * k) / 2, (W - item.h * k) / 2, item.w * k, item.h * k);
   } else {
     const V = voxOf(item);
-    const flat = item.kind !== 'vox';
+    const flat = item.kind !== 'vox' && item.fold !== 'voxel';
     if (flat){
       // the flat picture in the corner, the 3D one in the middle
       const cv = itemCanvases(item)[0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
@@ -799,7 +805,7 @@ function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add(
 const baseName = rec => `hatcher_${rec.mode}_${rec.seed}`;
 function itemPNG(item, rec, scale){
   let cv;
-  if (item.kind === 'sprite' || item.kind === 'edit'){
+  if (item.kind === 'sprite' || (item.kind === 'edit' && item.fold !== 'voxel')){
     const cvs = itemCanvases(item); cv = document.createElement('canvas');
     cv.width = item.w * cvs.length * scale; cv.height = item.h * scale;
     const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
@@ -814,7 +820,8 @@ function itemPNG(item, rec, scale){
     cv = document.createElement('canvas'); cv.width = cv.height = 128 * scale;
     const c = cv.getContext('2d');
     if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, cv.width, cv.height); }
-    drawVox(c, item, view.yaw, view.pitch, cv.width / 2, cv.height / 2, voxScale(item, cv.width));
+    const V = voxOf(item);
+    drawVox(c, V, view.yaw, view.pitch, cv.width / 2, cv.height / 2, voxScale(V, cv.width));
   }
   return cv;
 }
@@ -905,7 +912,7 @@ $('#exObj').onclick = () => {
 $('#exJson').onclick = () => {
   if (!picked) return;
   const it = picked.item, rec = picked.rec, out = { mode: rec.mode, seed: rec.seed, settings: rec.params, colour: rec.colour, colors: it.colors.map(hex) };
-  if (it.kind === 'sprite' || it.kind === 'edit'){ out.size = [it.w, it.h]; out.frames = it.frames.map(f => { const rows = []; for (let y = 0; y < it.h; y++) rows.push(Array.from(f.slice(y * it.w, y * it.w + it.w))); return rows; }); }
+  if (it.kind === 'sprite' || (it.kind === 'edit' && it.fold !== 'voxel')){ out.size = [it.w, it.h]; out.frames = it.frames.map(f => { const rows = []; for (let y = 0; y < it.h; y++) rows.push(Array.from(f.slice(y * it.w, y * it.w + it.w))); return rows; }); }
   else { const V = voxOf(it); out.size = [V.w, V.h, V.d]; out.cells = voxList(V); }
   download(baseName(rec) + '.json', new Blob([JSON.stringify(out)], { type: 'application/json' }));
 };
@@ -942,7 +949,7 @@ function renderKept(){
     const cv = document.createElement('canvas'); cv.width = cv.height = 64;
     const c = cv.getContext('2d');
     if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, 64, 64); }
-    if (item.kind === 'vox') drawVox(c, item, Math.PI / 4, -0.62, 32, 32, voxScale(item, 64));
+    if (item.kind === 'vox' || item.fold === 'voxel'){ const V = voxOf(item); drawVox(c, V, Math.PI / 4, -0.62, 32, 32, voxScale(V, 64)); }
     else { const src = itemCanvases(item)[0], k = Math.max(1, Math.floor(56 / Math.max(src.width, src.height))); c.imageSmoothingEnabled = false; c.drawImage(src, (64 - src.width * k) / 2, (64 - src.height * k) / 2, src.width * k, src.height * k); }
     el.appendChild(cv);
     const rm = document.createElement('button'); rm.className = 'rm'; rm.textContent = '✕'; rm.title = 'Remove';
@@ -1082,9 +1089,17 @@ function openEditor(){
       return out;
     });
     e = { w: item.w, h: item.h, frames, colors: keys.length ? keys : ['#e6e6e6'], fold: 'sprite', net: null, mirror: rec.params.mirrorX !== false };
+  } else if (item.kind === 'vox'){
+    const { w, h, d } = item, frames = [];
+    for (let z = 0; z < d; z++){ const f = []; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) f.push(item.cells[x + w * ((h - 1 - y) + h * z)]); frames.push(f); }
+    e = { w, h, frames, colors: item.colors.map(hex), fold: 'voxel', net: null, mirror: rec.params.mirrorX !== false };
   } else return;
+  const before = P.edit ? edSnapshot() : null;
   P.edit = { depthMode: 'bulge', depth: 2, ...e, frame: 0, id: rec.seed };
-  ed.undo = []; ed.redo = []; ed.cur = 0;
+  // whatever was being edited before stays one undo away
+  if (before){ ed.undo.push(before); ed.redo = []; }
+  ed.cur = 0;
+  if (P.edit.fold === 'voxel') P.edit.frame = Math.floor(P.edit.frames.length / 2);
   setMode('edit');
 }
 $('#editBtn').onclick = openEditor;
@@ -1098,7 +1113,7 @@ function edRefresh(save = true){
 function edResize(){
   const r = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   stage.width = Math.round(r.width * dpr); stage.height = Math.round(r.height * dpr);
-  $('#countInfo').textContent = P.edit.w + '×' + P.edit.h;
+  $('#countInfo').textContent = P.edit.w + '×' + P.edit.h + (P.edit.fold === 'voxel' ? '×' + P.edit.frames.length : '');
   $('#status').textContent = 'editing';
   drawEditor();
 }
@@ -1121,9 +1136,10 @@ function drawEditor(){
     else { sctx.fillStyle = P.colour.bg; sctx.fillRect(L.ox + x * k, L.oy + y * k, w * k, h * k); }
   };
   if (F) F.forEach(r => back(...r)); else back(0, 0, e.w, e.h);
-  if (e.frames.length > 1){
-    // the other frame shows faintly underneath
-    const o = e.frames[1 - e.frame]; sctx.globalAlpha = .2;
+  // the other frame, or the layer behind, shows faintly underneath
+  const o = e.fold === 'voxel' ? e.frames[e.frame + 1] : e.frames.length > 1 ? e.frames[1 - e.frame] : null;
+  if (o){
+    sctx.globalAlpha = .2;
     o.forEach((v, i) => { if (v >= 0 && f[i] < 0){ sctx.fillStyle = e.colors[v]; sctx.fillRect(L.ox + (i % e.w) * k, L.oy + Math.floor(i / e.w) * k, k, k); } });
     sctx.globalAlpha = 1;
   }
@@ -1152,8 +1168,8 @@ function edCell(ev){
   if (x < 0 || y < 0 || x >= P.edit.w || y >= P.edit.h || !edFaceAt(x, y)) return null;
   return [x, y];
 }
-const edSnapshot = () => JSON.stringify({ w: P.edit.w, h: P.edit.h, frames: P.edit.frames, colors: P.edit.colors, frame: P.edit.frame });
-function edRestore(json){ Object.assign(P.edit, JSON.parse(json)); if (P.edit.frame >= P.edit.frames.length) P.edit.frame = 0; buildEditPanels(); edResize(); edRefresh(); }
+const edSnapshot = () => JSON.stringify(P.edit);
+function edRestore(json){ P.edit = JSON.parse(json); if (P.edit.frame >= P.edit.frames.length) P.edit.frame = 0; buildEditPanels(); edResize(); edRefresh(); }
 function edPush(){ ed.undo.push(edSnapshot()); if (ed.undo.length > 200) ed.undo.shift(); ed.redo = []; }
 function edUndo(){ if (!ed.undo.length) return; ed.redo.push(edSnapshot()); edRestore(ed.undo.pop()); }
 function edRedo(){ if (!ed.redo.length) return; ed.undo.push(edSnapshot()); edRestore(ed.redo.pop()); }
@@ -1226,6 +1242,17 @@ function edCanvasSize(nw, nh){
   });
   e.w = nw; e.h = nh; edResize(); edRefresh();
 }
+function edDepth(n){
+  const e = P.edit; if (n === e.frames.length) return;
+  edPush();
+  while (e.frames.length < n) e.frames.push(Array(e.w * e.h).fill(-1));   // new layers go at the back
+  e.frames.length = n; e.frame = Math.min(e.frame, n - 1);
+  buildEditPanels(); edResize(); edRefresh();
+}
+function edLayer(step){
+  const e = P.edit; if (e.fold !== 'voxel') return;
+  e.frame = Math.max(0, Math.min(e.frames.length - 1, e.frame + step)); buildEditPanels(); edRefresh(false);
+}
 function seg(options, current, onPick){
   const s = document.createElement('div'); s.className = 'seg';
   for (const [val, label] of options){
@@ -1237,7 +1264,7 @@ function seg(options, current, onPick){
 function buildEditPanels(){
   const e = P.edit, body = $('#shapeBody'); body.innerHTML = '';
   $('#panelShape .panel-head').firstChild.textContent = 'Canvas ';
-  $('#shapeBadge').textContent = e.fold === 'net' ? 'box net' : 'sprite';
+  $('#shapeBadge').textContent = e.fold === 'net' ? 'box net' : e.fold === 'voxel' ? 'voxels' : 'sprite';
   $('#mirrorTool').classList.toggle('on', !!e.mirror); edTool(ed.tool);
   const field = (label, val, a, b, set) => {
     const f = document.createElement('label'); f.className = 'field';
@@ -1249,6 +1276,20 @@ function buildEditPanels(){
   if (e.fold !== 'net'){
     field('Width', e.w, 1, 32, v => edCanvasSize(v, e.h));
     field('Height', e.h, 1, 32, v => edCanvasSize(e.w, v));
+  }
+  if (e.fold === 'voxel'){
+    label('Layers, front to back. The layer behind shows faintly.');
+    field('Layer', e.frame + 1, 1, e.frames.length, v => { e.frame = v - 1; edRefresh(false); });
+    field('Depth', e.frames.length, 1, 32, v => edDepth(v));
+    const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
+    const cp = document.createElement('button'); cp.className = 'btn'; cp.textContent = 'Copy to next layer';
+    cp.onclick = () => { if (e.frame + 1 >= e.frames.length) return; edPush(); e.frames[e.frame + 1] = e.frames[e.frame].slice(); e.frame++; buildEditPanels(); edRefresh(); };
+    const clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear layer';
+    clr.onclick = () => { edPush(); e.frames[e.frame].fill(-1); edRefresh(); };
+    row.append(cp, clr); body.appendChild(row);
+    label('[ and ] step through the layers.');
+    buildEditColour();
+    return;
   }
   label('Frames');
   const fr = e.frames.length > 1 ? [[0, 'Frame 1'], [1, 'Frame 2']] : [[0, 'Frame 1']];
@@ -1321,7 +1362,8 @@ function setMode(m){
   buildShape(); regen(); saveState();
   if (m === 'edit') edRefresh(false);
 }
-document.querySelectorAll('.modebtn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+const toEdit = () => { if (picked && !picked.rec.live) openEditor(); else setMode('edit'); };
+document.querySelectorAll('.modebtn').forEach(b => b.onclick = () => b.dataset.mode === 'edit' ? toEdit() : setMode(b.dataset.mode));
 $('#shuffleBtn').onclick = () => setSeed((Math.random() * 1e9) >>> 0);
 $('#backBtn').onclick = () => { if (seedHistory.length) setSeed(seedHistory.pop(), false); };
 $('#seedIn').onchange = e => setSeed(seedFromText(e.target.value));
@@ -1339,6 +1381,8 @@ document.addEventListener('keydown', e => {
     if (tools[k]) { edTool(tools[k]); return; }
     if (k === 'm') { $('#mirrorTool').click(); return; }
     if (k === 'z') { edUndo(); return; }
+    if (k === '[') { edLayer(-1); return; }
+    if (k === ']') { edLayer(1); return; }
     if (k === 'r') return;
   }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1348,7 +1392,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'e') $('#sheetBtn').click();
   else if (k === 'h') $('#helpBtn').click();
   else if (k === 'escape') $('#help').classList.remove('show');
-  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '4') setMode('edit');
+  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '4') toEdit();
 });
 function saveState(){ try { localStorage.setItem('hatcher.state', JSON.stringify(P)); } catch (e) {} }
 try {
@@ -1366,7 +1410,7 @@ $('#help').innerHTML = `
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
   <h3>Edit</h3>
-  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Swatches recolour everything that uses them. Right-click erases, alt-click picks a colour, and the second frame shows faintly underneath the first.</p>
+  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases, alt-click picks a colour, and the second frame shows faintly underneath the first.</p>
   <h3>Keys</h3>
   <table>
     <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
