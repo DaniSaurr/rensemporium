@@ -210,6 +210,7 @@
       <button class="tbtn modebtn" data-mode="prop" title="Props: lathed vessels and slab panels (5)"><svg viewBox="0 0 24 24"><path d="M10 3h4M11 3v3M9 6h6l1 3-2 3 2 4-1 5H9l-1-5 2-4-2-3z"/></svg><span class="lbl">Prop</span></button>
       <button class="tbtn modebtn" data-mode="creature" title="Creatures: front and back, domed both ways (6)"><svg viewBox="0 0 24 24"><path d="M5 18c-1-6 2-12 7-12s8 6 7 12c-2-2-4-2-7-2s-5 0-7 2z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/></svg><span class="lbl">Creature</span></button>
       <button class="tbtn modebtn" data-mode="witch" title="Witch outfits and wands (7)"><svg viewBox="0 0 24 24"><path d="M12 2 8 11h8z"/><path d="M5 11h14"/><circle cx="12" cy="14" r="2.5"/><path d="M9 21l1.5-4h3L15 21"/></svg><span class="lbl">Witch</span></button>
+      <button class="tbtn modebtn" data-mode="tiles" title="Walls, floors and runners for a room theme (8)"><svg viewBox="0 0 24 24"><path d="M3 4h18v9H3zM3 8.5h18M9 4v4.5M15 8.5V13M7 13l-4 7h18l-4-7"/></svg><span class="lbl">Tiles</span></button>
       <button class="tbtn modebtn" data-mode="edit" title="Edit the pick pixel by pixel (4)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></svg><span class="lbl">Edit</span></button>
       <div class="sep edtool"></div>
       <button class="tbtn edtool" data-tool="pencil" title="Pencil (B)"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="6" height="6"/><rect x="13" y="13" width="6" height="6"/></svg><span class="lbl">Pencil</span></button>
@@ -264,6 +265,7 @@
             <button class="btn" id="exVox" title="MagicaVoxel">.vox</button>
             <button class="btn" id="exObj" title="Mesh with vertex colours">.obj</button>
             <button class="btn" id="exJson" title="Cells and colours">.json</button>
+            <button class="btn" id="exTiles" title="A zip: wall.png, floor.png, runner.png and theme.json">Tiles .zip</button>
             <button class="btn" id="exOutfit" title="A zip for art/witch/sets/: every slot front and back, and the set with its wand">Outfit .zip</button>
           </div>
           <label class="field" id="artDirRow" title="Where the recipe says the PNGs live, inside the dungeon project"><span>Recipe PNG folder</span><input type="text" id="artDir" spellcheck="false" style="width:170px"></label>
@@ -319,6 +321,7 @@ const DEFAULTS = {
   prop:   { kind: 'vessel', style: 'any', w: 13, h: 22, thumb: 120, detail: 50, depth: 2, frame: 2, stripes: false },
   creature: { w: 12, h: 12, thumb: 120, density: 55, core: 40, front: 4, back: 3, backStyle: 'plain' },
   witch:  { px: 3, hat: true, back: true, hand: true, showBack: true },
+  tiles:  { px: 2, cell: 64, tall: 72, runner: true },
   edit: null, artDir: 'art/sprites-hatcher',
   colour: { palette: 'random', n: 3, roles: true, eyes: true, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
             custom: '#2b1b2e #6b2d5c #b0306a #f06c9b #ffd0e0 #3a6b8c #9ad1d4' },
@@ -357,6 +360,7 @@ FIELDS.creature = [
   ['density', 'Fill %', 0, 100], ['core', 'Pull to middle %', 0, 100],
   ['front', 'Front depth', 1, 12], ['back', 'Back depth', 0, 12], ['backStyle', 'Back', 'select', ['plain', 'spots', 'stripe', 'same']],
 ];
+FIELDS.tiles = [['px', 'Pixel size', 1, 6], ['cell', 'Cell', 32, 128, 8], ['tall', 'Wall height', 24, 128, 4], ['runner', 'Show the runner', 'check']];
 FIELDS.witch = [
   ['px', 'Pixel size', 1, 8], ['hat', 'Hats', 'check'], ['back', 'Capes, wings and bows', 'check'], ['hand', 'Wands', 'check'], ['showBack', 'Show the back beside it', 'check'],
 ];
@@ -364,6 +368,7 @@ const MODE_NOTE = {
   sprite: 'Only half of each sprite is random. The mirror does the rest.',
   net: 'Laid out as top / left front right back / bottom, the same as boxnet.gd. The front faces you in the fold under Picked.',
   voxel: 'A cube of cells, each filled or not, mirrored like the sprites and shown from the front. Drag the pick to turn it.',
+  tiles: 'A wall face and a floor cell for one room theme, built from the same parts as themes.gd: plinth, wainscot, rail, upper wall, cornice, pilasters; tiles, joints and a runner.',
   witch: 'Outfits for the witch, drawn slot by slot on her 28 × 56 body with the same shapes as draw_witch_sets.py. Outfit saves a zip for art/witch/sets/.',
   prop: 'Vessels are lathed like the candles and urns. Panels are slabs with a depth for each colour, like the doors, windows and curtains.',
   creature: 'A front picture domed forward and a back picture domed backward, like the jellies and eyeballs. Same makes the back match the front.',
@@ -713,6 +718,7 @@ function applyEyes3D(c, w, h, d, rng, eye, mirror){
 }
 function voxOf(item){
   if (item.kind === 'vox') return item;
+  if (item.kind === 'tiles') return item._vox || (item._vox = tilesVox(item));
   if (item._vox) return item._vox;
   if (item.kind === 'net') return (item._vox = netToVox(item));
   if (item.kind === 'edit' && item.fold === 'voxel'){
@@ -947,6 +953,13 @@ function nudgeColour(colors, rng){ const j = ri(rng, colors.length); colors[j] =
 function mutate(item, seed, strength){
   const rng = mulberry32(seed), edits = Math.max(1, Math.round(strength * (.6 + rng() * .8)));
   const colors = item.colors.map(c => c.slice());
+  if (item.kind === 'tiles'){
+    const def = JSON.parse(JSON.stringify(item.def)), names = Object.keys(TILE_PARTS);
+    for (let i = 0; i < Math.max(1, Math.round(strength / 3)); i++){ const k = names[ri(rng, names.length)]; def.picks[k] = TILE_PARTS[k][ri(rng, TILE_PARTS[k].length)]; }
+    if (rng() < .5){ const j = ri(rng, def.colours.length); def.colours[j] = hex(unhex(def.colours[j]).map(v => clamp255(v + ri(rng, 71) - 35))); }
+    def.seed = seed;
+    return tilesFrom(def);
+  }
   if (item.witch){
     const def = JSON.parse(JSON.stringify(item.witch.def)), on = SLOTS.filter(s2 => def.enabled[s2] !== false);
     const k = Math.max(1, Math.round(strength / 3));
@@ -1039,6 +1052,105 @@ function netFaces(w, h, d){ return [[d, 0, w, d], [0, d, d, h], [d, d, w, h], [d
 function itemFromRec(rec){
   if (rec.mutation) return mutate(itemFromRec(rec.mutation.parent), rec.mutation.seed, rec.mutation.strength);
   return withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params));
+}
+
+/* ---------- tiles: a room theme's wall face, floor and runner ----------
+   The same parts as themes.gd draws in code. A def holds the picks, so a family can swap one
+   part (the wainscot, the floor) and keep the rest. */
+const TILE_PARTS = {
+  wainscot: ['harlequin', 'stripes', 'honeycomb', 'clinical', 'panels'],
+  upper: ['bricks', 'wallpaper', 'stripes', 'stones'],
+  motif: ['eye', 'diamond', 'dot', 'cross'],
+  cornice: ['line', 'scallop'],
+  pilaster: ['banded', 'plain', 'candy'],
+  floor: ['flags', 'checker', 'slime', 'boards', 'tiles'],
+  runner: ['solid', 'diag', 'stripes'],
+};
+const posmod = (a, n) => ((a % n) + n) % n;
+function genTiles(seed, p){
+  const rng = mulberry32(seed), cs = makeColors(rng, 5), pick = a => a[ri(rng, a.length)];
+  const def = { seed, cell: p.cell, tall: p.tall, runner: p.runner, colours: cs.map(hex), picks: {} };
+  for (const k in TILE_PARTS) def.picks[k] = pick(TILE_PARTS[k]);
+  def.picks.plinth = 2 + ri(rng, 3); def.picks.wainH = Math.round(p.tall * (.26 + rng() * .1)); def.picks.rail = 2 + ri(rng, 2); def.picks.corH = 2 + ri(rng, 3);
+  def.picks.tile = pick([8, 16]);
+  return tilesFrom(def);
+}
+function tilesFrom(def){
+  const keys = [], colors = [], col = c => { const k = typeof c === 'string' ? c : hex(c); let i = keys.indexOf(k); if (i < 0){ keys.push(k); colors.push(unhex(k)); i = keys.length - 1; } return i; };
+  const c = def.colours.map(unhex), P2 = def.picks, CELLn = def.cell, h = def.tall;
+  const dark = mul(c[0], .35), mid = c[1], light = mix(c[2], [255, 255, 255], .5), accent = c[3], gold = mix(c[4], [255, 230, 140], .4), white = mix(c[2], [255, 250, 245], .8);
+  const wall = new Int16Array(CELLn * h);
+  for (let a = 0; a < CELLn; a++) for (let yy = 0; yy < h; yy++){
+    const y = h - 1 - yy;    // picture rows run down; the wall's y counts up from the floor
+    let v;
+    if (y >= h - P2.corH){
+      if (P2.cornice === 'scallop'){ const sc = Math.abs(a % 8 - 3.5); v = y < h - P2.corH + P2.corH - Math.trunc(sc / 1.5) ? light : accent; }
+      else v = y === h - 1 || a % 4 ? light : mid;
+    } else if (a < 4 || a >= CELLn - 4){
+      v = P2.pilaster === 'banded' ? (Math.trunc(y / 6) % 2 ? mid : dark) : P2.pilaster === 'candy' ? (Math.trunc(y / 4) % 2 ? accent : white) : (a % 4 ? mid : dark);
+    } else if (y < P2.plinth) v = dark;
+    else if (y < P2.wainH){
+      const u = a - 32, w2 = y - P2.plinth;
+      if (P2.wainscot === 'harlequin') v = posmod(Math.floor((u + w2) / 6) + Math.floor((u - w2) / 6), 2) === 0 ? accent : dark;
+      else if (P2.wainscot === 'stripes') v = Math.trunc(a / 4) % 2 || y % 7 ? c[2] : mul(c[2], .55);
+      else if (P2.wainscot === 'honeycomb'){ const r = Math.trunc(y / 5) % 2, hx = posmod(a + r * 4, 8); v = y % 5 === 0 || hx === 0 ? dark : (Math.trunc(a / 8) + Math.trunc(y / 5)) % 7 === 0 ? light : c[2]; }
+      else if (P2.wainscot === 'clinical') v = a % 6 === 0 || y % 6 === 0 ? mid : white;
+      else { const pa = a % 16, top = P2.wainH - P2.plinth; v = pa === 0 || pa === 15 || w2 === 1 || w2 === top - 2 ? dark : c[2]; }
+    } else if (y < P2.wainH + P2.rail) v = y === P2.wainH + 1 ? gold : accent;
+    else {
+      const top = P2.wainH + P2.rail;
+      if (P2.upper === 'bricks'){
+        const course = Math.trunc(y / 8), off = course % 2 ? 8 : 0, cols = [mid, mid, mul(mid, .9), mid, dark];
+        v = y % 8 === 0 || (a + off) % 16 === 0 ? dark : cols[(Math.trunc((a + off + 64) / 16) * 5 + course * 3) % cols.length];
+      } else if (P2.upper === 'wallpaper'){
+        const cc = Math.trunc(a / 12), ry = y - top + (cc % 2 ? 6 : 0), ex = a % 12 - 6, ey = posmod(ry, 14) - 7;
+        const m = P2.motif === 'eye' ? Math.abs(ex) <= 2 && Math.abs(ey) <= 1 : P2.motif === 'diamond' ? Math.abs(ex) + Math.abs(ey) <= 2
+          : P2.motif === 'dot' ? ex * ex + ey * ey <= 2 : (ex === 0 && Math.abs(ey) <= 2) || (ey === 0 && Math.abs(ex) <= 2);
+        v = m ? (P2.motif === 'eye' && ex === 0 && ey === 0 ? dark : white) : ((a + y) % 2 ? c[4] : mul(c[4], .94));
+      } else if (P2.upper === 'stripes') v = Math.trunc(a / 4) % 2 ? c[4] : white;
+      else { const row = Math.trunc((y - top) / 12), off = row % 2 ? 8 : 0; v = (y - top) % 12 === 0 || (a + off) % 16 === 0 ? dark : (row + Math.trunc((a + off) / 16)) % 3 ? mid : mul(mid, .85); }
+    }
+    wall[yy * CELLn + a] = col(v);
+  }
+  const t = P2.tile, floorAt = (x, z) => {
+    if (P2.floor === 'checker') return (Math.trunc(x / t) + Math.trunc(z / t)) % 2 ? c[1] : white;
+    if (P2.floor === 'flags'){ if (x % 16 === 0 || z % 16 === 0) return dark; return ((x * 7 + z * 3) % 23) === 0 ? accent : (Math.trunc(x / 16) + Math.trunc(z / 16)) % 2 ? mid : mul(mid, .8); }
+    if (P2.floor === 'slime'){
+      if (x % 8 === 0 || z % 8 === 0) return dark;
+      const per = 13, bx = Math.trunc(x / per) * per + ((Math.trunc(x / per) * 7 + Math.trunc(z / per) * 3) % 5) + 4, bz = Math.trunc(z / per) * per + ((Math.trunc(x / per) * 3 + Math.trunc(z / per) * 11) % 5) + 4;
+      if ((x - bx) ** 2 + (z - bz) ** 2 <= 9 && (Math.trunc(x / per) * 5 + Math.trunc(z / per)) % 3 === 0) return accent;
+      return (Math.trunc(x / 8) + Math.trunc(z / 8)) % 3 ? mid : mul(mid, 1.15);
+    }
+    if (P2.floor === 'boards'){ const plank = Math.trunc(z / 6); if (z % 6 === 0 || (x + plank * 13) % 32 === 0) return dark; return plank % 2 ? c[2] : mul(c[2], .88); }
+    if (x % 8 === 0 || z % 8 === 0) return mul(white, .8);
+    return (Math.trunc(x / 8) + Math.trunc(z / 8) * 3) % 7 === 0 ? accent : white;
+  };
+  const cc = Math.trunc(CELLn / 2), rw = Math.min(Math.max(7, Math.trunc(CELLn / 9)), Math.trunc(CELLn / 3));
+  // the game's _on_path with every side linked: a cross of runner
+  const onPath = (x, z) => {
+    let hit = '';
+    if (Math.abs(z - cc) < rw) hit = Math.abs(z - cc) === rw - 1 ? 'edge' : 'in';
+    if (Math.abs(x - cc) < rw) hit = Math.abs(x - cc) === rw - 1 && hit !== 'in' ? 'edge' : 'in';
+    if (Math.abs(x - cc) < rw && Math.abs(z - cc) < rw) hit = Math.abs(x - cc) < rw - 1 && Math.abs(z - cc) < rw - 1 ? 'in' : 'edge';
+    return hit;
+  };
+  const runAt = (x, z) => P2.runner === 'diag' ? ((x + z) % 6 ? accent : mul(accent, .6)) : P2.runner === 'stripes' ? ((x % 4 < 2) !== (z % 4 < 2) ? accent : gold) : accent;
+  const floor = new Int16Array(CELLn * CELLn), floorRun = new Int16Array(CELLn * CELLn), runner = new Int16Array(CELLn * CELLn);
+  for (let z = 0; z < CELLn; z++) for (let x = 0; x < CELLn; x++){
+    const i = z * CELLn + x, f = col(floorAt(x, z)), path = onPath(x, z);
+    floor[i] = f; runner[i] = col(runAt(x, z));
+    floorRun[i] = path === 'edge' ? col(gold) : path === 'in' ? runner[i] : f;
+  }
+  return { kind: 'tiles', seed: def.seed, def, colors, cell: CELLn, tall: h, wall, floor, floorRun, runner,
+           inner: hex(dark).slice(1), edge: hex(gold).slice(1), style: P2.wainscot + ' / ' + P2.upper + ' / ' + P2.floor };
+}
+// a corner of the room for the 3D view: the floor laid flat, the wall standing along its back edge
+function tilesVox(item){
+  const n = item.cell, h = item.tall, list = [];
+  const src = item.def.runner ? item.floorRun : item.floor;
+  for (let z = 0; z < n; z++) for (let x = 0; x < n; x++) list.push([x, 0, z, src[z * n + x]]);
+  for (let a = 0; a < n; a++) for (let yy = 0; yy < h; yy++) list.push([a, h - yy, -1, item.wall[yy * n + a]]);
+  return cellsToV(list, item.colors);
 }
 
 /* ---------- the witch ----------
@@ -1466,6 +1578,7 @@ function makeItem(mode, seed, params){
   if (mode === 'prop') return genProp(seed, params);
   if (mode === 'creature') return genCreature(seed, params);
   if (mode === 'witch') return genWitch(seed, params);
+  if (mode === 'tiles') return genTiles(seed, params);
   return genVox(seed, params);
 }
 function rgbaCanvas(w, h, rgba){
@@ -1474,7 +1587,8 @@ function rgbaCanvas(w, h, rgba){
 }
 function itemCanvases(item, thumb){
   if (item._cv) return item._cv;
-  if (item.kind === 'built') item._cv = item.frames.map(f => picCanvas(item.w, item.h, f, item.colors));
+  if (item.kind === 'tiles') item._cv = [picCanvas(item.cell, item.tall, item.wall, item.colors), picCanvas(item.cell, item.cell, item.def.runner ? item.floorRun : item.floor, item.colors)];
+  else if (item.kind === 'built') item._cv = item.frames.map(f => picCanvas(item.w, item.h, f, item.colors));
   else if (item.kind === 'sprite' || item.kind === 'edit') item._cv = item.frames.map((_, f) => rgbaCanvas(item.w, item.h, spriteRGBA(item, f)));
   else if (item.kind === 'net') item._cv = [rgbaCanvas(item.W, item.H, netRGBA(item))];
   else {
@@ -1495,6 +1609,7 @@ function cellSize(){
   if (m === 'sprite') return [(p.w + 2 * p.gap) * p.px, (p.h + 2 * p.gap) * p.px];
   if (m === 'net') return [(2 * p.d + 2 * p.w + 2) * p.px, (2 * p.d + p.h + 2) * p.px];
   if (m === 'witch') return [(WW * (p.showBack ? 2 : 1) + 3) * p.px, (WH + 3) * p.px];
+  if (m === 'tiles') return [(2 * p.cell + 8) * p.px, (p.tall + 6) * p.px];
   return [p.thumb, p.thumb];   // voxels, props and creatures
 }
 function relayout(){
@@ -1512,6 +1627,14 @@ function getItem(i){
 }
 function drawCell(ctx, i, x, y, cw, ch, frame){
   const item = getItem(i);
+  if (item.kind === 'tiles'){
+    const [wcv, fcv] = itemCanvases(item), n = item.cell, k = Math.max(1, Math.floor(Math.min(cw / (2 * n + 6), ch / (item.tall + 4))));
+    const ox = Math.round(x + (cw - (2 * n + 2) * k) / 2), oy = Math.round(y + (ch - item.tall * k) / 2);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(wcv, ox, oy, n * k, item.tall * k);
+    ctx.drawImage(fcv, ox + (n + 2) * k, oy + (item.tall - n) * k, n * k, n * k);
+    return;
+  }
   if (item.witch){
     const cvs = itemCanvases(item), two = P.witch.showBack, k = Math.max(1, Math.floor(Math.min(cw / (WW * (two ? 2 : 1) + 3), ch / (WH + 2))));
     const gw = WW * k * (two ? 2 : 1) + (two ? k : 0), ox = Math.round(x + (cw - gw) / 2), oy = Math.round(y + (ch - WH * k) / 2);
@@ -1591,7 +1714,7 @@ function startBreed(){
 function endBreed(){
   if (!breed) return;
   breed = null; $('#breedBar').hidden = true;
-  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', witch: 'WITCH', edit: 'EDIT' }[P.mode];
+  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', witch: 'WITCH', tiles: 'TILES', edit: 'EDIT' }[P.mode];
   regen();
 }
 function cellAt(e){
@@ -1625,7 +1748,7 @@ function pick(rec, item){
   $('#pickBadge').textContent = rec.mode;
   $('#pickSeed').textContent = '#' + rec.seed;
   const it = picked.item, p = rec.params;
-  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + (it.build ? it.build.type : '')) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : it.witch ? `${it.witch.set.label}${it.witch.set.wand ? ', ' + it.witch.set.wand.name : ''}` : it.kind === 'built' ? `${it.w}×${it.h} ${it.style || it.build.type}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
+  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + (it.build ? it.build.type : '')) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : it.kind === 'tiles' ? `${it.cell}×${it.tall} ${it.style}` : it.witch ? `${it.witch.set.label}${it.witch.set.wand ? ', ' + it.witch.set.wand.name : ''}` : it.kind === 'built' ? `${it.w}×${it.h} ${it.style || it.build.type}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
   const show = (id, on) => { $(id).hidden = !on; };
   const flat = rec.mode === 'sprite' || it.kind === 'built' || (rec.mode === 'edit' && it.fold === 'sprite'), netty = rec.mode === 'net' || (rec.mode === 'edit' && it.fold === 'net');
   show('#exBitsy', flat); show('#exShape', flat);
@@ -1634,6 +1757,8 @@ function pick(rec, item){
   show('#editBtn', !rec.live);
   show('#breedBtn', !rec.live && rec.mode !== 'edit');
   show('#exOutfit', !!it.witch);
+  show('#exTiles', it.kind === 'tiles');
+  if (it.kind === 'tiles'){ show('#exRecipe', false); show('#editBtn', false); show('#exBitsy', false); show('#exShape', false); }
   if (it.witch){ show('#exRecipe', false); show('#editBtn', false); show('#exBitsy', false); show('#exShape', false); }
   if (!item || rec.mode !== 'edit') $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1;
   drawPick();
@@ -1661,7 +1786,7 @@ function drawPick(){
     if (flat){
       // the flat picture in the corner, the 3D one in the middle
       // a two-frame sprite plays in the corner; voxel layers are not frames, so they never play
-      const cvs = itemCanvases(item), cv = cvs[item.fold === 'sprite' && !(item.build && item.build.back === 'picture') ? frameTick % cvs.length : 0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
+      const cvs = itemCanvases(item), cv = item.kind === 'tiles' ? cvs[0] : cvs[item.fold === 'sprite' && !(item.build && item.build.back === 'picture') ? frameTick % cvs.length : 0], fw = item.W || item.w || item.cell, fh = item.H || item.h || item.tall, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
       pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
       pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
@@ -1725,6 +1850,11 @@ function itemPNG(item, rec, scale){
     const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
     if (!rec.colour.transparent && item.fold !== 'net'){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, cv.width, cv.height); }
     cvs.forEach((f, i) => c.drawImage(f, i * item.w * scale, 0, item.w * scale, item.h * scale));
+  } else if (item.kind === 'tiles'){
+    const [wcv, fcv] = itemCanvases(item); cv = document.createElement('canvas');
+    cv.width = (2 * item.cell + 2) * scale; cv.height = item.tall * scale;
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+    c.drawImage(wcv, 0, 0, item.cell * scale, item.tall * scale); c.drawImage(fcv, (item.cell + 2) * scale, (item.tall - item.cell) * scale, item.cell * scale, item.cell * scale);
   } else if (item.kind === 'net'){
     // nets stay transparent outside the cross so boxnet.gd reads them as-is
     const src = itemCanvases(item)[0]; cv = document.createElement('canvas');
@@ -1815,6 +1945,19 @@ function makeZip(files){
   e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, offset, true);
   return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
 }
+$('#exTiles').onclick = async () => {
+  if (!picked || picked.item.kind !== 'tiles') return;
+  const it = picked.item, name = 'tiles_' + it.seed, files = [];
+  const png = async (w, h, px) => new Uint8Array(await (await canvasBlob(picCanvas(w, h, px, it.colors))).arrayBuffer());
+  files.push([`${name}/wall.png`, await png(it.cell, it.tall, it.wall)]);
+  files.push([`${name}/floor.png`, await png(it.cell, it.cell, it.floor)]);
+  files.push([`${name}/runner.png`, await png(it.cell, it.cell, it.runner)]);
+  const theme = { note: "made in ren's hatcher: wall.png is one cell of wall face, top row at the top; floor.png one cell of floor; runner.png the runner's fill",
+    cell: it.cell, tall: it.tall, inner: it.inner, runner_edge: it.edge, parts: it.def.picks, colours: it.def.colours.map(h => h.slice(1)) };
+  files.push([`${name}/theme.json`, new TextEncoder().encode(JSON.stringify(theme, null, 1))]);
+  download(name + '.zip', makeZip(files));
+  toast('wall, floor and runner saved; the dungeon draws its themes in code for now');
+};
 $('#exOutfit').onclick = async () => {
   if (!picked || !picked.item.witch) return;
   const wt = picked.item.witch, name = wt.set.label.replace(/[^a-z0-9_]/gi, ''), files = [];
@@ -1894,7 +2037,7 @@ $('#sheetBtn').onclick = async () => {
   const c = cv.getContext('2d'); paintBg(c, cv.width, cv.height);
   for (let i = 0; i < L.cols * L.rows; i++){
     const item = getItem(i);
-    if (item.witch) drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
+    if (item.witch || item.kind === 'tiles') drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
     else if (item.kind === 'vox' || item.kind === 'built'){ const V = voxOf(item); drawVox(c, V, VIEW_YAW, VIEW_PITCH, (i % L.cols) * cw + cw / 2, Math.floor(i / L.cols) * ch + ch / 2, voxScale(V, cw)); }
     else drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
   }
@@ -1972,6 +2115,7 @@ let regenTimer = 0;
 const regenSoon = () => { clearTimeout(regenTimer); regenTimer = setTimeout(() => { regen(); saveState(); }, P.mode === 'voxel' ? 120 : 0); };
 /* shape presets and shuffling. Display settings (pixel size, gap, thumb size, frames) are never touched */
 const PRESETS = {
+  tiles: { 'dungeon cell': { cell: 64, tall: 72, runner: true }, 'small cell': { cell: 32, tall: 40, runner: true } },
   witch: {
     'everything': { hat: true, back: true, hand: true },
     'no hats':    { hat: false, back: true, hand: true },
@@ -2030,10 +2174,11 @@ const SHUFFLE = {
 SHUFFLE.prop = () => { const kind = chance(.55) ? 'vessel' : 'panel';
   return { kind, style: 'any', w: kind === 'vessel' ? 2 * between(3, 9) + 1 : 2 * between(4, 11) + 1, h: between(kind === 'vessel' ? 12 : 14, 34), detail: between(20, 80), depth: between(1, 4), frame: between(1, 4), stripes: chance(.3) }; };
 SHUFFLE.creature = () => ({ w: between(8, 20), h: between(8, 20), density: between(40, 70), core: between(20, 70), front: between(2, 7), back: between(0, 6), backStyle: ['plain', 'spots', 'stripe', 'same'][between(0, 3)] });
+SHUFFLE.tiles = () => ({ runner: chance(.8) });
 SHUFFLE.witch = () => ({ hat: chance(.85), back: chance(.6), hand: chance(.9) });
-const SHAPE_KEYS = { witch: ['hat', 'back', 'hand'], prop: ['kind', 'style', 'w', 'h', 'detail', 'depth', 'frame', 'stripes'], creature: ['w', 'h', 'density', 'core', 'front', 'back', 'backStyle'], sprite: ['w', 'h', 'density', 'core', 'mirrorX', 'mirrorY', 'cleanup'], net: ['w', 'h', 'd', 'density', 'core', 'matched', 'rim', 'holes', 'front', 'wrap'],
+const SHAPE_KEYS = { tiles: ['runner'], witch: ['hat', 'back', 'hand'], prop: ['kind', 'style', 'w', 'h', 'detail', 'depth', 'frame', 'stripes'], creature: ['w', 'h', 'density', 'core', 'front', 'back', 'backStyle'], sprite: ['w', 'h', 'density', 'core', 'mirrorX', 'mirrorY', 'cleanup'], net: ['w', 'h', 'd', 'density', 'core', 'matched', 'rim', 'holes', 'front', 'wrap'],
                      voxel: ['w', 'h', 'd', 'density', 'core', 'smooth', 'mirrorX', 'mirrorZ', 'cleanup'] };
-const shapeHistory = { sprite: [], net: [], voxel: [], prop: [], creature: [], witch: [] }, shapeName = {};
+const shapeHistory = { sprite: [], net: [], voxel: [], prop: [], creature: [], witch: [], tiles: [] }, shapeName = {};
 function setShape(values, name){
   const m = P.mode, p = P[m];
   shapeHistory[m].push({ values: { ...p }, name: shapeName[m] });
@@ -2750,7 +2895,7 @@ function setMode(m){
   if (m === 'edit') $('#editCol').appendChild($('#panelShape'));
   else $('#props').insertBefore($('#panelShape'), $('#panelColour'));
   document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  $('#modeBadge').textContent = breed ? 'FAMILY' : { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', witch: 'WITCH', edit: 'EDIT' }[m];
+  $('#modeBadge').textContent = breed ? 'FAMILY' : { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', prop: 'PROPS', creature: 'CREATURES', witch: 'WITCH', tiles: 'TILES', edit: 'EDIT' }[m];
   buildShape(); regen(); saveState();
   if (m === 'edit') edRefresh(false);
 }
@@ -2790,7 +2935,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'e') $('#sheetBtn').click();
   else if (k === 'h') $('#helpBtn').click();
   else if (k === 'escape') $('#help').classList.remove('show');
-  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '5') setMode('prop'); else if (k === '6') setMode('creature'); else if (k === '7') setMode('witch'); else if (k === '4') toEdit();
+  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel'); else if (k === '5') setMode('prop'); else if (k === '6') setMode('creature'); else if (k === '7') setMode('witch'); else if (k === '8') setMode('tiles'); else if (k === '4') toEdit();
 });
 function saveState(){ try { localStorage.setItem('hatcher.state', JSON.stringify(P)); } catch (e) {} }
 try {
@@ -2811,6 +2956,8 @@ $('#help').innerHTML = `
   <p>A front picture domed forward and a back picture domed backward, built the way the jellies and eyeballs are. The back can be plain, spotted, striped down the spine, or the same as the front. Edit opens both, as Front and Back.</p>
   <h3>Witch</h3>
   <p>Whole outfits on the witch's own body: a hat (pointed, crown, bow, horns or hood), hair, a bodice, a skirt, stockings and shoes, something on the back (a cape, wings, a bow, ribbons) and a wand. They are drawn with the same shapes and anchor rows as the dungeon's outfit scripts, each slot front and back. The wand's shot follows what she holds: staffs fire orbs, short wands and droppers needles, star wands stars. Outfit saves a zip of the slot pictures and the set JSON. More like this changes a slot or two and keeps the rest.</p>
+  <h3>Tiles</h3>
+  <p>A room theme: one cell of wall face and one cell of floor, at the dungeon's 64 by 72. The wall stacks a plinth, a wainscot (harlequin, stripes, honeycomb, clinical tiles or panels), a rail, an upper wall (bricks, half-drop wallpaper, stripes or stone), a cornice and corner pilasters. The floor is flags, checks, slime tiles, boards or small tiles, with the runner crossing it. Tiles .zip saves the wall, floor and runner as pictures with the colours and parts in theme.json. More like this swaps a part or two.</p>
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
   <h3>More like this</h3>
@@ -2827,7 +2974,7 @@ $('#help').innerHTML = `
     <tr><td><span class="kbd">K</span></td><td>save the pick</td></tr>
     <tr><td><span class="kbd">B</span></td><td>more like this (Esc goes back to all)</td></tr>
     <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
-    <tr><td><span class="kbd">1</span>–<span class="kbd">7</span></td><td>sprites, nets, voxels, edit, props, creatures, witch</td></tr>
+    <tr><td><span class="kbd">1</span>–<span class="kbd">8</span></td><td>sprites, nets, voxels, edit, props, creatures, witch, tiles</td></tr>
     <tr><td><span class="kbd">B</span> <span class="kbd">E</span> <span class="kbd">G</span> <span class="kbd">I</span> <span class="kbd">M</span></td><td>in edit: pencil, eraser, fill, pick colour, mirror</td></tr>
     <tr><td><span class="kbd">S</span> <span class="kbd">L</span> <span class="kbd">V</span></td><td>in edit: box select, lasso, move</td></tr>
     <tr><td><span class="kbd">Ctrl+Z</span></td><td>in edit: undo (Ctrl+Shift+Z redoes)</td></tr>
