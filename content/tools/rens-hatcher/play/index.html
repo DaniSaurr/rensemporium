@@ -1061,7 +1061,8 @@ function drawPick(){
     const flat = item.kind !== 'vox' && item.fold !== 'voxel';
     if (flat){
       // the flat picture in the corner, the 3D one in the middle
-      const cv = itemCanvases(item)[0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
+      // a two-frame sprite plays in the corner; voxel layers are not frames, so they never play
+      const cvs = itemCanvases(item), cv = cvs[item.fold === 'sprite' ? frameTick % cvs.length : 0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
       pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
       pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
@@ -1089,7 +1090,8 @@ setInterval(() => {
   frameTick++;
   const anim = P.mode === 'sprite' && P.sprite.frames > 1;
   if (anim) { const L = layout; for (let i = 0; i < L.cols * L.rows; i++) redrawCell(i); drawMarks(); }
-  if (picked && picked.item.kind === 'sprite' && picked.item.frames.length > 1) drawPick();
+  const it = picked && picked.item;
+  if (it && it.frames && it.frames.length > 1 && (it.kind === 'sprite' || it.fold === 'sprite') && !(view.spin && it.kind !== 'sprite')) drawPick();
 }, 420);
 
 /* ---------- downloads ---------- */
