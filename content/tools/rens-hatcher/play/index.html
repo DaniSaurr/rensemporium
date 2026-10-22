@@ -1236,124 +1236,341 @@ function witchStockings(p, colourAt, shoe, boot = 1, toe = null){
 const heldX = side => side === 'front' ? WCX + 7 : WCX - 7;
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 const WITCH_NAMES = ['chandler', 'glazier', 'milliner', 'apothecary', 'lamplighter', 'spinster', 'tinker', 'beekeeper', 'gravedigger', 'seamstress',
-  'pickler', 'ferryman', 'nursemaid', 'bellringer', 'candlewright', 'mothkeeper', 'bonesetter', 'wicktrimmer', 'sugarer', 'lacemaker'];
+  'pickler', 'ferryman', 'nursemaid', 'bellringer', 'candlewright', 'mothkeeper', 'bonesetter', 'wicktrimmer', 'sugarer', 'lacemaker',
+  'sexton', 'tallowmaker', 'herbwife', 'ragpicker', 'organist', 'taxidermist', 'confessor', 'almoner', 'scrivener', 'midwife', 'lockkeeper', 'tanner',
+  'puppeteer', 'cartographer', 'embalmer', 'glovemaker', 'saltwife', 'eelcatcher', 'mudlark', 'rushlight'];
+const WITCH_SCHEMES = ['harmony', 'harmony', 'mono', 'contrast', 'pastel', 'dark', 'two-tone'];
+const HAIR_TONES = [[34, 26, 30], [92, 58, 40], [150, 96, 52], [228, 196, 120], [196, 84, 48], [232, 228, 222], [150, 146, 160]];
+// what she holds -> [shot shape, heavy, the wand's noun]
+const WAND_KINDS = { staff: ['orb', 1, 'staff'], orb: ['orb', 1, 'staff'], short: ['needle', 0, 'wand'], dropper: ['needle', 0, 'dropper'], star: ['star', 0, 'wand'],
+  broom: ['needle', 1, 'broom'], lantern: ['orb', 0, 'lantern'], scythe: ['needle', 1, 'scythe'], book: ['star', 0, 'grimoire'], parasol: ['orb', 0, 'parasol'],
+  candle: ['orb', 0, 'candle'], trident: ['needle', 1, 'trident'], heart: ['star', 0, 'wand'], bone: ['orb', 1, 'bone'] };
 const WAND_WORDS = [['bone', 'sugar', 'glass', 'moth', 'wax', 'thorn', 'pearl', 'soot', 'honey', 'brass', 'jelly', 'grave'], ['staff', 'wand', 'rod', 'dropper', 'sprig', 'spindle', 'pin', 'crook']];
 
-// one slot, front or back; each slot has its own seed so a family can change one and keep the rest
-function drawSlot(slot, side, seed, c, pal){
-  const rng = mulberry32(seed), p = new Pen(pal), pick = a => a[ri(rng, a.length)];
-  let info = {};
+// one slot, front or back; each slot has its own seed so a family can change one and keep the rest.
+// Every kind keeps to the body's anchor rows, so any part fits any other and the cutter still cuts it.
+function drawSlot(slot, side, seed, c, pal, ctx = {}){
+  const rng = mulberry32(seed), p = new Pen(pal), pick = a => a[ri(rng, a.length)], chance = n => rng() < n, info = {};
+  const front = side === 'front', X = WCX;
+  const line = (x0, y0, x1, y1, col) => { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1); for (let i = 0; i <= n; i++) p.put(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, col); };
+  const disc = (cx, cy, r, col) => { for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) if (dx * dx + dy * dy <= r * r + .3) p.put(cx + dx, cy + dy, col); };
+  const both = (fn) => { fn(1); fn(-1); };             // draw a pair, mirrored about the middle
+  const mx = (s, d) => s > 0 ? X + d : X - d;          // x at a distance d either side
   if (slot === 'hat'){
-    const kind = pick(['witch', 'witch', 'witch', 'crown', 'bow', 'horns', 'hood']);
+    const kind = pick(['witch', 'witch', 'witch', 'witch', 'crown', 'bow', 'horns', 'hood', 'beret', 'tophat', 'bonnet', 'cap', 'antlers', 'halo', 'flowers', 'mushroom', 'ears', 'jester', 'veil']);
     info.kind = kind;
     if (kind === 'witch'){
-      witchHat(p, c.main, c.band, 7 + rng() * 2.5, 7 + ri(rng, 6), pick([-.3, -.15, 0, .15, .25, .3]), c.shade);
-      const orn = pick(['none', 'buckle', 'goggles', 'feather']);
-      if (side === 'front' && orn === 'buckle'){ for (const dx of [-1, 0, 1]) p.put(WCX + dx, HEAD_TOP - 1, c.trim); p.put(WCX, HEAD_TOP - 1, c.alt); }
-      if (side === 'front' && orn === 'goggles') for (const gx of [WCX - 2, WCX + 2]){ p.put(gx, HEAD_TOP - 1, '#f2b23a'); p.put(gx + 1, HEAD_TOP - 1, '#f2b23a'); p.put(gx, HEAD_TOP - 2, '#9be8ff'); }
-      if (orn === 'feather') for (let k = 0; k < 4; k++) p.put(WCX + 4 + (k > 1 ? 1 : 0), HEAD_TOP - 1 - k, k % 2 ? c.light : c.alt);
+      const tall = 7 + ri(rng, 7), lean = pick([-.35, -.2, 0, .15, .25, .35]);
+      witchHat(p, c.main, chance(.3) ? c.alt : c.band, 7 + rng() * 3, tall, lean, c.shade);
+      if (chance(.35)){ const tx = X + tall * lean; for (let k = 0; k < 3; k++) p.put(tx + (lean >= 0 ? 1 : -1) * (k + 1), HEAD_TOP - tall + 1 + k, c.main); }   // a droop at the tip
+      if (chance(.25)){ const py = HEAD_TOP - 3 - ri(rng, 3); for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) p.put(X - 1 + dx, py + dy, c.alt); }   // a patch
+      const orn = pick(['none', 'buckle', 'goggles', 'feather', 'star', 'moon', 'stripes']);
+      if (front && orn === 'buckle'){ for (const dx of [-1, 0, 1]) p.put(X + dx, HEAD_TOP - 1, c.trim); p.put(X, HEAD_TOP - 1, c.alt); }
+      if (front && orn === 'goggles') for (const gx of [X - 2, X + 2]){ p.put(gx, HEAD_TOP - 1, '#f2b23a'); p.put(gx + 1, HEAD_TOP - 1, '#f2b23a'); p.put(gx, HEAD_TOP - 2, '#9be8ff'); }
+      if (orn === 'feather') for (let k = 0; k < 4; k++) p.put(X + 4 + (k > 1 ? 1 : 0), HEAD_TOP - 1 - k, k % 2 ? c.light : c.alt);
+      if (front && orn === 'star') for (const [dx, dy] of [[0, -1], [-1, 0], [0, 0], [1, 0], [0, 1]]) p.put(X + dx, HEAD_TOP - 4 + dy, '#ffe08a');
+      if (front && orn === 'moon') for (const [dx, dy] of [[0, -1], [-1, 0], [-1, 1], [0, 2]]) p.put(X + dx, HEAD_TOP - 4 + dy, '#fff6c8');
+      if (orn === 'stripes') for (let k = 2; k < tall; k += 3) p.rowC(HEAD_TOP - k, Math.max(.6, 4.5 - k * .4), c.alt);
     } else if (kind === 'crown'){
       for (let y = HEAD_TOP - 2; y <= HEAD_TOP; y++) p.rowC(y, 3.5, c.trim);
-      for (let x = Math.trunc(WCX - 3); x <= WCX + 3; x += 2) p.put(x, HEAD_TOP - 3, c.trim);
-      if (side === 'front') p.put(WCX, HEAD_TOP - 1, c.alt);
+      for (let x = Math.trunc(X - 3); x <= X + 3; x += 2) p.put(x, HEAD_TOP - 3, c.trim);
+      if (front) p.put(X, HEAD_TOP - 1, c.alt);
     } else if (kind === 'bow'){
-      const bx = WCX + pick([-3, 3]);
+      const bx = X + pick([-3, 3]);
       for (const [dx, dy] of [[-2, 0], [-1, -1], [-1, 1], [-1, 0], [0, 0], [1, 0], [1, -1], [1, 1], [2, 0]]) p.put(bx + dx, HEAD_TOP + dy, dx === 0 ? c.alt : c.band);
     } else if (kind === 'horns'){
-      for (let k = 0; k < 6; k++) for (const sgn of [-1, 1]) p.put(WCX + sgn * (4 + k * .5) + (sgn > 0 ? 1 : 0), HEAD_TOP + 1 - k, k > 3 ? c.trim : c.light);
-    } else {
+      const curl = chance(.5);
+      for (let k = 0; k < 6; k++) both(s => p.put(mx(s, 4 + k * .5) + (s > 0 ? 1 : 0) + (curl && k > 3 ? -s * (k - 3) : 0), HEAD_TOP + 1 - k, k > 3 ? c.trim : c.light));
+    } else if (kind === 'hood'){
       for (let y = HEAD_TOP - 1; y <= CHIN + 1; y++){
         const hw = y < HEAD_TOP + 3 ? 4.5 + (y - HEAD_TOP + 1) * .6 : 6.4;
-        for (let x = pyRound(WCX - hw + .5); x < pyRound(WCX + hw + .5); x++){
-          if (side === 'front' && Math.abs(x - WCX) < 4.2 && y > HEAD_TOP + 2) continue;   // the face shows through
-          p.put(x, y, Math.abs(x - WCX) > 5 ? c.shade : c.main);
+        for (let x = pyRound(X - hw + .5); x < pyRound(X + hw + .5); x++){
+          if (front && Math.abs(x - X) < 4.2 && y > HEAD_TOP + 2) continue;   // the face shows through
+          p.put(x, y, Math.abs(x - X) > 5 ? c.shade : c.main);
         }
       }
+      if (chance(.4)) for (let k = 0; k < 4; k++) both(s => p.put(mx(s, 3 + k * .3), HEAD_TOP - 1 - k, c.main));   // ears on the hood
+    } else if (kind === 'beret'){
+      const off = pick([-1, 1]);
+      p.rowC(HEAD_TOP - 1, 5, c.main); p.rowC(HEAD_TOP, 6.2, c.main); p.rowC(HEAD_TOP + 1, 5.6, c.shade);
+      for (let x = X - 6 + off; x < X - 2 + off; x++) p.put(x, HEAD_TOP - 2, c.main);
+      p.put(X + off, HEAD_TOP - 2, c.alt);
+    } else if (kind === 'tophat'){
+      const tall = 6 + ri(rng, 4);
+      p.rowC(HEAD_TOP + 1, 6.5, c.main);
+      for (let y = HEAD_TOP - tall; y <= HEAD_TOP; y++) p.rowC(y, 3.8, c.main);
+      p.rowC(HEAD_TOP - 1, 3.8, c.band); p.rowC(HEAD_TOP - tall, 3.8, c.shade);
+      if (chance(.5)) for (let k = 0; k < 3; k++) p.put(X + 4, HEAD_TOP - 2 - k, k === 2 ? c.light : c.alt);   // a feather or card in the band
+    } else if (kind === 'bonnet'){
+      for (let y = HEAD_TOP - 2; y <= HEAD_TOP + 8; y++){
+        const hw = y < HEAD_TOP + 1 ? 4 + (y - HEAD_TOP + 2) * .9 : 6.2;
+        for (let x = pyRound(X - hw + .5); x < pyRound(X + hw + .5); x++){
+          if (front && Math.abs(x - X) < 4.6 && y > HEAD_TOP + 1) continue;
+          p.put(x, y, y === HEAD_TOP + 1 ? c.trim : c.main);
+        }
+      }
+      if (front){ for (let y = HEAD_TOP + 8; y <= CHIN + 1; y++) both(s => p.put(mx(s, 5 - (y - HEAD_TOP - 8) * .4), y, c.band)); for (const dx of [-1, 0, 1]) p.put(X + dx, CHIN + 2, c.band); }
+    } else if (kind === 'cap'){
+      p.rowC(HEAD_TOP - 1, 4.2, c.main); p.rowC(HEAD_TOP, 5, c.main); p.rowC(HEAD_TOP + 1, 5.2, c.band);
+      if (front) for (let x = X - 1; x < X + 7; x++) p.put(x, HEAD_TOP + 2, c.shade);
+      if (front && chance(.5)) for (const gx of [X - 2, X + 2]){ p.put(gx, HEAD_TOP, '#f2b23a'); p.put(gx + 1, HEAD_TOP, '#9be8ff'); }
+    } else if (kind === 'antlers'){
+      both(s => { line(mx(s, 3), HEAD_TOP, mx(s, 7), HEAD_TOP - 6, c.trim); line(mx(s, 5), HEAD_TOP - 3, mx(s, 4), HEAD_TOP - 6, c.trim); line(mx(s, 6.5), HEAD_TOP - 5, mx(s, 9), HEAD_TOP - 6, c.trim); });
+    } else if (kind === 'halo'){
+      for (let x = -4; x <= 4; x++) for (const dy of [-1, 1]) if (Math.abs(x) < 4 || dy > 0) p.put(X + x + .5, HEAD_TOP - 4 + (Math.abs(x) >= 3 ? 0 : dy), '#ffe08a');
+    } else if (kind === 'flowers'){
+      const cols = [c.light, c.alt, c.band];
+      for (let k = -2; k <= 2; k++){ const fx = X + k * 2.2, fy = HEAD_TOP + (Math.abs(k) === 2 ? 1 : 0), fc = cols[(k + 3) % 3];
+        for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) p.put(fx + dx, fy + dy, fc); p.put(fx, fy, '#ffe08a'); }
+    } else if (kind === 'mushroom'){
+      for (let k = 0; k < 7; k++) p.rowC(HEAD_TOP + 1 - k, 7.5 - k * k * .14, k ? c.main : c.trim);
+      for (const [dx, dy] of [[-4, -1], [2, -2], [-1, -4], [4, 0], [0, -1]]) p.put(X + dx, HEAD_TOP + dy, c.light);
+    } else if (kind === 'ears'){
+      const rabbit = chance(.5);
+      both(s => {
+        for (let k = 0; k < (rabbit ? 8 : 4); k++){
+          const hw = rabbit ? 1 : 2 - k * .5, cx2 = mx(s, 3.5);
+          for (let x = Math.trunc(cx2 - hw); x <= cx2 + hw; x++) p.put(x, HEAD_TOP - k, front && Math.abs(x - cx2) < hw - .2 && k > 0 ? '#ffb3d9' : c.main);
+        }
+      });
+    } else if (kind === 'jester'){
+      p.rowC(HEAD_TOP + 1, 6.5, c.main); p.rowC(HEAD_TOP + 2, 7, c.alt);
+      both(s => { for (let k = 0; k < 7; k++){ const y = HEAD_TOP - k + Math.trunc(k * k / 10); p.span(y, s > 0 ? X + k * .8 : X - k * .8 - 3, s > 0 ? X + k * .8 + 3 : X - k * .8, s > 0 ? c.main : c.alt); }
+        disc(mx(s, 8), HEAD_TOP - 2, 1, c.trim); });
+    } else {
+      // veil: a band round the head and a sheer fall behind
+      p.rowC(HEAD_TOP, 5, c.band);
+      for (let y = HEAD_TOP + 1; y <= WAIST + 4; y++){
+        const hw = 5.5 + (y - HEAD_TOP) * .08;
+        for (let x = pyRound(X - hw + .5); x < pyRound(X + hw + .5); x++) if (!front || Math.abs(x - X) >= 5) p.put(x, y, (x + y) % 3 ? c.light : c.trim);
+      }
+      if (chance(.6)) for (let k = -1; k <= 1; k++) p.put(X + k * 2, HEAD_TOP - 1, c.alt);
     }
   } else if (slot === 'hair'){
-    witchHair(p, side, c.hair, c.hair_d, c.hairLight, pick([CHIN + 1, SHOULDER + 1, SHOULDER + 2, WAIST + 1, HIP]), rng() < .8, rng() < .2, rng() < .15);
+    const length = pick([HEAD_TOP + 6, CHIN + 1, SHOULDER + 1, SHOULDER + 2, WAIST + 1, HIP, KNEE]);
+    const extra = pick(['none', 'none', 'side', 'braids', 'drills', 'ahoge', 'streak', 'spiky']);
+    info.kind = extra;
+    witchHair(p, side, c.hair, c.hair_d, c.hairLight, length, chance(.8), chance(.18), chance(.12));
+    if (extra === 'side'){ const s = pick([-1, 1]), bx = mx(s, 6); for (let y = HEAD_TOP + 1; y < HIP; y++) p.put(bx + s * (y > SHOULDER ? 1 : 0), y, y % 4 ? c.hair : c.hair_d); disc(bx, HEAD_TOP, 1.2, c.hair); p.put(bx, HEAD_TOP + 1, c.band); }
+    if (extra === 'braids') both(s => { const bx = mx(s, 5.5); for (let y = CHIN; y < WAIST + 3; y++) p.put(bx + ((y % 2) ? 0 : s), y, (y % 3) ? c.hair : c.hair_d); p.put(bx, WAIST + 3, c.band); });
+    if (extra === 'drills') both(s => { for (let y = HEAD_TOP + 4; y < WAIST; y++){ const bx = mx(s, 6.5) + ((y % 4) < 2 ? 0 : s); p.put(bx, y, c.hair); p.put(bx + s, y, (y % 4) === 1 ? c.hairLight : c.hair_d); } });
+    if (extra === 'ahoge') for (let k = 0; k < 4; k++) p.put(X + (k > 1 ? 1 : 0) + (k > 2 ? 1 : 0), HEAD_TOP - 3 - k, c.hair);
+    if (extra === 'streak'){ const sx = X + pick([-3, 2]); for (let y = HEAD_TOP - 1; y <= Math.min(length, HEAD_TOP + 7); y++) p.put(sx, y, c.alt); }
+    if (extra === 'spiky') for (let x = Math.trunc(X - 5); x <= X + 5; x += 2) p.put(x, HEAD_TOP - 3, c.hair);
+    // on the face, so it moves with the head: glasses, a monocle, a patch, a blindfold, a mask, freckles
+    const face = pick(['none', 'none', 'none', 'none', 'none', 'none', 'none', 'glasses', 'glasses', 'monocle', 'patch', 'blindfold', 'mask', 'freckles', 'freckles']);
+    if (face === 'blindfold' || face === 'patch'){
+      p.rowC(17, 5, c.shade);                                   // the strap shows from behind too
+      if (face === 'blindfold') for (const y of [19, 20]) p.rowC(y, 4.8, c.band);
+    }
+    if (front){
+      const eyes = [X - 2.5, X + 1.5], ring = (ex, col) => { for (let y = 18; y <= 21; y++) for (let x = ex - 1; x <= ex + 2; x++) if (y === 18 || y === 21 || x === ex - 1 || x === ex + 2) p.put(x, y, col); };
+      if (face === 'glasses'){ const g = pick(['#f2b23a', INK, c.alt]); ring(eyes[0], g); ring(eyes[1], g); p.put(X, 19, g); }
+      if (face === 'monocle'){ ring(eyes[1], '#f2b23a'); for (let y = 22; y < SHOULDER + 2; y++) p.put(eyes[1] + 2 + (y > CHIN ? 1 : 0), y, '#f2b23a'); }
+      if (face === 'patch') for (let y = 18; y <= 21; y++) for (let x = eyes[0] - 1; x <= eyes[0] + 2; x++) p.put(x, y, INK);
+      if (face === 'mask') for (let y = 18; y <= 21; y++) for (let x = Math.trunc(X - 4.5); x <= X + 4.5; x++){ const inEye = eyes.some(ex => x >= ex && x <= ex + 1 && (y === 19 || y === 20)); if (!inEye) p.put(x, y, c.alt); }
+      if (face === 'freckles') for (const [dx, dy] of [[-4, 21], [-3, 22], [3, 21], [4, 22]]) p.put(X + dx, dy, '#c98a6a');
+    }
   } else if (slot === 'top'){
-    const pat = pick(['plain', 'stripes', 'checker', 'placket', 'apron', 'dots']), sleeve = rng() < .5 ? c.light : c.alt, puff = rng() < .6, ruff = rng() < .2;
+    const pat = pick(['plain', 'stripes', 'checker', 'placket', 'apron', 'dots', 'buttons', 'laces', 'sash', 'vest', 'hearts', 'vstripes']);
+    const sleeves = pick(['puff', 'puff', 'short', 'long', 'bell', 'none']), sleeve = chance(.5) ? c.light : c.alt;
+    const collar = pick(['none', 'none', 'ruff', 'sailor', 'peter', 'high', 'bowtie', 'pendant']);
+    info.kind = pat;
     witchBodice(p, (x, y) => {
+      const dx = Math.abs(x - X), u = y - SHOULDER;
       if (pat === 'stripes') return (y % 2) ? c.main : c.alt;
+      if (pat === 'vstripes') return (x % 2) ? c.main : c.alt;
       if (pat === 'checker') return ((x + y) % 2) ? c.main : c.alt;
-      if (pat === 'placket') return side === 'front' && Math.abs(x - WCX) <= 1 ? c.trim : c.main;
-      if (pat === 'apron') return side === 'front' && Math.abs(x - WCX) <= 2 && y >= SHOULDER + 2 ? c.trim : c.main;
+      if (pat === 'placket') return front && dx <= 1 ? c.trim : c.main;
+      if (pat === 'apron') return front && dx <= 2 && y >= SHOULDER + 2 ? c.trim : c.main;
       if (pat === 'dots') return (x % 3 === 0 && y % 3 === 0) ? c.light : c.main;
+      if (pat === 'buttons') return front && dx < 1 && u % 2 === 1 ? c.trim : c.main;
+      if (pat === 'laces') return front && u > 1 && dx <= 1 && (x + y) % 2 === 0 ? c.trim : c.main;
+      if (pat === 'sash') return Math.abs((x - X) - (u - 4) * (front ? .7 : -.7)) < 1.2 ? c.band : c.main;
+      if (pat === 'vest') return dx >= 2 ? c.alt : c.light;
+      if (pat === 'hearts') return ((x % 4 === 1 && (y % 4 === 1 || y % 4 === 2)) || (x % 4 === 2 && y % 4 === 1)) ? c.light : c.main;
       return c.main;
-    }, sleeve, puff);
-    if (ruff) for (let x = Math.trunc(WCX - 5); x < Math.trunc(WCX + 6); x++) p.put(x, SHOULDER - 1, x % 2 ? c.trim : WHITE);
+    }, sleeve, sleeves === 'puff');
+    if (sleeves === 'long' || sleeves === 'bell') for (let y = SHOULDER; y < WAIST + 2; y++) both(s => { p.put(mx(s, 5), y, sleeve); if (sleeves === 'bell' && y >= WAIST - 1) p.put(mx(s, 6), y, sleeve); });
+    if (sleeves === 'none') for (let y = SHOULDER; y < SHOULDER + 8; y++) both(s => p.put(mx(s, 5), y, s > 0 ? SKIN_D : SKIN));
+    if (collar === 'ruff') for (let x = Math.trunc(X - 5); x < Math.trunc(X + 6); x++) p.put(x, SHOULDER - 1, x % 2 ? c.trim : WHITE);
+    if (collar === 'sailor'){ p.rowC(SHOULDER, 4.5, c.trim); p.rowC(SHOULDER + 1, 4, c.light); if (!front) p.rowC(SHOULDER + 2, 3.5, c.trim); }
+    if (collar === 'peter' && front) both(s => { p.put(mx(s, 1), SHOULDER, c.trim); p.put(mx(s, 2), SHOULDER, c.trim); p.put(mx(s, 2), SHOULDER + 1, c.trim); });
+    if (collar === 'high'){ p.rowC(SHOULDER - 1, 2, c.main); p.rowC(SHOULDER, 3, c.trim); }
+    if (collar === 'bowtie' && front) for (const [dx, dy] of [[-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-2, 1], [2, 1], [-2, -1], [2, -1]]) p.put(X + dx + .5, SHOULDER + dy + 1, c.band);
+    if (collar === 'pendant' && front){ line(X - 2, SHOULDER, X, SHOULDER + 3, '#f2b23a'); line(X + 3, SHOULDER, X + 1, SHOULDER + 3, '#f2b23a'); p.put(X, SHOULDER + 4, c.alt); p.put(X + 1, SHOULDER + 4, c.alt); }
   } else if (slot === 'bottom'){
-    const to = pick([HIP + 3, HIP + 4, KNEE, KNEE + 3, ANKLE - 1]), flare = to <= HIP + 4 ? .6 + rng() * .2 : .35 + rng() * .2;
-    const pat = pick(['plain', 'vstripes', 'bands', 'hem', 'apron', 'checker']);
-    witchSkirt(p, (x, y) => {
+    const kind = pick(['skirt', 'skirt', 'skirt', 'long', 'tutu', 'tiers', 'trousers', 'shorts']);
+    const pat = pick(['plain', 'vstripes', 'bands', 'hem', 'apron', 'checker', 'patches', 'scallop']);
+    info.kind = kind;
+    const colourAt = to => (x, y) => {
       if (y >= to - 1 && (pat === 'hem' || pat === 'bands')) return c.trim;
-      if (pat === 'vstripes') return Math.floor((x - Math.trunc(WCX)) / 2) % 2 ? c.main : c.alt;
+      if (pat === 'scallop' && y >= to - 1 && (x % 3 !== 1 || y === to)) return y === to ? (x % 3 === 1 ? null : c.trim) : c.trim;
+      if (pat === 'vstripes') return Math.floor((x - Math.trunc(X)) / 2) % 2 ? c.main : c.alt;
       if (pat === 'bands') return Math.floor((y - WAIST) / 3) % 2 ? c.alt : c.main;
-      if (pat === 'apron' && side === 'front' && Math.abs(x - WCX - .5) <= 2.5) return c.trim;
+      if (pat === 'apron' && front && Math.abs(x - X - .5) <= 2.5) return c.trim;
       if (pat === 'checker') return ((x + y) % 2) ? c.main : c.alt;
+      if (pat === 'patches') return (Math.trunc(x / 3) * 7 + Math.trunc(y / 3) * 3) % 5 === 0 ? c.alt : c.main;
       return c.main;
-    }, to, flare);
+    };
+    if (kind === 'trousers' || kind === 'shorts'){
+      // only the seat here: the cutter keeps this slot as one swaying piece, so the legs slot draws the trouser legs
+      for (let y = WAIST; y <= HIP + 1; y++) p.rowC(y, 3.6 + (y - WAIST) * .3, c.main);
+    } else {
+      const to = kind === 'long' ? ANKLE - 1 : kind === 'tutu' ? HIP + 2 : kind === 'tiers' ? pick([KNEE, KNEE + 3]) : pick([HIP + 3, HIP + 4, KNEE, KNEE + 3]);
+      const flare = kind === 'tutu' ? 1.3 : kind === 'long' ? .35 + rng() * .1 : to <= HIP + 4 ? .6 + rng() * .2 : .35 + rng() * .2;
+      const col = colourAt(to);
+      witchSkirt(p, kind === 'tiers' ? (x, y) => ((y - WAIST) % 4 === 3 ? (x % 2 ? c.trim : c.light) : col(x, y)) : col, to, flare);
+    }
+    if (chance(.4)){ p.rowC(WAIST, 3.8, c.band); if (front) p.put(X + .5, WAIST, '#f2b23a'); }   // a belt
   } else if (slot === 'legs'){
-    const pat = pick(['none', 'plain', 'stripes', 'socks', 'fishnet']), toe = rng() < .2 ? c.shoe : null;
-    witchStockings(p, y => pat === 'plain' ? c.alt : pat === 'stripes' ? ((Math.floor(y / 2) % 2) ? c.trim : c.main)
-      : pat === 'socks' ? (y > KNEE + 1 ? c.trim : null) : pat === 'fishnet' ? (y % 2 ? c.alt : c.main) : null, c.shoe, 1 + ri(rng, 4), toe);
+    const pat = pick(['none', 'plain', 'stripes', 'socks', 'fishnet', 'thigh', 'ankle', 'mismatch', 'dots']);
+    const shoe = c.shoe, boot = 1 + ri(rng, 6), style = pick(['plain', 'plain', 'curl', 'strap', 'platform', 'buckle']);
+    info.kind = pat;
+    const legCol = (y, left) => {
+      if (pat === 'plain') return c.alt;
+      if (pat === 'stripes') return (Math.floor(y / 2) % 2) ? c.trim : c.main;
+      if (pat === 'socks') return y > KNEE + 1 ? c.trim : null;
+      if (pat === 'fishnet') return y % 2 ? c.alt : c.main;
+      if (pat === 'thigh') return y < HIP + 4 ? null : y === HIP + 4 ? c.band : c.main;
+      if (pat === 'ankle') return y >= ANKLE - 2 ? c.trim : null;
+      if (pat === 'mismatch') return left ? ((Math.floor(y / 2) % 2) ? c.trim : c.main) : c.alt;
+      if (pat === 'dots') return y % 3 === 0 ? c.light : c.alt;
+      return null;
+    };
+    for (let y = HIP + 2; y < ANKLE; y++){
+      const l = legCol(y, front), r = legCol(y, !front);    // seen from behind, her left leg is on the right
+      if (l) p.span(y, X - 3, X - .5, l); if (r) p.span(y, X + 1.5, X + 4, r);
+    }
+    if (ctx.trousers){
+      // trouser legs, one per leg so each walks with its leg; stockings show below shorts
+      const to = ctx.trousers === 'shorts' ? HIP + 3 : ANKLE - 1;
+      for (let y = HIP + 1; y <= to; y++){ p.span(y, X - 3.5, X, y === to ? c.shade : c.main); p.span(y, X + 1, X + 4.5, y === to ? c.shade : c.main); }
+    }
+    for (let y = ANKLE - boot; y < WH; y++){ p.span(y, X - 3.5, X - .5, shoe); p.span(y, X + 1.5, X + 4.5, shoe); }
+    if (style === 'curl'){ p.put(X - 4, WH - 1, shoe); p.put(X + 5, WH - 1, shoe); p.put(X - 5, WH - 2, shoe); p.put(X + 6, WH - 2, shoe); }
+    if (style === 'strap') for (const [a, b] of [[X - 3.5, X - .5], [X + 1.5, X + 4.5]]) p.span(ANKLE + 1, a, b, c.trim);
+    if (style === 'platform') p.rowC(WH - 1, 4.5, INK);
+    if (style === 'buckle' && front){ p.put(X - 2, ANKLE + 1, '#f2b23a'); p.put(X + 3, ANKLE + 1, '#f2b23a'); }
+    if (boot >= 4 && chance(.5)) for (const a of [X - 3.5, X + 1.5]) p.span(ANKLE - boot, a, a + 3, c.trim);   // a cuff on tall boots
   } else if (slot === 'back'){
-    const kind = pick(['cape', 'cape', 'bow', 'ribbons', 'wings']); info.kind = kind;
-    if (kind === 'cape'){
-      const to = pick([HIP + 2, HIP + 6, KNEE + 4]);
-      for (let y = SHOULDER; y <= to; y++) p.rowC(y, 4.5 + (y - SHOULDER) * .3, side === 'front' ? c.hair_d : c.alt);
+    const kind = pick(['cape', 'cape', 'cloak', 'bow', 'ribbons', 'wings', 'bat', 'butterfly', 'backpack', 'tail', 'basket']);
+    info.kind = kind;
+    if (kind === 'cape' || kind === 'cloak'){
+      const to = kind === 'cloak' ? KNEE + 4 : pick([HIP + 2, HIP + 6, KNEE + 4]);
+      for (let y = SHOULDER; y <= to; y++) p.rowC(y, 4.5 + (y - SHOULDER) * .3, front ? c.hair_d : (y === to ? c.trim : c.alt));
+      if (kind === 'cloak' && !front) for (let y = SHOULDER - 1; y < SHOULDER + 3; y++) p.rowC(y, 3.5, c.shade);   // the hood, down
+      if (chance(.4)) p.rowC(SHOULDER - 1, 5, c.band);                                                        // a high collar
     } else if (kind === 'bow'){
-      if (side === 'back'){
-        for (const [dx, dy] of [[-3, 0], [-2, -1], [-2, 1], [-1, 0], [1, 0], [2, -1], [2, 1], [3, 0]]) p.put(WCX + dx, WAIST + dy, c.band);
-        for (let y = WAIST + 1; y < HIP + 6; y++){ p.put(WCX - 1, y, c.band); p.put(WCX + 1, y, c.band); }
+      if (!front){
+        for (const [dx, dy] of [[-3, 0], [-2, -1], [-2, 1], [-1, 0], [1, 0], [2, -1], [2, 1], [3, 0]]) p.put(X + dx, WAIST + dy, c.band);
+        for (let y = WAIST + 1; y < HIP + 6; y++){ p.put(X - 1, y, c.band); p.put(X + 1, y, c.band); }
       }
     } else if (kind === 'ribbons'){
-      for (let y = SHOULDER - 2; y < WAIST + 2; y++) p.put(WCX + 6 + ((y % 3 === 0) ? 1 : 0), y, y % 2 ? c.light : c.main);
-    } else {
-      // wings from the shoulder blades, veined
+      for (let y = SHOULDER - 2; y < WAIST + 2; y++) p.put(X + 6 + ((y % 3 === 0) ? 1 : 0), y, y % 2 ? c.light : c.main);
+    } else if (kind === 'wings' || kind === 'bat' || kind === 'butterfly'){
+      const spots = chance(.5);
       for (let y = SHOULDER - 5; y <= WAIST + 3; y++){
-        const t = (y - (SHOULDER - 5)) / (WAIST + 8 - SHOULDER), reach = Math.round(1 + 8 * Math.sin(Math.PI * Math.min(1, t * 1.1)));
-        for (let k = 0; k < reach; k++) for (const sgn of [-1, 1]){
-          const x = sgn > 0 ? WCX + 4.5 + k : WCX - 4.5 - k;
-          p.put(x, y, k === reach - 1 || y % 3 === 0 ? c.shade : c.light);
-        }
+        const t = (y - (SHOULDER - 5)) / (WAIST + 8 - SHOULDER);
+        let reach = Math.round(1 + 8 * Math.sin(Math.PI * Math.min(1, t * 1.1)));
+        if (kind === 'butterfly') reach = Math.round(t < .55 ? 2 + 8 * Math.sin(Math.PI * t / .55) : 1 + 5 * Math.sin(Math.PI * (t - .55) / .45));
+        for (let k = 0; k < reach; k++) both(s => {
+          let colr = k === reach - 1 || y % 3 === 0 ? c.shade : c.light;
+          if (kind === 'bat') colr = (k === reach - 1 && (y % 3) !== 2) ? null : (k % 3 === 0 ? c.shade : c.main);
+          if (kind === 'butterfly') colr = spots && (k * 3 + y) % 5 === 0 ? c.alt : k === reach - 1 ? c.shade : c.light;
+          if (colr) p.put(s > 0 ? X + 4.5 + k : X - 4.5 - k, y, colr);
+        });
+      }
+    } else if (kind === 'backpack'){
+      if (!front){ for (let y = SHOULDER + 1; y <= WAIST + 2; y++) p.rowC(y, 3.2, y === SHOULDER + 3 ? c.shade : c.alt); p.put(X + .5, SHOULDER + 4, '#f2b23a'); }
+      else both(s => { for (let y = SHOULDER; y < SHOULDER + 5; y++) p.put(mx(s, 3), y, c.shade); });
+    } else if (kind === 'tail'){
+      const fluffy = chance(.5);
+      for (let k = 0; k < 12; k++){
+        const tx = X + 4 + k * .5, ty = HIP + 1 + k - Math.trunc(k * k / 14);
+        if (!front) p.put(X + .5 + Math.min(k, 3) * .3, HIP - 1 + k, fluffy ? c.hair : c.main);
+        else if (k > 5) p.put(tx, ty, fluffy ? c.hair : c.main);
+      }
+      if (!fluffy && !front) for (const [dx, dy] of [[0, 0], [-1, 1], [1, 1]]) p.put(X + 1 + dx, HIP + 11 + dy, c.main);   // a devil's spade tip
+    } else {
+      if (!front){
+        for (let y = SHOULDER + 2; y < WAIST + 2; y++) p.rowC(y, 3.5, (y % 2) ? c.shade : c.main);
+        for (const ex of [X - 2, X + 1, X + 3]){ p.put(ex, SHOULDER + 1, c.light); p.put(ex, SHOULDER, c.trim); }
       }
     }
   } else if (slot === 'hand'){
-    const kind = pick(['staff', 'short', 'star', 'orb', 'dropper']), x = heldX(side); info.kind = kind;
+    const kind = pick(['staff', 'short', 'star', 'orb', 'dropper', 'broom', 'lantern', 'scythe', 'book', 'parasol', 'candle', 'trident', 'heart', 'bone']);
+    const x = heldX(side), hy = WAIST + 2; info.kind = kind;
+    const shaft = (y0, y1, col) => { for (let y = y0; y < y1; y++) p.put(x, y, col); };
     if (kind === 'staff' || kind === 'orb'){
-      for (let y = HEAD_TOP - 2; y < ANKLE; y++) p.put(x, y, '#7d6f78');
+      shaft(HEAD_TOP - 2, ANKLE, '#7d6f78');
       if (kind === 'staff'){ for (let dy = -2; dy < 2; dy++) for (let dx = -1; dx < 2; dx++) p.put(x + dx, HEAD_TOP - 3 + dy, c.trim); p.put(x, HEAD_TOP - 6, c.light); }
       else for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) p.put(x + dx, HEAD_TOP - 4 + dy, dx === -1 && dy === -1 ? WHITE : c.alt);
-    } else if (kind === 'short'){
-      for (let y = WAIST - 6; y < WAIST + 2; y++) p.put(x, y, c.main);
-      p.put(x, WAIST - 7, c.trim); p.put(x, WAIST - 8, c.light);
-    } else if (kind === 'star'){
-      for (let y = SHOULDER; y < WAIST + 2; y++) p.put(x, y, c.trim);
+    } else if (kind === 'short'){ shaft(WAIST - 6, WAIST + 2, c.main); p.put(x, WAIST - 7, c.trim); p.put(x, WAIST - 8, c.light); }
+    else if (kind === 'star'){
+      shaft(SHOULDER, WAIST + 2, c.trim);
       for (const [dx, dy] of [[0, -3], [-1, -2], [0, -2], [1, -2], [-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1], [-1, 0], [1, 0]]) p.put(x + dx, SHOULDER - 1 + dy, '#ffe08a');
+    } else if (kind === 'dropper'){ shaft(SHOULDER, WAIST + 1, c.light); for (let dy = -2; dy <= 0; dy++) for (let dx = -1; dx <= 1; dx++) p.put(x + dx, SHOULDER - 1 + dy, c.alt); }
+    else if (kind === 'broom'){
+      shaft(SHOULDER - 6, ANKLE - 3, '#8a6a4a');
+      for (let y = ANKLE - 3; y < WH; y++) for (let dx = -Math.trunc((y - ANKLE + 4) / 2); dx <= Math.trunc((y - ANKLE + 4) / 2); dx++) p.put(x + dx, y, (dx + y) % 2 ? '#e8c46a' : '#c99a3a');
+      p.put(x, ANKLE - 3, c.band);
+    } else if (kind === 'lantern'){
+      shaft(hy - 2, hy + 1, INK);
+      for (let y = hy + 1; y < hy + 6; y++) for (let dx = -1; dx <= 1; dx++) p.put(x + dx, y, dx === 0 && y > hy + 1 && y < hy + 5 ? '#ffe08a' : c.shade);
+    } else if (kind === 'scythe'){
+      shaft(HEAD_TOP - 4, ANKLE, '#5a4a52');
+      for (let k = 0; k < 7; k++) p.put(x + (side === 'front' ? -1 : 1) * (k + 1), HEAD_TOP - 4 + Math.trunc(k * k / 12), '#d8dde8');
+    } else if (kind === 'book'){
+      for (let y = hy - 2; y < hy + 3; y++) for (let dx = -1; dx <= 1; dx++) p.put(x + dx, y, dx === 0 ? c.trim : c.alt);
+      p.put(x, hy - 3, '#ffe08a');
+    } else if (kind === 'parasol'){
+      shaft(SHOULDER - 2, ANKLE - 4, '#7d6f78');
+      for (let k = 0; k < 5; k++) p.span(SHOULDER - 6 + k, x - k - 1, x + k + 2, k === 4 ? c.trim : (k % 2 ? c.main : c.light));
+    } else if (kind === 'candle'){
+      for (let y = hy - 4; y < hy + 1; y++) p.put(x, y, '#f4e6d4');
+      p.put(x, hy - 5, '#f2b23a'); p.put(x, hy - 6, '#ffe08a');
+      p.span(hy + 1, x - 1, x + 2, '#f2b23a');
+    } else if (kind === 'trident'){
+      shaft(HEAD_TOP, ANKLE, '#7d6f78');
+      for (const dx of [-2, 0, 2]) for (let k = 0; k < (dx ? 3 : 4); k++) p.put(x + dx, HEAD_TOP - 1 - k, c.trim);
+      p.span(HEAD_TOP - 1, x - 2, x + 3, c.trim);
+    } else if (kind === 'heart'){
+      shaft(SHOULDER, WAIST + 2, c.trim);
+      for (const [dx, dy] of [[-1, -3], [1, -3], [-2, -2], [-1, -2], [0, -2], [1, -2], [2, -2], [-1, -1], [0, -1], [1, -1], [0, 0]]) p.put(x + dx, SHOULDER - 1 + dy, '#ff5fae');
     } else {
-      for (let y = SHOULDER; y < WAIST + 1; y++) p.put(x, y, c.light);
-      for (let dy = -2; dy <= 0; dy++) for (let dx = -1; dx <= 1; dx++) p.put(x + dx, SHOULDER - 1 + dy, c.alt);
+      shaft(hy - 5, hy + 3, '#f4e6d4');
+      for (const dy of [hy - 6, hy + 3]){ p.put(x - 1, dy, '#f4e6d4'); p.put(x + 1, dy, '#f4e6d4'); }
     }
   }
   return { px: p.px, info };
 }
 function genWitch(seed, p){
-  const rng = mulberry32(seed), cs = makeColors(rng, 5);
+  const rng = mulberry32(seed);
+  let cs = makeColors(rng, 5);
+  // a scheme for the whole outfit, when the palette is free to choose; fixed palettes keep their colours
+  const free = ['random', 'harmony'].includes(P_COLOUR().palette), scheme = free ? WITCH_SCHEMES[ri(rng, WITCH_SCHEMES.length)] : 'as is';
+  if (scheme === 'mono') cs = [cs[0], mul(cs[0], .7), mix(cs[0], [255, 255, 255], .7), cs[3], mul(cs[0], .5)];
+  if (scheme === 'contrast') cs = [[34, 26, 40], cs[1], mix(cs[2], [255, 255, 255], .5), cs[3], cs[1]];
+  if (scheme === 'pastel') cs = cs.map(c => mix(c, [255, 255, 255], .5));
+  if (scheme === 'dark') cs = [mul(cs[0], .45), mul(cs[1], .6), mix(cs[2], [255, 250, 240], .6), cs[3], mul(cs[4], .7)];
+  if (scheme === 'two-tone') cs = [cs[0], cs[1], mix(cs[1], [255, 255, 255], .5), cs[3], cs[1]];
+  if (free && rng() < .35) cs[3] = HAIR_TONES[ri(rng, HAIR_TONES.length)];   // natural hair now and then
   const colours = {
     main: hex(cs[0]), shade: hex(mul(cs[0], .62)), alt: hex(cs[1]), trim: hex(mix(cs[2], [255, 246, 235], .6)), light: hex(mix(cs[0], [255, 255, 255], .45)),
     hair: hex(cs[3]), hair_d: hex(mul(cs[3], .6)), hairLight: hex(mix(cs[3], [255, 255, 255], .5)), shoe: hex(mul(cs[4], .45)), band: hex(cs[4]),
   };
   const slotSeeds = {}; SLOTS.forEach((s2, k) => slotSeeds[s2] = hash32((seed ^ hash32(k + 11)) >>> 0));
   const label = WITCH_NAMES[ri(rng, WITCH_NAMES.length)], wandSeed = hash32(seed ^ 0x9e37);
-  return witchFrom({ seed, colours, slotSeeds, label, wandSeed, enabled: { hat: p.hat, back: p.back, hand: p.hand } });
+  return witchFrom({ seed, colours, slotSeeds, label, wandSeed, scheme, enabled: { hat: p.hat, back: p.back, hand: p.hand } });
 }
 function witchFrom(def){
   const pal = { keys: [], colors: [] }, c = def.colours, slots = {}, front = witchBody(pal, 'front').px, back = witchBody(pal, 'back').px;
-  for (const s2 of SLOTS){
+  const ctx = {}, order = ['bottom', ...SLOTS.filter(s2 => s2 !== 'bottom')];
+  for (const s2 of order){
     if (def.enabled[s2] === false) continue;
-    slots[s2] = { front: drawSlot(s2, 'front', def.slotSeeds[s2], c, pal), back: drawSlot(s2, 'back', def.slotSeeds[s2], c, pal) };
+    slots[s2] = { front: drawSlot(s2, 'front', def.slotSeeds[s2], c, pal, ctx), back: drawSlot(s2, 'back', def.slotSeeds[s2], c, pal, ctx) };
+    if (s2 === 'bottom' && ['trousers', 'shorts'].includes(slots.bottom.front.info.kind)) ctx.trousers = slots.bottom.front.info.kind;
   }
   // front: the back slot behind the body, then the rest back to front; back: the back slot on top
   const lay = (dst, src) => { for (let i = 0; i < dst.length; i++) if (src[i] >= 0) dst[i] = src[i]; };
@@ -1366,13 +1583,13 @@ function witchFrom(def){
   let wand = null;
   if (slots.hand){
     const r = mulberry32(def.wandSeed), kind = slots.hand.front.info.kind;
-    const shape = { staff: 'orb', orb: 'orb', short: 'needle', dropper: 'needle', star: 'star' }[kind];
-    const heavy = kind === 'staff' || kind === 'orb';
+    const [shape, heavyN, noun] = WAND_KINDS[kind], heavy = !!heavyN;
+    const fan = { book: [3, 14], trident: [3, 10], dropper: [2, 6], broom: [2, 6], star: [1 + ri(r, 3), 8] }[kind];
     wand = {
-      name: WAND_WORDS[0][ri(r, 12)] + ' ' + { staff: 'staff', orb: 'staff', short: 'wand', dropper: 'dropper', star: 'wand' }[kind],
+      name: WAND_WORDS[0][ri(r, 12)] + ' ' + noun,
       rate: +(heavy ? .5 + r() * .4 : 1 + r() * .6).toFixed(2), speed: +(heavy ? .7 + r() * .3 : 1 + r() * .4).toFixed(2),
-      dmg: heavy ? 2 + ri(r, 2) : 1, bounce: ri(r, 4) === 0 ? 1 : 0, pierce: ri(r, 5) === 0 ? 1 : 0,
-      shots: kind === 'dropper' ? 2 : kind === 'star' ? 1 + ri(r, 3) : 1, spread: kind === 'star' || kind === 'dropper' ? +(4 + r() * 8).toFixed(1) : 0,
+      dmg: heavy ? 2 + ri(r, 2) : 1, bounce: kind === 'parasol' || ri(r, 4) === 0 ? 1 : 0, pierce: kind === 'scythe' || ri(r, 5) === 0 ? 1 : 0,
+      shots: fan ? fan[0] : 1, spread: fan ? +(fan[1] * (.7 + r() * .6)).toFixed(1) : 0,
       life: +(heavy ? 2.4 + r() * .8 : 1.4 + r() * .8).toFixed(1), flash: c.light.slice(1),
       shot: { shape, colours: [c.alt.slice(1), c.trim.slice(1)] },
     };
@@ -2955,7 +3172,7 @@ $('#help').innerHTML = `
   <h3>Creatures</h3>
   <p>A front picture domed forward and a back picture domed backward, built the way the jellies and eyeballs are. The back can be plain, spotted, striped down the spine, or the same as the front. Edit opens both, as Front and Back.</p>
   <h3>Witch</h3>
-  <p>Whole outfits on the witch's own body: a hat (pointed, crown, bow, horns or hood), hair, a bodice, a skirt, stockings and shoes, something on the back (a cape, wings, a bow, ribbons) and a wand. They are drawn with the same shapes and anchor rows as the dungeon's outfit scripts, each slot front and back. The wand's shot follows what she holds: staffs fire orbs, short wands and droppers needles, star wands stars. Outfit saves a zip of the slot pictures and the set JSON. More like this changes a slot or two and keeps the rest.</p>
+  <p>Whole outfits on the witch's own body. Hats: pointed (drooping, patched, with buckles, goggles, feathers, stars, moons), crowns, bows, horns, hoods, berets, top hats, bonnets, caps, antlers, halos, flower crowns, mushrooms, ears, jester points, veils. Hair in seven lengths with buns, tails, side tails, braids, ringlets, a stray strand, a streak or spikes, and sometimes glasses, a monocle, a patch, a blindfold, a mask or freckles. Bodices in a dozen patterns with puffed, short, long, bell or no sleeves and a collar; skirts, long dresses, tutus, tiers, trousers or shorts; stockings and shoes; capes, cloaks, wings (feathered, bat, butterfly), backpacks, tails, baskets; and fourteen things to hold. Each outfit takes a colour scheme: harmony, one colour, contrast, pastel, dark or two-tone. They are drawn with the same shapes and anchor rows as the dungeon's outfit scripts, each slot front and back. The wand's shot follows what she holds: staffs fire orbs, short wands and droppers needles, star wands stars. Outfit saves a zip of the slot pictures and the set JSON. More like this changes a slot or two and keeps the rest.</p>
   <h3>Tiles</h3>
   <p>A room theme: one cell of wall face and one cell of floor, at the dungeon's 64 by 72. The wall stacks a plinth, a wainscot (harlequin, stripes, honeycomb, clinical tiles or panels), a rail, an upper wall (bricks, half-drop wallpaper, stripes or stone), a cornice and corner pilasters. The floor is flags, checks, slime tiles, boards or small tiles, with the runner crossing it. Tiles .zip saves the wall, floor and runner as pictures with the colours and parts in theme.json. More like this swaps a part or two.</p>
   <h3>Voxel field</h3>
