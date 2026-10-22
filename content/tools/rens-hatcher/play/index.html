@@ -1053,8 +1053,8 @@ const regenSoon = () => { clearTimeout(regenTimer); regenTimer = setTimeout(() =
 const PRESETS = {
   sprite: {
     ships:      { w: 7, h: 7, density: 50, core: 0, mirrorX: true, mirrorY: false, cleanup: false },
-    critters:   { w: 8, h: 8, density: 55, core: 35, mirrorX: true, mirrorY: false, cleanup: true },
-    'tall folk': { w: 7, h: 12, density: 55, core: 25, mirrorX: true, mirrorY: false, cleanup: true },
+    creatures:  { w: 8, h: 8, density: 55, core: 35, mirrorX: true, mirrorY: false, cleanup: true },
+    bugs:       { w: 7, h: 12, density: 55, core: 25, mirrorX: true, mirrorY: false, cleanup: true },
     badges:     { w: 9, h: 9, density: 55, core: 40, mirrorX: true, mirrorY: true, cleanup: true },
     lumps:      { w: 10, h: 8, density: 70, core: 60, mirrorX: true, mirrorY: false, cleanup: true },
     big:        { w: 16, h: 16, density: 48, core: 45, mirrorX: true, mirrorY: false, cleanup: true },
@@ -1070,7 +1070,7 @@ const PRESETS = {
   voxel: {
     blobs:      { w: 12, h: 12, d: 12, density: 55, core: 60, smooth: 2, mirrorX: true, mirrorZ: false, cleanup: true },
     rocks:      { w: 10, h: 8, d: 10, density: 65, core: 70, smooth: 3, mirrorX: false, mirrorZ: false, cleanup: true },
-    hulls:      { w: 9, h: 6, d: 14, density: 50, core: 40, smooth: 1, mirrorX: true, mirrorZ: false, cleanup: true },
+    bugs:       { w: 9, h: 6, d: 14, density: 50, core: 40, smooth: 1, mirrorX: true, mirrorZ: false, cleanup: true },
     towers:     { w: 8, h: 16, d: 8, density: 55, core: 30, smooth: 2, mirrorX: true, mirrorZ: true, cleanup: true },
     totems:     { w: 6, h: 14, d: 6, density: 60, core: 20, smooth: 1, mirrorX: true, mirrorZ: true, cleanup: true },
     coral:      { w: 12, h: 12, d: 12, density: 40, core: 30, smooth: 1, mirrorX: false, mirrorZ: false, cleanup: true },
