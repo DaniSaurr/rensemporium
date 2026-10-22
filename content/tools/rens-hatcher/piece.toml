@@ -1,0 +1,10 @@
+title = "ren's hatcher"
+year = "2026"
+updated = "2026-10-22"
+made_with = ["javascript", "html"]
+lead = true
+order = 3
+draft = true
+blurb = ""
+links = [ { label = "open ren's hatcher", href = "play/", big = true } ]
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]

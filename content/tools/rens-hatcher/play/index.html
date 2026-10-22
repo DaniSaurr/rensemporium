@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ren's Hatcher</title>
+<style>
+  :root{
+    --bg:#1d1d1d; --region:#303030; --panel:#2d2d2d; --panel-head:#3a3a3a;
+    --widget:#4a4a4a; --widget-hi:#5c5c5c; --field:#232323;
+    --line:#151515; --line-soft:#3d3d3d; --text:#e6e6e6; --muted:#9a9a9a;
+    --accent:#4772b3; --accent-hi:#5b88cc; --select:#e8912b;
+    --headers:#dfe4ee;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",Inter,Roboto,-apple-system,system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;}
+
+  #app{height:100vh;display:grid;grid-template-rows:38px 1fr 24px;overflow:hidden;}
+  #topbar{display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--region);border-bottom:1px solid var(--line);}
+  #body{display:grid;grid-template-columns:74px 1fr minmax(340px,30vw);overflow:hidden;}
+  #statusbar{display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--region);border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+  #statusbar .spacer{flex:1;}
+
+  .brand{font-weight:600;letter-spacing:.3px;color:var(--headers);font-size:15px;white-space:nowrap;}
+  .brand small{color:var(--accent-hi);font-weight:600;}
+  .topspacer{flex:1;}
+  .topbtn{background:var(--widget);border:1px solid var(--line);color:var(--text);height:26px;min-width:30px;padding:0 8px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12px;}
+  .topbtn:hover{background:var(--widget-hi);}
+  .topbtn svg{width:16px;height:16px;}
+  .topbtn.hot{background:var(--select);border-color:#f0a44e;color:#171717;font-weight:600;}
+  .topbtn.hot:hover{background:#f0a44e;}
+  .seedbox{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;}
+  .seedbox input{width:110px;height:26px;text-align:center;}
+
+  #toolbar{background:var(--region);border-right:1px solid var(--line);padding:6px 0;display:flex;flex-direction:column;
+    align-items:center;gap:3px;overflow-y:auto;}
+  #toolbar .sep{width:46px;height:1px;background:var(--line-soft);margin:5px 0;}
+  .tbtn{width:60px;padding:7px 2px 5px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--muted);
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;}
+  .tbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .tbtn .lbl{font-size:10px;letter-spacing:.2px;}
+  .tbtn:hover{background:var(--widget);color:var(--text);}
+  .tbtn.on{background:var(--accent);color:#fff;border-color:var(--accent-hi);}
+
+  #stageWrap{position:relative;background:var(--bg);overflow:hidden;}
+  #stage{display:block;width:100%;height:100%;cursor:pointer;image-rendering:pixelated;}
+  #modeBadge{position:absolute;right:12px;top:12px;background:rgba(20,20,20,.86);border:1px solid var(--accent);
+    padding:5px 11px;color:#fff;font-family:ui-monospace,Consolas,monospace;font-size:12px;border-radius:5px;pointer-events:none;}
+  #hint{position:absolute;left:12px;bottom:12px;background:rgba(20,20,20,.82);border:1px solid var(--line-soft);
+    padding:8px 11px;color:var(--text);font-size:11.5px;max-width:640px;line-height:1.5;border-radius:6px;}
+  #hint .x{float:right;margin-left:10px;cursor:pointer;color:var(--muted);}
+  #hint.hide{display:none;}
+
+  #props{background:var(--region);border-left:1px solid var(--line);overflow-y:auto;padding:8px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--panel-head);cursor:pointer;
+    user-select:none;font-weight:600;color:var(--headers);font-size:12.5px;}
+  .panel-head::before{content:"";width:0;height:0;border-left:5px solid var(--muted);border-top:4px solid transparent;
+    border-bottom:4px solid transparent;transform:rotate(90deg);transition:transform .12s;}
+  .panel.collapsed .panel-head::before{transform:rotate(0deg);}
+  .panel-head .badge{margin-left:auto;font-weight:400;color:var(--muted);font-size:11px;}
+  .panel-body{padding:10px;}
+  .panel.collapsed .panel-body{display:none;}
+
+  .hintline{font-size:11.5px;color:var(--muted);line-height:1.5;margin:6px 0 0;}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .row + .row{margin-top:6px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+
+  .btn{background:var(--widget);color:var(--text);border:1px solid var(--line);padding:7px 10px;border-radius:5px;
+    cursor:pointer;font-size:12px;flex:1;text-align:center;white-space:nowrap;}
+  .btn:hover{background:var(--widget-hi);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.primary{background:var(--accent);border-color:var(--accent-hi);color:#fff;}
+  .btn.primary:hover{background:var(--accent-hi);}
+
+  .field{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0;font-size:12px;}
+  .field > span{color:var(--muted);}
+  input[type="number"],input[type="text"],select,textarea{background:var(--field);color:var(--text);border:1px solid var(--line);
+    padding:6px 8px;font-size:12px;border-radius:5px;width:100%;font-family:inherit;}
+  .field input[type="number"]{width:104px;text-align:center;cursor:ew-resize;}
+  .field select{width:124px;}
+  input[type="number"]:hover{border-color:var(--accent);}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent-hi);cursor:text;}
+  input[type="color"]{width:104px;height:28px;padding:2px;background:var(--field);border:1px solid var(--line);border-radius:5px;cursor:pointer;}
+  select{cursor:pointer;}
+  textarea{resize:vertical;min-height:54px;font-family:ui-monospace,Consolas,monospace;font-size:11px;}
+  .check{display:flex;align-items:center;gap:8px;margin:7px 0;cursor:pointer;font-size:12px;}
+  .check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+
+  #pickWrap{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:5px;overflow:hidden;}
+  #pickCv{display:block;width:100%;aspect-ratio:1/1;cursor:grab;image-rendering:pixelated;}
+  #pickCv:active{cursor:grabbing;}
+  #pickEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;pointer-events:none;}
+  .pickmeta{display:flex;justify-content:space-between;margin:7px 0 2px;}
+  .exports{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px;}
+  .exports .btn{padding:6px 3px;}
+  .exports[hidden],.exports .btn[hidden]{display:none;}
+
+  #keptList{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:5px;margin-bottom:8px;}
+  .kept{position:relative;background:var(--field);border:1px solid var(--line);border-radius:5px;aspect-ratio:1/1;cursor:pointer;overflow:hidden;}
+  .kept:hover{border-color:var(--accent);}
+  .kept.on{border-color:var(--select);}
+  .kept canvas{width:100%;height:100%;display:block;image-rendering:pixelated;}
+  .kept .rm{position:absolute;top:1px;right:1px;width:16px;height:16px;border:0;border-radius:3px;background:rgba(0,0,0,.6);
+    color:var(--muted);font-size:10px;line-height:16px;padding:0;cursor:pointer;display:none;}
+  .kept:hover .rm{display:block;}
+  .kept .rm:hover{color:#ff9b9b;}
+
+  .small{font-size:11.5px;color:var(--muted);line-height:1.45;}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;}
+  .kbd{font-family:ui-monospace,Consolas,monospace;background:var(--field);border:1px solid var(--line-soft);
+    border-radius:4px;padding:1px 6px;color:var(--accent-hi);font-size:11px;}
+
+  #help{position:absolute;inset:0;background:rgba(15,15,15,.95);display:none;padding:30px;overflow:auto;z-index:20;}
+  #help.show{display:block;}
+  #help h2{font-size:18px;color:var(--headers);margin-top:0;}
+  #help h3{font-size:13px;color:var(--accent-hi);margin:16px 0 4px;}
+  #help p{max-width:620px;line-height:1.55;font-size:12.5px;}
+  #help table{border-collapse:collapse;margin-top:4px;}
+  #help td{padding:3px 16px 3px 0;vertical-align:top;font-size:12.5px;}
+  #help a{color:var(--accent-hi);}
+
+  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(20,20,20,.92);border:1px solid var(--select);
+    color:var(--text);padding:6px 12px;border-radius:5px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .2s;}
+  #toast.show{opacity:1;}
+
+  ::-webkit-scrollbar{width:12px;height:12px;}
+  ::-webkit-scrollbar-thumb{background:#464646;border:3px solid var(--region);border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:#585858;}
+
+  @media (max-width:820px){
+    #app{height:auto;min-height:100vh;grid-template-rows:auto auto 24px;}
+    #topbar{flex-wrap:wrap;padding:6px 10px;}
+    #body{grid-template-columns:1fr;}
+    #toolbar{flex-direction:row;justify-content:center;border-right:0;border-bottom:1px solid var(--line);}
+    #toolbar .sep{display:none;}
+    #stageWrap{height:62vh;}
+    #props{border-left:0;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">Ren's&nbsp;Hatcher&nbsp;<small>1</small></div>
+    <button id="backBtn" class="topbtn" title="Previous seed (Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button id="shuffleBtn" class="topbtn hot" title="New seed (R)">Shuffle</button>
+    <label class="seedbox">seed <input id="seedIn" type="text" spellcheck="false" /></label>
+    <div class="topspacer"></div>
+    <button id="sheetBtn" class="topbtn" title="Download everything on screen as one PNG (E)">Export sheet</button>
+    <button id="helpBtn" class="topbtn" title="Help (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg></button>
+  </header>
+
+  <div id="body">
+
+    <nav id="toolbar">
+      <button class="tbtn modebtn on" data-mode="sprite" title="Sprites (1)"><svg viewBox="0 0 24 24"><path d="M8 4h8v3h3v6h-2v3h2v4h-4v-3H9v3H5v-4h2v-3H5V7h3z"/><path d="M9.5 10h1M13.5 10h1"/></svg><span class="lbl">Sprite</span></button>
+      <button class="tbtn modebtn" data-mode="net" title="Box nets (2)"><svg viewBox="0 0 24 24"><path d="M8 3h5v5H8zM3 8h5v6H3zM8 8h5v6H8zM13 8h5v6h-5zM18 8h3v6h-3M8 14h5v5H8z"/></svg><span class="lbl">Net</span></button>
+      <button class="tbtn modebtn" data-mode="voxel" title="Voxel field (3)"><svg viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span class="lbl">Voxel</span></button>
+    </nav>
+
+    <div id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="modeBadge">—</div>
+      <div id="toast"></div>
+      <div id="hint"><span class="x" id="hintX">✕</span>
+        Click anything to pick it. <span class="kbd">K</span> keeps the pick. <span class="kbd">R</span> rolls a new seed and <span class="kbd">Z</span> goes back.
+        The grid keeps its seeds while you change settings, so the same creatures stay in place as they change. Drag sideways on a number to scrub it.</div>
+      <div id="help"></div>
+    </div>
+
+    <aside id="props">
+
+      <section class="panel" id="panelPick">
+        <div class="panel-head">Picked <span class="badge" id="pickBadge">none</span></div>
+        <div class="panel-body">
+          <div id="pickWrap"><canvas id="pickCv" width="600" height="600"></canvas><div id="pickEmpty">click something on the left</div></div>
+          <div class="pickmeta small"><span id="pickSeed" class="mono"></span><span id="pickSize" class="mono"></span></div>
+          <div class="row">
+            <button class="btn primary" id="keepBtn" title="Keep (K)">Keep</button>
+            <label class="field" style="margin:0;flex:1;justify-content:flex-end"><span>PNG scale</span><input type="number" id="pngScale" min="1" max="32" value="1" style="width:64px" /></label>
+          </div>
+          <div class="exports" id="exports" hidden>
+            <button class="btn" id="exPng">PNG</button>
+            <button class="btn" id="exBitsy" title="Bitsy sprite text, copied and downloaded">Bitsy</button>
+            <button class="btn" id="exShape" title="Kenney Shape file">.kenshape</button>
+            <button class="btn" id="exRecipe" title="Copy a recipe part for the dungeon">Recipe</button>
+            <button class="btn" id="exVox" title="MagicaVoxel">.vox</button>
+            <button class="btn" id="exObj" title="Mesh with vertex colours">.obj</button>
+            <button class="btn" id="exJson" title="Cells and colours">.json</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panelShape">
+        <div class="panel-head">Shape <span class="badge" id="shapeBadge">sprite</span></div>
+        <div class="panel-body" id="shapeBody"></div>
+      </section>
+
+      <section class="panel" id="panelColour">
+        <div class="panel-head">Colour</div>
+        <div class="panel-body" id="colourBody"></div>
+      </section>
+
+      <section class="panel" id="panelKept">
+        <div class="panel-head">Kept <span class="badge" id="keptBadge">0</span></div>
+        <div class="panel-body">
+          <div id="keptList"></div>
+          <div class="row">
+            <button class="btn" id="keptSheet" title="Kept items of this mode as one sheet">Sheet PNG</button>
+            <button class="btn" id="keptJson" title="Seeds and settings for everything kept">Seeds .json</button>
+            <button class="btn" id="keptClear">Clear</button>
+          </div>
+          <p class="hintline">Click a kept one to pick it again. It brings its own settings with it.</p>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+
+  <footer id="statusbar"><span id="status">ready</span><span class="spacer"></span><span id="countInfo"></span></footer>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+/* ---------- random ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash32(n){n=Math.imul(n^n>>>16,0x45d9f3b);n=Math.imul(n^n>>>16,0x45d9f3b);return(n^n>>>16)>>>0;}
+function seedFromText(s){const n=Number(s);if(Number.isInteger(n)&&n>=0)return n>>>0;let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+const itemSeed = i => hash32((P.seed ^ hash32(i + 1)) >>> 0);
+const ri = (rng, n) => Math.floor(rng() * n);
+
+/* ---------- settings ---------- */
+const DEFAULTS = {
+  mode: 'sprite', seed: 1,
+  sprite: { w: 8, h: 8, px: 5, gap: 1, density: 50, core: 30, mirrorX: true, mirrorY: false, cleanup: true, frames: 1 },
+  net:    { w: 8, h: 6, d: 5, px: 4, density: 45, core: 20, matched: true, rim: true, holes: false },
+  voxel:  { w: 12, h: 12, d: 12, thumb: 120, density: 55, core: 60, smooth: 2, mirrorX: true, mirrorZ: false, cleanup: true },
+  colour: { palette: 'random', n: 3, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
+            custom: '#2b1b2e #6b2d5c #b0306a #f06c9b #ffd0e0 #3a6b8c #9ad1d4' },
+};
+const P = JSON.parse(JSON.stringify(DEFAULTS));
+P.seed = (Math.random() * 1e6) | 0;
+
+const FIELDS = {
+  sprite: [
+    ['w','Width',2,32],['h','Height',2,32],['px','Pixel size',1,16],['gap','Gap',0,8],
+    ['density','Fill %',0,100],['core','Pull to middle %',0,100],
+    ['mirrorX','Mirror left / right','check'],['mirrorY','Mirror top / bottom','check'],
+    ['cleanup','One piece only','check'],['frames','Frames',1,2],
+  ],
+  net: [
+    ['w','Width',2,32],['h','Height',2,32],['d','Depth',2,32],['px','Pixel size',1,12],
+    ['density','Fill %',0,100],['core','Pull to middle %',0,100],
+    ['matched','Matched sides','check'],['rim','Rim','check'],['holes','Holes','check'],
+  ],
+  voxel: [
+    ['w','Width',2,32],['h','Height',2,32],['d','Depth',2,32],['thumb','Thumb size',48,320,8],
+    ['density','Fill %',0,100],['core','Pull to middle %',0,100],['smooth','Smoothing',0,6],
+    ['mirrorX','Mirror left / right','check'],['mirrorZ','Mirror front / back','check'],['cleanup','One piece only','check'],
+  ],
+};
+const MODE_NOTE = {
+  sprite: 'Only half of each sprite is random. The mirror does the rest.',
+  net: 'Laid out as top / left front right back / bottom, the same as boxnet.gd. The fold is shown under Picked.',
+  voxel: 'A cube of cells, each filled or not, mirrored like the sprites. Drag the pick to turn it.',
+};
+
+/* ---------- colour ---------- */
+const hex = c => '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+const unhex = h => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+const mul = (c, k) => c.map(v => Math.max(0, Math.min(255, Math.round(v * k))));
+function hsl(h, s, l){h=((h%360)+360)%360/360;const f=n=>{const k=(n+h*12)%12,a=s*Math.min(l,1-l);return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1))));};return[f(0),f(8),f(4)];}
+const PALETTES = {
+  'pico-8': '1D2B53 7E2553 008751 AB5236 5F574F C2C3C7 FFF1E8 FF004D FFA300 FFEC27 00E436 29ADFF 83769C FF77A8 FFCCAA',
+  'game boy': '306230 8BAC0F 9BBC0F 0F380F',
+  'c64': 'FFFFFF 880000 AAFFEE CC44CC 00CC55 0000AA EEEE77 DD8855 664400 FF7777 333333 777777 AAFF66 0088FF BBBBBB',
+};
+function listColours(text){ return (String(text).match(/#?[0-9a-f]{6}\b/gi) || []).map(unhex); }
+function makeColors(rng, n){
+  const pal = P_COLOUR().palette;
+  if (pal === 'random') return Array.from({ length: n }, () => [0, 0, 0].map(() => 50 + ri(rng, 166)));
+  if (pal === 'harmony'){
+    const h0 = rng() * 360, step = rng() < .5 ? 25 + rng() * 20 : 137.5;
+    return Array.from({ length: n }, (_, i) => hsl(h0 + i * step, .45 + rng() * .35, .35 + rng() * .35));
+  }
+  if (pal === 'mono') return Array.from({ length: n }, (_, i) => mul([240, 236, 228], 1 - i * .18));
+  let src = pal === 'custom' ? listColours(P_COLOUR().custom) : listColours(PALETTES[pal] || '');
+  const bg = unhex(P_COLOUR().bg).join();
+  src = src.filter(c => c.join() !== bg);
+  if (!src.length) src = [[230, 230, 230]];
+  const bag = src.slice(), out = [];
+  for (let i = 0; i < n; i++){
+    if (!bag.length) bag.push(...src);
+    out.push(bag.splice(ri(rng, bag.length), 1)[0]);
+  }
+  return out;
+}
+// kept items carry their own colour settings; this lets generation read whichever is active
+let colourOverride = null;
+const P_COLOUR = () => colourOverride || P.colour;
+
+/* ---------- 2D pattern ---------- */
+function keepLargest(c, n, neighbours){
+  const seen = new Uint8Array(n); let best = null;
+  for (let i = 0; i < n; i++){
+    if (c[i] < 0 || seen[i]) continue;
+    const comp = [i], stack = [i]; seen[i] = 1;
+    while (stack.length){ const j = stack.pop(); for (const k of neighbours(j)) if (k >= 0 && c[k] >= 0 && !seen[k]){ seen[k] = 1; stack.push(k); comp.push(k); } }
+    if (!best || comp.length > best.length) best = comp;
+  }
+  if (!best) return;
+  const keep = new Uint8Array(n); for (const i of best) keep[i] = 1;
+  for (let i = 0; i < n; i++) if (!keep[i]) c[i] = -1;
+}
+function genPattern(rng, w, h, o){
+  const c = new Int16Array(w * h).fill(-1);
+  const hw = o.mirrorX ? Math.ceil(w / 2) : w, hh = o.mirrorY ? Math.ceil(h / 2) : h;
+  const k = o.core / 100, cx = (w - 1) / 2, cy = (h - 1) / 2;
+  let band = ri(rng, o.n);
+  const set = (x, y, v) => {
+    c[y * w + x] = v;
+    if (o.mirrorX) c[y * w + (w - 1 - x)] = v;
+    if (o.mirrorY) c[(h - 1 - y) * w + x] = v;
+    if (o.mirrorX && o.mirrorY) c[(h - 1 - y) * w + (w - 1 - x)] = v;
+  };
+  for (let y = 0; y < hh; y++){
+    if (o.bands && (y === 0 || rng() < .45)) band = ri(rng, o.n);
+    for (let x = 0; x < hw; x++){
+      const dx = (x - cx) / Math.max(1, w / 2), dy = (y - cy) / Math.max(1, h / 2);
+      const r = Math.min(1, Math.hypot(dx, dy) / 1.414);
+      const pf = o.density / 100 * ((1 - k) + k * 1.9 * (1 - r));
+      const roll = rng(), pick = ri(rng, o.n);
+      if (roll < pf) set(x, y, o.bands ? band : pick);
+    }
+  }
+  if (o.cleanup) keepLargest(c, w * h, i => {
+    const x = i % w; return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w < w * h ? i + w : -1];
+  });
+  return c;
+}
+
+/* ---------- sprite ---------- */
+function genSprite(seed, p){
+  const rng = mulberry32(seed), col = P_COLOUR();
+  const n = col.palette === 'mono' ? 1 : col.n;
+  const colors = makeColors(rng, n);
+  const f0 = genPattern(rng, p.w, p.h, { ...p, n, bands: col.bands });
+  const frames = [f0];
+  if (p.frames > 1){
+    // second frame: the lower rows step outward by one, so legs and fins twitch
+    const f1 = f0.slice(), w = p.w, y0 = Math.floor(p.h * .6), half = Math.floor(w / 2);
+    for (let y = y0; y < p.h; y++){
+      const row = f0.slice(y * w, y * w + w);
+      for (let x = 0; x < w; x++){
+        let src;
+        if (p.mirrorX) src = x < half ? x + 1 : x > w - 1 - half ? x - 1 : x;
+        else src = x + 1;
+        f1[y * w + x] = src >= 0 && src < w ? row[src] : -1;
+      }
+    }
+    frames.push(f1);
+  }
+  return { kind: 'sprite', seed, w: p.w, h: p.h, frames, colors, col: { ...col } };
+}
+function outlineColour(item){
+  const o = item.col.outline;
+  if (o === 'light') return [236, 230, 218];
+  if (o === 'black') return [0, 0, 0];
+  const darkest = item.colors.slice().sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]))[0];
+  return mul(darkest, .38);
+}
+function spriteRGBA(item, f){
+  const { w, h } = item, c = item.frames[f], out = new Uint8ClampedArray(w * h * 4);
+  const oc = item.col.outline !== 'none' ? outlineColour(item) : null;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const i = y * w + x, v = c[i]; let col = null;
+    if (v >= 0){
+      col = item.colors[v];
+      if (item.col.shade && (y === h - 1 || c[i + w] < 0)) col = mul(col, .62);
+    } else if (oc){
+      if ((x > 0 && c[i - 1] >= 0) || (x < w - 1 && c[i + 1] >= 0) || (y > 0 && c[i - w] >= 0) || (y < h - 1 && c[i + w] >= 0)) col = oc;
+    }
+    if (col){ out.set(col, i * 4); out[i * 4 + 3] = 255; }
+  }
+  return out;
+}
+
+/* ---------- box net ---------- */
+function genNet(seed, p){
+  const rng = mulberry32(seed), col = P_COLOUR();
+  const n = Math.max(2, col.palette === 'mono' ? 2 : col.n);
+  const colors = makeColors(rng, n);
+  const rimIdx = colors.length; colors.push(mul(colors[0], .55));
+  const { w, h, d } = p, W = 2 * d + 2 * w, H = 2 * d + h;
+  const px = new Int16Array(W * H).fill(-2);           // -2 outside the net, -1 a hole
+  const face = (fw, fh) => genPattern(rng, fw, fh, { density: p.density, core: p.core, mirrorX: true, mirrorY: false, n: n - 1, bands: col.bands, cleanup: false });
+  const front = face(w, h), left = face(d, h), top = face(w, d);
+  const back = p.matched ? front : face(w, h), right = p.matched ? left : face(d, h), bottom = p.matched ? top : face(w, d);
+  const paste = (pat, ox, oy, fw, fh) => {
+    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++){
+      const v = pat[y * fw + x];
+      let out = v >= 0 ? v + 1 : (p.holes ? -1 : 0);
+      if (p.rim && (x === 0 || y === 0 || x === fw - 1 || y === fh - 1)) out = rimIdx;
+      px[(oy + y) * W + ox + x] = out;
+    }
+  };
+  paste(top, d, 0, w, d);
+  paste(left, 0, d, d, h); paste(front, d, d, w, h); paste(right, d + w, d, d, h); paste(back, 2 * d + w, d, w, h);
+  paste(bottom, d, d + h, w, d);
+  return { kind: 'net', seed, w, h, d, W, H, px, colors, col: { ...col } };
+}
+function netRGBA(item){
+  const out = new Uint8ClampedArray(item.W * item.H * 4);
+  item.px.forEach((v, i) => { if (v >= 0){ out.set(item.colors[v], i * 4); out[i * 4 + 3] = 255; } });
+  return out;
+}
+// the same fold as diorama-dungeon/boxnet.gd
+function netToVox(item){
+  const { w, h, d, W } = item, cells = new Int16Array(w * h * d).fill(-1);
+  const at = (x, y) => item.px[y * W + x];
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) for (let z = 0; z < d; z++){
+    if (x > 0 && x < w - 1 && y > 0 && y < h - 1 && z > 0 && z < d - 1) continue;
+    const v = h - 1 - y; let c;
+    if (z === d - 1) c = at(d + x, d + v);
+    else if (z === 0) c = at(2 * d + w + (w - 1 - x), d + v);
+    else if (y === h - 1) c = at(d + x, z);
+    else if (y === 0) c = at(d + x, d + h + (d - 1 - z));
+    else if (x === w - 1) c = at(d + w + (d - 1 - z), d + v);
+    else c = at(z, d + v);
+    cells[x + w * (y + h * z)] = c >= 0 ? c : -1;
+  }
+  return { w, h, d, cells, colors: item.colors };
+}
+
+/* ---------- voxel field ---------- */
+function genVox(seed, p){
+  const rng = mulberry32(seed), col = P_COLOUR();
+  const n = col.palette === 'mono' ? 1 : col.n;
+  const colors = makeColors(rng, n);
+  const { w, h, d } = p, c = new Int16Array(w * h * d).fill(-1), I = (x, y, z) => x + w * (y + h * z);
+  const hw = p.mirrorX ? Math.ceil(w / 2) : w, hd = p.mirrorZ ? Math.ceil(d / 2) : d, k = p.core / 100;
+  let band = ri(rng, n);
+  for (let y = 0; y < h; y++){
+    if (col.bands && (y === 0 || rng() < .4)) band = ri(rng, n);
+    for (let z = 0; z < hd; z++) for (let x = 0; x < hw; x++){
+      const dx = (x - (w - 1) / 2) / (w / 2), dy = (y - (h - 1) / 2) / (h / 2), dz = (z - (d - 1) / 2) / (d / 2);
+      const r = Math.min(1, Math.hypot(dx, dy, dz) / 1.732);
+      const pf = p.density / 100 * ((1 - k) + k * 2 * (1 - r));
+      const roll = rng(), pick = ri(rng, n);
+      if (roll >= pf) continue;
+      const v = col.bands ? band : pick;
+      c[I(x, y, z)] = v;
+      if (p.mirrorX) c[I(w - 1 - x, y, z)] = v;
+      if (p.mirrorZ) c[I(x, y, d - 1 - z)] = v;
+      if (p.mirrorX && p.mirrorZ) c[I(w - 1 - x, y, d - 1 - z)] = v;
+    }
+  }
+  // smoothing: each pass a cell follows the majority of its 26 neighbours, which turns noise into lumps
+  for (let pass = 0; pass < p.smooth; pass++){
+    const s = c.slice();
+    for (let z = 0; z < d; z++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+      let full = 0, out = 0, last = -1;
+      for (let dz = -1; dz <= 1; dz++) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+        if (!dx && !dy && !dz) continue;
+        const X = x + dx, Y = y + dy, Z = z + dz;
+        if (X < 0 || Y < 0 || Z < 0 || X >= w || Y >= h || Z >= d) { out++; continue; }
+        const v = c[I(X, Y, Z)]; if (v >= 0){ full++; last = v; }
+      }
+      const i = I(x, y, z);
+      if (full > 13) s[i] = c[i] >= 0 ? c[i] : last;
+      else if (full < 13 - (out ? 2 : 0)) s[i] = -1;
+    }
+    c.set(s);
+  }
+  // colour in patches: a coarse grid of picks, mirrored like the shape
+  if (!col.bands && n > 1){
+    const B = Math.max(2, Math.round(Math.max(w, h, d) / 4)), bw = Math.ceil(w / B), bh = Math.ceil(h / B), bd = Math.ceil(d / B);
+    const blocks = Array.from({ length: bw * bh * bd }, () => ri(rng, n));
+    for (let z = 0; z < d; z++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+      const i = I(x, y, z); if (c[i] < 0) continue;
+      const mx = p.mirrorX ? Math.min(x, w - 1 - x) : x, mz = p.mirrorZ ? Math.min(z, d - 1 - z) : z;
+      c[i] = blocks[Math.floor(mx / B) + bw * (Math.floor(y / B) + bh * Math.floor(mz / B))];
+    }
+  }
+  if (p.cleanup) keepLargest(c, w * h * d, i => {
+    const x = i % w, y = Math.floor(i / w) % h, z = Math.floor(i / (w * h));
+    return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1, z > 0 ? i - w * h : -1, z < d - 1 ? i + w * h : -1];
+  });
+  // stand it on the floor
+  let minY = h;
+  for (let i = 0; i < c.length; i++) if (c[i] >= 0) minY = Math.min(minY, Math.floor(i / w) % h);
+  if (minY > 0 && minY < h){
+    const s = new Int16Array(c.length).fill(-1);
+    for (let z = 0; z < d; z++) for (let y = minY; y < h; y++) for (let x = 0; x < w; x++) s[I(x, y - minY, z)] = c[I(x, y, z)];
+    c.set(s);
+  }
+  return { kind: 'vox', seed, w, h, d, cells: c, colors, col: { ...col } };
+}
+const voxOf = item => item.kind === 'net' ? (item._vox || (item._vox = netToVox(item))) : item;
+
+/* ---------- voxel renderer (orthographic, painter's sort) ---------- */
+const FACES = [
+  { n: [1, 0, 0],  q: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
+  { n: [-1, 0, 0], q: [[0,0,0],[0,0,1],[0,1,1],[0,1,0]] },
+  { n: [0, 1, 0],  q: [[0,1,0],[0,1,1],[1,1,1],[1,1,0]] },
+  { n: [0, -1, 0], q: [[0,0,0],[1,0,0],[1,0,1],[0,0,1]] },
+  { n: [0, 0, 1],  q: [[0,0,1],[1,0,1],[1,1,1],[0,1,1]] },
+  { n: [0, 0, -1], q: [[0,0,0],[0,1,0],[1,1,0],[1,0,0]] },
+];
+function visibleFaces(V){
+  const { w, h, d, cells } = V, out = [];
+  const filled = (x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < w && y < h && z < d && cells[x + w * (y + h * z)] >= 0;
+  for (let z = 0; z < d; z++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const v = cells[x + w * (y + h * z)]; if (v < 0) continue;
+    FACES.forEach((f, fi) => { if (!filled(x + f.n[0], y + f.n[1], z + f.n[2])) out.push([x, y, z, fi, v]); });
+  }
+  return out;
+}
+function drawVox(ctx, V, yaw, pitch, cx, cy, s){
+  const faces = V._faces || (V._faces = visibleFaces(V));
+  const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const rot = (x, y, z) => { const x1 = x * cyw - z * syw, z1 = x * syw + z * cyw; return [x1, y * cp - z1 * sp, y * sp + z1 * cp]; };
+  const ox = V.w / 2, oy = V.h / 2, oz = V.d / 2;
+  const L = [-.45, .8, -.4], ll = Math.hypot(...L);
+  const rn = FACES.map(f => rot(...f.n));
+  const shade = rn.map(n => .52 + .48 * Math.max(0, (n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / ll));
+  const list = [];
+  for (const [x, y, z, fi, v] of faces){
+    if (rn[fi][2] >= -1e-6) continue;
+    const pts = FACES[fi].q.map(q => rot(x + q[0] - ox, y + q[1] - oy, z + q[2] - oz));
+    list.push([pts.reduce((a, p) => a + p[2], 0), pts, fi, v]);
+  }
+  list.sort((a, b) => b[0] - a[0]);
+  const cache = {};
+  for (const [, pts, fi, v] of list){
+    const key = v + ':' + fi;
+    const col = cache[key] || (cache[key] = 'rgb(' + mul(V.colors[v], shade[fi]).join(',') + ')');
+    ctx.fillStyle = ctx.strokeStyle = col;
+    ctx.beginPath();
+    pts.forEach((p, i) => { const sx = cx + p[0] * s, sy = cy - p[1] * s; i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+    ctx.closePath(); ctx.fill(); ctx.lineWidth = .7; ctx.stroke();
+  }
+}
+const voxScale = (V, size) => size / (Math.hypot(V.w, V.h, V.d) * 1.05);
+
+/* ---------- items and bitmaps ---------- */
+function makeItem(mode, seed, params){
+  if (mode === 'sprite') return genSprite(seed, params);
+  if (mode === 'net') return genNet(seed, params);
+  return genVox(seed, params);
+}
+function rgbaCanvas(w, h, rgba){
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  cv.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0); return cv;
+}
+function itemCanvases(item, thumb){
+  if (item._cv) return item._cv;
+  if (item.kind === 'sprite') item._cv = item.frames.map((_, f) => rgbaCanvas(item.w, item.h, spriteRGBA(item, f)));
+  else if (item.kind === 'net') item._cv = [rgbaCanvas(item.W, item.H, netRGBA(item))];
+  else {
+    const cv = document.createElement('canvas'); cv.width = cv.height = thumb;
+    drawVox(cv.getContext('2d'), item, Math.PI / 4, -0.62, thumb / 2, thumb / 2, voxScale(item, thumb));
+    item._cv = [cv];
+  }
+  return item._cv;
+}
+
+/* ---------- stage ---------- */
+const stage = $('#stage'), sctx = stage.getContext('2d');
+let layout = null, cache = new Map(), hoverIdx = -1, pickIdx = -1, frameTick = 0, drawToken = 0;
+
+function cellSize(){
+  const m = P.mode, p = P[m];
+  if (m === 'sprite') return [(p.w + 2 * p.gap) * p.px, (p.h + 2 * p.gap) * p.px];
+  if (m === 'net') return [(2 * p.d + 2 * p.w + 2) * p.px, (2 * p.d + p.h + 2) * p.px];
+  return [p.thumb, p.thumb];
+}
+function relayout(){
+  const r = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  stage.width = Math.round(r.width * dpr); stage.height = Math.round(r.height * dpr);
+  const [cw, ch] = cellSize().map(v => v * dpr);
+  const cols = Math.max(1, Math.floor((stage.width - 16 * dpr) / cw)), rows = Math.max(1, Math.floor((stage.height - 16 * dpr) / ch));
+  layout = { cw, ch, cols, rows, ox: Math.floor((stage.width - cols * cw) / 2), oy: Math.floor((stage.height - rows * ch) / 2), dpr };
+  $('#countInfo').textContent = cols * rows + ' on screen';
+}
+function regen(){ cache = new Map(); pickIdx = -1; relayout(); drawStage(); }
+function getItem(i){
+  if (!cache.has(i)) cache.set(i, makeItem(P.mode, itemSeed(i), P[P.mode]));
+  return cache.get(i);
+}
+function drawCell(ctx, i, x, y, cw, ch, frame){
+  const item = getItem(i), cvs = itemCanvases(item, Math.round(cw));
+  const cv = cvs[Math.min(frame, cvs.length - 1)];
+  ctx.imageSmoothingEnabled = false;
+  if (item.kind === 'vox') ctx.drawImage(cv, x, y, cw, ch);
+  else {
+    const k = Math.floor(Math.min(cw / (cv.width + 2), ch / (cv.height + 2)));
+    const gw = cv.width * k, gh = cv.height * k;
+    ctx.drawImage(cv, Math.round(x + (cw - gw) / 2), Math.round(y + (ch - gh) / 2), gw, gh);
+  }
+}
+function paintBg(ctx, w, h){
+  ctx.clearRect(0, 0, w, h);
+  if (!P.colour.transparent){ ctx.fillStyle = P.colour.bg; ctx.fillRect(0, 0, w, h); }
+}
+function drawStage(){
+  const L = layout, token = ++drawToken, n = L.cols * L.rows;
+  sctx.fillStyle = '#1d1d1d'; sctx.fillRect(0, 0, stage.width, stage.height);
+  if (P.colour.transparent){ checker(sctx, L.ox, L.oy, L.cols * L.cw, L.rows * L.ch); }
+  else { sctx.fillStyle = P.colour.bg; sctx.fillRect(L.ox, L.oy, L.cols * L.cw, L.rows * L.ch); }
+  const frame = frameTick % 2;
+  // voxel thumbnails are slow, so they draw a few at a time
+  let i = 0;
+  const step = () => {
+    if (token !== drawToken) return;
+    const t0 = performance.now();
+    for (; i < n; i++){
+      if (P.mode === 'voxel' && performance.now() - t0 > 30) { $('#status').textContent = 'drawing ' + i + ' / ' + n; setTimeout(step, 0); return; }
+      drawCell(sctx, i, L.ox + (i % L.cols) * L.cw, L.oy + Math.floor(i / L.cols) * L.ch, L.cw, L.ch, frame);
+    }
+    drawMarks();
+    $('#status').textContent = 'seed ' + P.seed;
+  };
+  step();
+}
+function checker(ctx, x, y, w, h){
+  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#333';
+  const s = 8 * (layout ? layout.dpr : 1);
+  for (let yy = 0; yy < h; yy += s) for (let xx = (yy / s) % 2 ? s : 0; xx < w; xx += 2 * s) ctx.fillRect(x + xx, y + yy, Math.min(s, w - xx), Math.min(s, h - yy));
+}
+function markRect(i, colour){
+  const L = layout; if (i < 0 || i >= L.cols * L.rows) return;
+  sctx.strokeStyle = colour; sctx.lineWidth = 2 * L.dpr;
+  sctx.strokeRect(L.ox + (i % L.cols) * L.cw + L.dpr, L.oy + Math.floor(i / L.cols) * L.ch + L.dpr, L.cw - 2 * L.dpr, L.ch - 2 * L.dpr);
+}
+function redrawCell(i){
+  const L = layout; if (i < 0 || i >= L.cols * L.rows) return;
+  const x = L.ox + (i % L.cols) * L.cw, y = L.oy + Math.floor(i / L.cols) * L.ch;
+  if (P.colour.transparent) checker(sctx, x, y, L.cw, L.ch); else { sctx.fillStyle = P.colour.bg; sctx.fillRect(x, y, L.cw, L.ch); }
+  drawCell(sctx, i, x, y, L.cw, L.ch, frameTick % 2);
+}
+function drawMarks(){ markRect(pickIdx, '#e8912b'); if (hoverIdx !== pickIdx) markRect(hoverIdx, '#5b88cc'); }
+function cellAt(e){
+  const r = stage.getBoundingClientRect(), L = layout, dpr = L.dpr;
+  const x = (e.clientX - r.left) * dpr - L.ox, y = (e.clientY - r.top) * dpr - L.oy;
+  if (x < 0 || y < 0) return -1;
+  const c = Math.floor(x / L.cw), rr = Math.floor(y / L.ch);
+  return c < L.cols && rr < L.rows ? rr * L.cols + c : -1;
+}
+stage.addEventListener('mousemove', e => {
+  const i = cellAt(e); if (i === hoverIdx) return;
+  const old = hoverIdx; hoverIdx = i; redrawCell(old); if (old === pickIdx) markRect(pickIdx, '#e8912b');
+  drawMarks();
+});
+stage.addEventListener('mouseleave', () => { const old = hoverIdx; hoverIdx = -1; redrawCell(old); drawMarks(); });
+stage.addEventListener('click', e => {
+  const i = cellAt(e); if (i < 0) return;
+  const old = pickIdx; pickIdx = i; redrawCell(old);
+  pick({ mode: P.mode, seed: itemSeed(i), params: { ...P[P.mode] }, colour: { ...P.colour } }, getItem(i));
+  drawMarks();
+});
+
+/* ---------- picked ---------- */
+const pickCv = $('#pickCv'), pctx = pickCv.getContext('2d');
+let picked = null, view = { yaw: Math.PI / 4, pitch: -0.55, spin: true }, keptOn = -1;
+function pick(rec, item){
+  picked = { rec, item: item || withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params)) };
+  $('#pickEmpty').style.display = 'none'; $('#exports').hidden = false;
+  $('#pickBadge').textContent = rec.mode;
+  $('#pickSeed').textContent = '#' + rec.seed;
+  const it = picked.item, p = rec.params;
+  $('#pickSize').textContent = rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
+  const show = (id, on) => { $(id).hidden = !on; };
+  show('#exBitsy', rec.mode === 'sprite'); show('#exShape', rec.mode === 'sprite'); show('#exRecipe', rec.mode === 'net');
+  show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
+  $('#pngScale').value = rec.mode === 'voxel' ? 4 : rec.mode === 'net' ? 1 : 1;
+  view.spin = true;
+  drawPick();
+}
+function withColour(col, fn){ const old = colourOverride; colourOverride = col; try { return fn(); } finally { colourOverride = old; } }
+function drawPick(){
+  const W = pickCv.width; pctx.setTransform(1, 0, 0, 1, 0, 0);
+  pctx.fillStyle = '#1d1d1d'; pctx.fillRect(0, 0, W, W);
+  if (!picked) return;
+  const { item, rec } = picked;
+  if (rec.colour.transparent) checker(pctx, 0, 0, W, W); else { pctx.fillStyle = rec.colour.bg; pctx.fillRect(0, 0, W, W); }
+  if (item.kind === 'sprite'){
+    const cv = itemCanvases(item)[frameTick % item.frames.length], k = Math.floor((W * .8) / Math.max(item.w, item.h));
+    pctx.imageSmoothingEnabled = false;
+    pctx.drawImage(cv, (W - item.w * k) / 2, (W - item.h * k) / 2, item.w * k, item.h * k);
+  } else {
+    const V = voxOf(item);
+    if (item.kind === 'net'){
+      // flat net in the corner, folded box in the middle
+      const cv = itemCanvases(item)[0], k = Math.max(1, Math.floor(W * .3 / Math.max(item.W, item.H)));
+      pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
+      pctx.drawImage(cv, 10, 10, item.W * k, item.H * k); pctx.globalAlpha = 1;
+    }
+    drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (item.kind === 'net' ? W * .08 : 0), voxScale(V, W * (item.kind === 'net' ? .72 : .9)));
+  }
+}
+let drag = null;
+pickCv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: view.yaw, pitch: view.pitch }; view.spin = false; pickCv.setPointerCapture(e.pointerId); });
+pickCv.addEventListener('pointermove', e => {
+  if (!drag || !picked || picked.item.kind === 'sprite') return;
+  view.yaw = drag.yaw + (e.clientX - drag.x) * .012;
+  view.pitch = Math.max(-1.5, Math.min(1.5, drag.pitch + (e.clientY - drag.y) * .01));
+  drawPick();
+});
+pickCv.addEventListener('pointerup', () => { drag = null; });
+pickCv.addEventListener('dblclick', () => { view.spin = !view.spin; });
+
+setInterval(() => {
+  if (picked && picked.item.kind !== 'sprite' && view.spin && !drag){ view.yaw += .03; drawPick(); }
+}, 50);
+setInterval(() => {
+  frameTick++;
+  const anim = P.mode === 'sprite' && P.sprite.frames > 1;
+  if (anim) { const L = layout; for (let i = 0; i < L.cols * L.rows; i++) redrawCell(i); drawMarks(); }
+  if (picked && picked.item.kind === 'sprite' && picked.item.frames.length > 1) drawPick();
+}, 420);
+
+/* ---------- downloads ---------- */
+function download(name, blob){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+const canvasBlob = cv => new Promise(r => cv.toBlob(r, 'image/png'));
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
+const baseName = rec => `hatcher_${rec.mode}_${rec.seed}`;
+function itemPNG(item, rec, scale){
+  let cv;
+  if (item.kind === 'sprite'){
+    const cvs = itemCanvases(item); cv = document.createElement('canvas');
+    cv.width = item.w * cvs.length * scale; cv.height = item.h * scale;
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+    if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, cv.width, cv.height); }
+    cvs.forEach((f, i) => c.drawImage(f, i * item.w * scale, 0, item.w * scale, item.h * scale));
+  } else if (item.kind === 'net'){
+    // nets stay transparent outside the cross so boxnet.gd reads them as-is
+    const src = itemCanvases(item)[0]; cv = document.createElement('canvas');
+    cv.width = item.W * scale; cv.height = item.H * scale;
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(src, 0, 0, cv.width, cv.height);
+  } else {
+    cv = document.createElement('canvas'); cv.width = cv.height = 128 * scale;
+    const c = cv.getContext('2d');
+    if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, cv.width, cv.height); }
+    drawVox(c, item, view.yaw, view.pitch, cv.width / 2, cv.height / 2, voxScale(item, cv.width));
+  }
+  return cv;
+}
+$('#exPng').onclick = async () => { if (!picked) return; const s = Math.max(1, +$('#pngScale').value || 1); download(baseName(picked.rec) + (s > 1 ? '_x' + s : '') + '.png', await canvasBlob(itemPNG(picked.item, picked.rec, s))); };
+
+function bitsyText(item, rec){
+  const w = item.w, h = item.h, x0 = Math.floor((w - 8) / 2), y0 = Math.floor((h - 8) / 2);
+  const frames = item.frames.map((_, f) => {
+    const rgba = spriteRGBA(item, f), rows = [];
+    for (let y = 0; y < 8; y++){ let r = ''; for (let x = 0; x < 8; x++){ const sx = x + x0, sy = y + y0; r += sx >= 0 && sy >= 0 && sx < w && sy < h && rgba[(sy * w + sx) * 4 + 3] ? '1' : '0'; } rows.push(r); }
+    return rows.join('\n');
+  });
+  return `SPR h${rec.seed.toString(36)}\n` + frames.join('\n>\n') + `\nNAME hatch ${rec.seed}\n`;
+}
+$('#exBitsy').onclick = async () => {
+  if (!picked) return;
+  const t = bitsyText(picked.item, picked.rec);
+  try { await navigator.clipboard.writeText(t); toast('Bitsy sprite copied' + (picked.item.w !== 8 || picked.item.h !== 8 ? ', cropped to 8×8' : '')); } catch (e) {}
+  download(baseName(picked.rec) + '_bitsy.txt', new Blob([t], { type: 'text/plain' }));
+};
+
+async function gzip(bytes){
+  const cs = new CompressionStream('gzip'), w = cs.writable.getWriter(); w.write(bytes); w.close();
+  return new Blob([await new Response(cs.readable).arrayBuffer()]);
+}
+// Kenney Shape: 32×32 grid, column-major, 16 colours; depth bulges toward the middle like to_kenshape.py
+$('#exShape').onclick = async () => {
+  if (!picked) return;
+  const item = picked.item, G = 32, rgba = spriteRGBA(item, 0);
+  const ox = Math.floor((G - item.w) / 2), oy = G - item.h;
+  const keys = [], grid = new Int16Array(G * G).fill(-1);
+  for (let y = 0; y < item.h && y + oy < G; y++) for (let x = 0; x < item.w && x + ox < G; x++){
+    const i = (y * item.w + x) * 4; if (!rgba[i + 3]) continue;
+    const k = hex([rgba[i], rgba[i + 1], rgba[i + 2]]).toUpperCase();
+    let ci = keys.indexOf(k); if (ci < 0){ if (keys.length < 16) { keys.push(k); ci = keys.length - 1; } else ci = 15; }
+    grid[(y + oy) * G + x + ox] = ci;
+  }
+  const dist = new Int16Array(G * G);
+  for (let i = 0; i < G * G; i++) dist[i] = grid[i] >= 0 ? 99 : 0;
+  for (let pass = 0; pass < 16; pass++) for (let y = 0; y < G; y++) for (let x = 0; x < G; x++){
+    const i = y * G + x; if (!dist[i]) continue;
+    const nb = [x > 0 ? dist[i - 1] : 0, x < G - 1 ? dist[i + 1] : 0, y > 0 ? dist[i - G] : 0, y < G - 1 ? dist[i + G] : 0];
+    dist[i] = Math.min(dist[i], Math.min(...nb) + 1);
+  }
+  const tiles = [];
+  for (let x = 0; x < G; x++) for (let y = 0; y < G; y++){
+    const i = y * G + x;
+    tiles.push(grid[i] >= 0 ? { shape: 0, angle: 0, color: grid[i], depth: Math.min(dist[i], 6), enabled: true, visited: false }
+                            : { shape: 0, angle: 0, color: -1, depth: 1, enabled: true, visited: false });
+  }
+  while (keys.length < 16) keys.push('#000000');
+  const data = { title: baseName(picked.rec), author: '', size: { x: G, y: G }, colors: keys, tiles };
+  download(baseName(picked.rec) + '.kenshape', await gzip(new TextEncoder().encode(JSON.stringify(data))));
+};
+$('#exRecipe').onclick = async () => {
+  if (!picked) return;
+  const p = picked.rec.params, t = JSON.stringify({ png: `art/sprites/${baseName(picked.rec)}.png`, net: [p.w, p.h, p.d] });
+  try { await navigator.clipboard.writeText(t); toast('recipe part copied'); } catch (e) { toast(t); }
+};
+
+function voxList(V){ const out = []; for (let z = 0; z < V.d; z++) for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++){ const v = V.cells[x + V.w * (y + V.h * z)]; if (v >= 0) out.push([x, y, z, v]); } return out; }
+// MagicaVoxel: z is up, so our y becomes its z
+$('#exVox').onclick = () => {
+  if (!picked) return;
+  const V = voxOf(picked.item), list = voxList(V), n = list.length;
+  const children = 24 + (12 + 4 + 4 * n) + (12 + 1024), buf = new ArrayBuffer(8 + 12 + children), dv = new DataView(buf);
+  let o = 0; const str = s => { for (const ch of s) dv.setUint8(o++, ch.charCodeAt(0)); }, i32 = v => { dv.setInt32(o, v, true); o += 4; };
+  str('VOX '); i32(150); str('MAIN'); i32(0); i32(children);
+  str('SIZE'); i32(12); i32(0); i32(V.w); i32(V.d); i32(V.h);
+  str('XYZI'); i32(4 + 4 * n); i32(0); i32(n);
+  for (const [x, y, z, v] of list){ dv.setUint8(o++, x); dv.setUint8(o++, V.d - 1 - z); dv.setUint8(o++, y); dv.setUint8(o++, v + 1); }
+  str('RGBA'); i32(1024); i32(0);
+  for (let k = 0; k < 256; k++){ const c = V.colors[k] || [0, 0, 0]; dv.setUint8(o++, c[0]); dv.setUint8(o++, c[1]); dv.setUint8(o++, c[2]); dv.setUint8(o++, 255); }
+  download(baseName(picked.rec) + '.vox', new Blob([buf]));
+};
+$('#exObj').onclick = () => {
+  if (!picked) return;
+  const V = voxOf(picked.item), faces = visibleFaces(V), lines = ['# ' + baseName(picked.rec), 'o ' + baseName(picked.rec)];
+  const ox = V.w / 2, oz = V.d / 2; let vi = 1;
+  const f = [];
+  for (const [x, y, z, fi, v] of faces){
+    const c = V.colors[v].map(u => (u / 255).toFixed(4)).join(' ');
+    for (const q of FACES[fi].q) lines.push(`v ${x + q[0] - ox} ${y + q[1]} ${z + q[2] - oz} ${c}`);
+    f.push(`f ${vi} ${vi + 1} ${vi + 2} ${vi + 3}`); vi += 4;
+  }
+  download(baseName(picked.rec) + '.obj', new Blob([lines.concat(f).join('\n') + '\n'], { type: 'text/plain' }));
+};
+$('#exJson').onclick = () => {
+  if (!picked) return;
+  const it = picked.item, rec = picked.rec, out = { mode: rec.mode, seed: rec.seed, settings: rec.params, colour: rec.colour, colors: it.colors.map(hex) };
+  if (it.kind === 'sprite'){ out.size = [it.w, it.h]; out.frames = it.frames.map(f => { const rows = []; for (let y = 0; y < it.h; y++) rows.push(Array.from(f.slice(y * it.w, y * it.w + it.w))); return rows; }); }
+  else { const V = voxOf(it); out.size = [V.w, V.h, V.d]; out.cells = voxList(V); }
+  download(baseName(rec) + '.json', new Blob([JSON.stringify(out)], { type: 'application/json' }));
+};
+
+$('#sheetBtn').onclick = async () => {
+  const L = layout, cv = document.createElement('canvas');
+  const [cw, ch] = cellSize(); cv.width = L.cols * cw; cv.height = L.rows * ch;
+  const c = cv.getContext('2d'); paintBg(c, cv.width, cv.height);
+  for (let i = 0; i < L.cols * L.rows; i++){
+    const item = getItem(i);
+    if (item.kind === 'vox'){ drawVox(c, item, Math.PI / 4, -0.62, (i % L.cols) * cw + cw / 2, Math.floor(i / L.cols) * ch + ch / 2, voxScale(item, cw)); }
+    else drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
+  }
+  download(`hatcher_${P.mode}_sheet_${P.seed}.png`, await canvasBlob(cv));
+};
+
+/* ---------- kept ---------- */
+let kept = [];
+try { kept = JSON.parse(localStorage.getItem('hatcher.kept') || '[]'); } catch (e) { kept = []; }
+const saveKept = () => { try { localStorage.setItem('hatcher.kept', JSON.stringify(kept)); } catch (e) {} };
+function keepPicked(){
+  if (!picked) return;
+  const r = picked.rec;
+  if (kept.some(k => k.mode === r.mode && k.seed === r.seed && JSON.stringify(k.params) === JSON.stringify(r.params) && JSON.stringify(k.colour) === JSON.stringify(r.colour))) { toast('already kept'); return; }
+  kept.push(JSON.parse(JSON.stringify(r))); saveKept(); renderKept(); toast('kept');
+}
+function renderKept(){
+  const list = $('#keptList'); list.innerHTML = '';
+  $('#keptBadge').textContent = kept.length;
+  kept.forEach((rec, i) => {
+    const el = document.createElement('div'); el.className = 'kept' + (i === keptOn ? ' on' : ''); el.title = rec.mode + ' #' + rec.seed;
+    const item = withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params));
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const c = cv.getContext('2d');
+    if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, 64, 64); }
+    if (item.kind === 'vox') drawVox(c, item, Math.PI / 4, -0.62, 32, 32, voxScale(item, 64));
+    else { const src = itemCanvases(item)[0], k = Math.max(1, Math.floor(56 / Math.max(src.width, src.height))); c.imageSmoothingEnabled = false; c.drawImage(src, (64 - src.width * k) / 2, (64 - src.height * k) / 2, src.width * k, src.height * k); }
+    el.appendChild(cv);
+    const rm = document.createElement('button'); rm.className = 'rm'; rm.textContent = '✕'; rm.title = 'Remove';
+    rm.onclick = e => { e.stopPropagation(); kept.splice(i, 1); if (keptOn === i) keptOn = -1; saveKept(); renderKept(); };
+    el.appendChild(rm);
+    el.onclick = () => { keptOn = i; pick(rec); renderKept(); };
+    list.appendChild(el);
+  });
+}
+$('#keepBtn').onclick = keepPicked;
+$('#keptClear').onclick = () => { if (kept.length && confirm('Forget everything kept?')) { kept = []; keptOn = -1; saveKept(); renderKept(); } };
+$('#keptJson').onclick = () => download('hatcher_kept.json', new Blob([JSON.stringify(kept, null, 1)], { type: 'application/json' }));
+// one sheet per mode, every cell the size of the largest; sprites at 1px so Godot can slice them
+$('#keptSheet').onclick = async () => {
+  const recs = kept.filter(k => k.mode === P.mode);
+  if (!recs.length){ toast('nothing kept in this mode'); return; }
+  const items = recs.map(r => withColour(r.colour, () => makeItem(r.mode, r.seed, r.params)));
+  const scale = Math.max(1, +$('#pngScale').value || 1);
+  const imgs = items.map((it, i) => itemPNG(it, recs[i], scale));
+  const cw = Math.max(...imgs.map(c => c.width)), ch = Math.max(...imgs.map(c => c.height)), cols = Math.ceil(Math.sqrt(imgs.length));
+  const cv = document.createElement('canvas'); cv.width = cw * cols; cv.height = ch * Math.ceil(imgs.length / cols);
+  const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+  imgs.forEach((im, i) => c.drawImage(im, (i % cols) * cw + (cw - im.width) / 2 | 0, Math.floor(i / cols) * ch + (ch - im.height) | 0));
+  download(`hatcher_${P.mode}_kept.png`, await canvasBlob(cv));
+};
+
+/* ---------- panels ---------- */
+function scrubify(inp, onChange){
+  let sx = null, sv = 0, moved = false;
+  inp.addEventListener('pointerdown', e => { if (document.activeElement === inp) return; sx = e.clientX; sv = +inp.value; moved = false; inp.setPointerCapture(e.pointerId); e.preventDefault(); });
+  inp.addEventListener('pointermove', e => {
+    if (sx === null) return; const dx = e.clientX - sx;
+    if (Math.abs(dx) > 3) moved = true;
+    if (!moved) return;
+    const st = +inp.step || 1; let v = sv + Math.round(dx / 7) * st;
+    if (inp.min !== '') v = Math.max(+inp.min, v); if (inp.max !== '') v = Math.min(+inp.max, v);
+    if (+inp.value !== v){ inp.value = v; onChange(); }
+  });
+  inp.addEventListener('pointerup', () => { if (sx === null) return; sx = null; if (!moved){ inp.focus(); inp.select(); } });
+  inp.addEventListener('change', onChange);
+}
+let regenTimer = 0;
+const regenSoon = () => { clearTimeout(regenTimer); regenTimer = setTimeout(() => { regen(); saveState(); }, P.mode === 'voxel' ? 120 : 0); };
+function buildShape(){
+  const body = $('#shapeBody'); body.innerHTML = ''; const p = P[P.mode];
+  $('#shapeBadge').textContent = P.mode;
+  for (const [key, label, a, b, step] of FIELDS[P.mode]){
+    if (a === 'check'){
+      const l = document.createElement('label'); l.className = 'check';
+      l.innerHTML = `<input type="checkbox"${p[key] ? ' checked' : ''}> ${label}`;
+      l.firstChild.onchange = e => { p[key] = e.target.checked; regenSoon(); };
+      body.appendChild(l);
+    } else {
+      const f = document.createElement('label'); f.className = 'field';
+      f.innerHTML = `<span>${label}</span><input type="number" min="${a}" max="${b}" step="${step || 1}" value="${p[key]}">`;
+      const inp = f.querySelector('input');
+      scrubify(inp, () => { p[key] = Math.max(a, Math.min(b, Math.round(+inp.value || a))); regenSoon(); });
+      body.appendChild(f);
+    }
+  }
+  const note = document.createElement('p'); note.className = 'hintline'; note.textContent = MODE_NOTE[P.mode]; body.appendChild(note);
+  buildColour();
+}
+function buildColour(){
+  const body = $('#colourBody'), c = P.colour; body.innerHTML = '';
+  const field = (label, html) => { const f = document.createElement('label'); f.className = 'field'; f.innerHTML = `<span>${label}</span>` + html; body.appendChild(f); return f.lastChild; };
+  const sel = field('Palette', `<select>${['random', 'harmony', 'pico-8', 'game boy', 'c64', 'mono', 'custom'].map(o => `<option${o === c.palette ? ' selected' : ''}>${o}</option>`).join('')}</select>`);
+  sel.onchange = () => { c.palette = sel.value; buildColour(); regenSoon(); };
+  if (c.palette !== 'mono'){
+    const n = field('Colours', `<input type="number" min="1" max="8" value="${c.n}">`);
+    scrubify(n, () => { c.n = Math.max(1, Math.min(8, +n.value || 1)); regenSoon(); });
+  }
+  if (c.palette === 'custom'){
+    const ta = document.createElement('textarea'); ta.value = c.custom; ta.spellcheck = false;
+    ta.onchange = () => { c.custom = ta.value; regenSoon(); };
+    body.appendChild(ta);
+    const r = document.createElement('div'); r.className = 'row'; r.style.marginTop = '6px';
+    r.innerHTML = '<button class="btn">Colours from an image</button><input type="file" accept="image/*" hidden>';
+    const [btn, file] = r.children; btn.onclick = () => file.click();
+    file.onchange = () => { if (file.files[0]) coloursFromImage(file.files[0], list => { c.custom = list.map(hex).join(' '); ta.value = c.custom; regenSoon(); }); };
+    body.appendChild(r);
+  }
+  const chk = (key, label) => { const l = document.createElement('label'); l.className = 'check'; l.innerHTML = `<input type="checkbox"${c[key] ? ' checked' : ''}> ${label}`; l.firstChild.onchange = e => { c[key] = e.target.checked; regenSoon(); }; body.appendChild(l); };
+  chk('bands', 'Colour by row');
+  if (P.mode === 'sprite'){
+    const o = field('Outline', `<select>${['none', 'dark', 'light', 'black'].map(v => `<option${v === c.outline ? ' selected' : ''}>${v}</option>`).join('')}</select>`);
+    o.onchange = () => { c.outline = o.value; regenSoon(); };
+    chk('shade', 'Shadow underneath');
+  }
+  const bg = field('Background', `<input type="color" value="${c.bg}">`);
+  bg.oninput = () => { c.bg = bg.value; regenSoon(); };
+  chk('transparent', 'Transparent background');
+}
+function coloursFromImage(file, done){
+  const img = new Image(); img.onload = () => {
+    const cv = document.createElement('canvas'), s = Math.min(1, 256 / Math.max(img.width, img.height));
+    cv.width = Math.max(1, img.width * s | 0); cv.height = Math.max(1, img.height * s | 0);
+    const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.drawImage(img, 0, 0, cv.width, cv.height);
+    const d = c.getImageData(0, 0, cv.width, cv.height).data, count = new Map();
+    for (let i = 0; i < d.length; i += 4){ if (d[i + 3] < 128) continue; const k = hex([d[i], d[i + 1], d[i + 2]]); count.set(k, (count.get(k) || 0) + 1); }
+    done([...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 32).map(e => unhex(e[0])));
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+}
+document.querySelectorAll('.panel-head').forEach(h => h.onclick = () => h.parentElement.classList.toggle('collapsed'));
+
+/* ---------- mode, seed, keys ---------- */
+const seedHistory = [];
+function setSeed(s, remember = true){
+  if (remember && s !== P.seed) seedHistory.push(P.seed);
+  P.seed = s >>> 0; $('#seedIn').value = P.seed; regen(); saveState();
+}
+function setMode(m){
+  P.mode = m;
+  document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD' }[m];
+  buildShape(); regen(); saveState();
+}
+document.querySelectorAll('.modebtn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$('#shuffleBtn').onclick = () => setSeed((Math.random() * 1e9) >>> 0);
+$('#backBtn').onclick = () => { if (seedHistory.length) setSeed(seedHistory.pop(), false); };
+$('#seedIn').onchange = e => setSeed(seedFromText(e.target.value));
+$('#hintX').onclick = () => $('#hint').classList.add('hide');
+$('#helpBtn').onclick = () => $('#help').classList.toggle('show');
+$('#help').onclick = e => { if (e.target.id === 'help') $('#help').classList.remove('show'); };
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'r') $('#shuffleBtn').click();
+  else if (k === 'z') $('#backBtn').click();
+  else if (k === 'k') keepPicked();
+  else if (k === 'e') $('#sheetBtn').click();
+  else if (k === 'h') $('#helpBtn').click();
+  else if (k === 'escape') $('#help').classList.remove('show');
+  else if (k === '1') setMode('sprite'); else if (k === '2') setMode('net'); else if (k === '3') setMode('voxel');
+});
+function saveState(){ try { localStorage.setItem('hatcher.state', JSON.stringify(P)); } catch (e) {} }
+try {
+  const s = JSON.parse(localStorage.getItem('hatcher.state') || 'null');
+  if (s) for (const k of Object.keys(DEFAULTS)) if (k in s) P[k] = typeof DEFAULTS[k] === 'object' ? { ...DEFAULTS[k], ...s[k] } : s[k];
+} catch (e) {}
+
+$('#help').innerHTML = `
+  <h2>Ren's Hatcher</h2>
+  <p>Every square on the left grows from its own seed. Change a setting and the same seeds grow again, so you can watch one creature get taller or lose its colours. Pick the good ones and keep them. Kept ones remember their settings and stay in this browser.</p>
+  <h3>Sprites</h3>
+  <p>Half of each sprite is filled at random and then mirrored. Pull to middle makes the middle fill more often than the edges, which gives bodies instead of dust. Two frames makes the bottom rows step outward and back, a walk cycle of sorts. The Bitsy button crops to 8×8 and writes both frames.</p>
+  <h3>Box nets</h3>
+  <p>Six faces laid out as an unfolded box, the same layout the dungeon's boxnet.gd folds. Save the PNG at scale 1, copy the recipe part, and it is a prop.</p>
+  <h3>Voxel field</h3>
+  <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
+  <h3>Keys</h3>
+  <table>
+    <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
+    <tr><td><span class="kbd">Z</span></td><td>previous seed</td></tr>
+    <tr><td><span class="kbd">K</span></td><td>keep the pick</td></tr>
+    <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
+    <tr><td><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span></td><td>sprites, nets, voxels</td></tr>
+    <tr><td>drag / double-click</td><td>turn the pick / stop it spinning</td></tr>
+  </table>
+  <h3>Where it comes from</h3>
+  <p>An old favourite, the <a href="https://2draw.me/random_ship_generator/index.en.htm">random spaceship sprite generator</a> by f2d, which follows Dave Bollinger's pixel spaceships.</p>`;
+
+$('#seedIn').value = P.seed;
+renderKept();
+window.addEventListener('resize', () => { relayout(); drawStage(); });
+setMode(P.mode);
+</script>
+</body>
+</html>
