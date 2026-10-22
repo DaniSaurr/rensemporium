@@ -42,6 +42,11 @@
   body.editing #toolbar .sep.edtool{display:block;}
   body.editing #stage{cursor:crosshair;}
   body.editing #hint{display:none;}
+  #editCol{display:none;background:var(--region);border-left:1px solid var(--line);overflow-y:auto;padding:8px;}
+  body.editing #editCol{display:block;}
+  body.editing #body{grid-template-columns:74px 1fr 290px minmax(340px,30vw);}
+  .edstrip{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;}
+  .edstrip .tbtn{width:auto;}
   .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:5px;margin-bottom:8px;}
   .swatch{aspect-ratio:1/1;border:2px solid var(--line);border-radius:5px;cursor:pointer;padding:0;}
   .swatch.on{border-color:var(--select);box-shadow:0 0 0 1px var(--select);}
@@ -159,6 +164,8 @@
     #toolbar .sep{display:none;}
     #stageWrap{height:62vh;}
     #props{border-left:0;}
+    body.editing #body{grid-template-columns:1fr;}
+    #editCol{border-left:0;}
   }
 </style>
 </head>
@@ -187,9 +194,9 @@
       <button class="tbtn edtool" data-tool="erase" title="Eraser (E), or right-click"><svg viewBox="0 0 24 24"><path d="M8 20h12M5 15l8-8 6 6-5 5H8z"/></svg><span class="lbl">Erase</span></button>
       <button class="tbtn edtool" data-tool="fill" title="Fill (G)"><svg viewBox="0 0 24 24"><path d="M5 12 12 5l7 7-7 7z"/><path d="M19 15c1 2 2 3 0 4"/></svg><span class="lbl">Fill</span></button>
       <button class="tbtn edtool" data-tool="pick" title="Pick colour (I), or alt-click"><svg viewBox="0 0 24 24"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg><span class="lbl">Pick</span></button>
-      <button class="tbtn edtool" id="mirrorTool" title="Mirror left / right (M)"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M9 7 4 12l5 5zM15 7l5 5-5 5z"/></svg><span class="lbl">Mirror</span></button>
-      <button class="tbtn edtool" id="undoTool" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg><span class="lbl">Undo</span></button>
-      <button class="tbtn edtool" id="redoTool" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg><span class="lbl">Redo</span></button>
+      <button class="tbtn edtool" data-tool="box" title="Box select (S)"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" stroke-dasharray="3 2.5"/></svg><span class="lbl">Box</span></button>
+      <button class="tbtn edtool" data-tool="lasso" title="Lasso (L)"><svg viewBox="0 0 24 24"><path d="M6 15c-3-3-2-9 6-10s9 5 6 8-8 3-10 1" stroke-dasharray="3 2.5"/><path d="M8 14c-1 2 0 4 2 5"/></svg><span class="lbl">Lasso</span></button>
+      <button class="tbtn edtool" data-tool="move" title="Move the selection, or the whole layer (V)"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span class="lbl">Move</span></button>
     </nav>
 
     <div id="stageWrap">
@@ -201,6 +208,14 @@
         The grid keeps its seeds while you change settings, so the same creatures stay in place as they change. Drag sideways on a number to scrub it.</div>
       <div id="help"></div>
     </div>
+
+    <aside id="editCol">
+      <div class="edstrip">
+          <button class="tbtn" id="mirrorTool" title="Mirror left / right (M)"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M9 7 4 12l5 5zM15 7l5 5-5 5z"/></svg><span class="lbl">Mirror</span></button>
+          <button class="tbtn" id="undoTool" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg><span class="lbl">Undo</span></button>
+          <button class="tbtn" id="redoTool" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg><span class="lbl">Redo</span></button>
+      </div>
+    </aside>
 
     <aside id="props">
 
@@ -1110,7 +1125,7 @@ function openEditor(){
   P.edit = { depthMode: 'bulge', depth: 2, ...e, frame: 0, id: rec.seed };
   // whatever was being edited before stays one undo away
   if (before){ ed.undo.push(before); ed.redo = []; }
-  ed.cur = 0;
+  ed.cur = 0; ed.sel = null;
   if (P.edit.fold === 'voxel') P.edit.frame = Math.floor(P.edit.frames.length / 2);
   setMode('edit');
 }
@@ -1171,7 +1186,27 @@ function drawEditor(){
     faces.forEach(([x, y, w, h]) => { const mx = L.ox + (x + w / 2) * k; sctx.moveTo(mx, L.oy + y * k); sctx.lineTo(mx, L.oy + (y + h) * k); });
     sctx.stroke(); sctx.setLineDash([]);
   }
-  if (ed.hover){
+  if (ed.sel && ed.sel.length !== e.w * e.h) ed.sel = null;
+  if (ed.sel){
+    // outline the selected cells: an edge wherever a selected cell meets an unselected one
+    sctx.beginPath();
+    const s = ed.sel, has = (x, y) => x >= 0 && y >= 0 && x < e.w && y < e.h && s[y * e.w + x];
+    for (let y = 0; y < e.h; y++) for (let x = 0; x < e.w; x++){
+      if (!s[y * e.w + x]) continue;
+      const X = L.ox + x * k, Y = L.oy + y * k;
+      if (!has(x, y - 1)){ sctx.moveTo(X, Y); sctx.lineTo(X + k, Y); }
+      if (!has(x, y + 1)){ sctx.moveTo(X, Y + k); sctx.lineTo(X + k, Y + k); }
+      if (!has(x - 1, y)){ sctx.moveTo(X, Y); sctx.lineTo(X, Y + k); }
+      if (!has(x + 1, y)){ sctx.moveTo(X + k, Y); sctx.lineTo(X + k, Y + k); }
+    }
+    sctx.lineWidth = 2; sctx.strokeStyle = '#000'; sctx.setLineDash([]); sctx.stroke();
+    sctx.strokeStyle = '#fff'; sctx.setLineDash([5, 4]); sctx.stroke(); sctx.setLineDash([]);
+  }
+  if (ed.drag && ed.drag.tool === 'lasso'){
+    sctx.beginPath(); ed.drag.pts.forEach(([x, y], i) => { const X = L.ox + x * k, Y = L.oy + y * k; i ? sctx.lineTo(X, Y) : sctx.moveTo(X, Y); });
+    sctx.lineWidth = 1.5; sctx.strokeStyle = '#fff'; sctx.setLineDash([5, 4]); sctx.stroke(); sctx.setLineDash([]);
+  }
+  if (ed.hover && !ed.drag){
     sctx.strokeStyle = '#e8912b'; sctx.lineWidth = 2;
     sctx.strokeRect(L.ox + ed.hover[0] * k + 1, L.oy + ed.hover[1] * k + 1, k - 2, k - 2);
   }
@@ -1188,6 +1223,88 @@ function edPush(){ ed.undo.push(edSnapshot()); if (ed.undo.length > 200) ed.undo
 function edUndo(){ if (!ed.undo.length) return; ed.redo.push(edSnapshot()); edRestore(ed.undo.pop()); }
 function edRedo(){ if (!ed.redo.length) return; ed.undo.push(edSnapshot()); edRestore(ed.redo.pop()); }
 function edTool(t){ ed.tool = t; document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t)); }
+/* selection: a mask over the current frame or layer */
+function edCellF(ev){
+  const r = stage.getBoundingClientRect(), dpr = stage.width / r.width, L = ed.lay;
+  return [((ev.clientX - r.left) * dpr - L.ox) / L.k, ((ev.clientY - r.top) * dpr - L.oy) / L.k];
+}
+function edClamp(c){ return [Math.max(0, Math.min(P.edit.w - 1, Math.floor(c[0]))), Math.max(0, Math.min(P.edit.h - 1, Math.floor(c[1])))]; }
+function rectMask(a, b){
+  const e = P.edit, m = new Uint8Array(e.w * e.h);
+  for (let y = Math.min(a[1], b[1]); y <= Math.max(a[1], b[1]); y++) for (let x = Math.min(a[0], b[0]); x <= Math.max(a[0], b[0]); x++) if (edFaceAt(x, y)) m[y * e.w + x] = 1;
+  return m;
+}
+function lassoMask(pts){
+  const e = P.edit, m = new Uint8Array(e.w * e.h); let any = false;
+  for (let y = 0; y < e.h; y++) for (let x = 0; x < e.w; x++){
+    const px = x + .5, py = y + .5; let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){
+      const [xi, yi] = pts[i], [xj, yj] = pts[j];
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    if (inside && edFaceAt(x, y)){ m[y * e.w + x] = 1; any = true; }
+  }
+  return any ? m : null;
+}
+function edSelDown(ev, tool, c){
+  if (tool === 'move'){
+    // with nothing selected, move takes everything on the layer
+    const f = P.edit.frames[P.edit.frame];
+    ed.before = edSnapshot();
+    ed.drag = { tool, start: c, src: f.slice(), mask: ed.sel ? ed.sel.slice() : Uint8Array.from(f, v => v >= 0 ? 1 : 0), dx: 0, dy: 0 };
+  } else {
+    ed.sel = null;
+    ed.drag = { tool, start: c, pts: [edCellF(ev)], moved: false };
+  }
+  drawEditor();
+}
+function edSelMove(ev){
+  const d = ed.drag, c = edClamp(edCellF(ev));
+  if (d.tool === 'box'){ if (String(c) !== String(d.start)) d.moved = true; ed.sel = rectMask(d.start, c); drawEditor(); return; }
+  if (d.tool === 'lasso'){ d.pts.push(edCellF(ev)); drawEditor(); return; }
+  const dx = c[0] - d.start[0], dy = c[1] - d.start[1]; if (dx === d.dx && dy === d.dy) return;
+  d.dx = dx; d.dy = dy;
+  const e = P.edit, W = e.w, f = e.frames[e.frame], moved = new Uint8Array(W * e.h);
+  for (let i = 0; i < f.length; i++) f[i] = d.mask[i] ? -1 : d.src[i];
+  for (let i = 0; i < f.length; i++){
+    if (!d.mask[i]) continue;
+    const X = i % W + dx, Y = Math.floor(i / W) + dy;
+    if (X < 0 || Y < 0 || X >= W || Y >= e.h || !edFaceAt(X, Y)) continue;
+    moved[Y * W + X] = 1; if (d.src[i] >= 0) f[Y * W + X] = d.src[i];
+  }
+  if (ed.sel) ed.sel = moved;
+  edRefresh(false);
+}
+function edSelUp(){
+  const d = ed.drag; ed.drag = null;
+  if (d.tool === 'box' && !d.moved) ed.sel = null;               // a click without a drag lets go of the selection
+  if (d.tool === 'lasso') ed.sel = d.pts.length > 2 ? lassoMask(d.pts) : null;
+  drawEditor();
+}
+function edDeleteSel(){
+  if (!ed.sel) return;
+  edPush(); const f = P.edit.frames[P.edit.frame];
+  ed.sel.forEach((v, i) => { if (v) f[i] = -1; });
+  edRefresh();
+}
+
+/* conversions; the old edit stays one undo away */
+function edToVoxel(){
+  const e = P.edit, V = voxOf(editItem(e)), frames = [];
+  for (let z = 0; z < V.d; z++){ const f = []; for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++) f.push(V.cells[x + V.w * ((V.h - 1 - y) + V.h * z)]); frames.push(f); }
+  edPush(); ed.sel = null;
+  P.edit = { id: e.id, w: V.w, h: V.h, frames, colors: e.colors.slice(), fold: 'voxel', net: null, depthMode: 'bulge', depth: 2,
+             mirror: e.mirror, cut: true, frame: Math.floor(V.d / 2) };
+  buildEditPanels(); edResize(); edRefresh(); toast('now voxels, ' + V.w + '×' + V.h + '×' + V.d);
+}
+function edLayerToSprite(){
+  const e = P.edit;
+  edPush(); ed.sel = null;
+  P.edit = { id: e.id, w: e.w, h: e.h, frames: [e.frames[e.frame].slice()], colors: e.colors.slice(), fold: 'sprite', net: null,
+             depthMode: 'bulge', depth: 2, mirror: e.mirror, frame: 0 };
+  buildEditPanels(); edResize(); edRefresh(); toast('layer ' + (e.frame + 1) + ' is a sprite now. Ctrl+Z goes back to the voxels');
+}
+
 function edApply(x, y, tool){
   const e = P.edit, f = e.frames[e.frame], W = e.w;
   if (tool === 'pick'){ const v = f[y * W + x]; if (v >= 0){ ed.cur = v; buildEditColour(); } edTool('pencil'); return; }
@@ -1223,6 +1340,7 @@ stage.addEventListener('pointerdown', ev => {
   const c = edCell(ev); if (!c) return;
   ev.preventDefault(); stage.setPointerCapture(ev.pointerId);
   const tool = ev.button === 2 ? 'erase' : ev.altKey ? 'pick' : ed.tool;
+  if (tool === 'box' || tool === 'lasso' || tool === 'move'){ edSelDown(ev, tool, c); return; }
   ed.before = edSnapshot(); ed.down = tool; ed.last = c;
   edApply(c[0], c[1], tool);
   if (tool === 'fill' || tool === 'pick') ed.down = null;
@@ -1230,6 +1348,7 @@ stage.addEventListener('pointerdown', ev => {
 });
 stage.addEventListener('pointermove', ev => {
   if (P.mode !== 'edit') return;
+  if (ed.drag){ edSelMove(ev); return; }
   const c = edCell(ev);
   if (ed.down && c && ed.last){
     // fill in the cells between two mouse samples so fast strokes stay solid
@@ -1241,7 +1360,9 @@ stage.addEventListener('pointermove', ev => {
   if (String(c) !== String(ed.hover)){ ed.hover = c; drawEditor(); }
 });
 const edEnd = () => {
-  if (P.mode !== 'edit' || !ed.before) return;
+  if (P.mode !== 'edit') return;
+  if (ed.drag) edSelUp();
+  if (!ed.before) return;
   if (edSnapshot() !== ed.before){ ed.undo.push(ed.before); if (ed.undo.length > 200) ed.undo.shift(); ed.redo = []; saveState(); }
   ed.before = ''; ed.down = null; ed.last = null;
 };
@@ -1348,6 +1469,9 @@ function buildEditPanels(){
     cut.innerHTML = `<input type="checkbox"${e.cut !== false ? ' checked' : ''}> Cut away the layers in front`;
     cut.firstChild.onchange = ev => { e.cut = ev.target.checked; edRefresh(); };
     body.appendChild(cut);
+    const conv = document.createElement('button'); conv.className = 'btn'; conv.style.width = '100%'; conv.style.marginTop = '6px';
+    conv.textContent = 'This layer to new sprite'; conv.onclick = edLayerToSprite;
+    body.appendChild(conv);
     label('[ and ] or the mouse wheel step through the layers. Dots show the layer behind. With paint through on, the eraser cuts all the way through and the pencil recolours every layer at that spot.');
     buildEditColour();
     return;
@@ -1374,6 +1498,10 @@ function buildEditPanels(){
     label(e.depthMode === 'lathe' ? 'Turned round the middle column, like a candle or a pot. The right half sets the profile.'
       : e.depthMode === 'slab' ? 'The same thickness everywhere, a cut-out.' : 'Thicker the further a pixel is from the outline.');
   }
+  const conv = document.createElement('button'); conv.className = 'btn'; conv.style.width = '100%'; conv.style.marginTop = '10px';
+  conv.textContent = 'Convert to voxel'; conv.title = 'Turn the 3D version into voxel layers you can edit';
+  conv.onclick = edToVoxel;
+  body.appendChild(conv);
   buildEditColour();
 }
 function buildEditColour(){
@@ -1418,6 +1546,9 @@ function setMode(m){
   if (m === 'edit' && !P.edit) P.edit = blankEdit();
   P.mode = m;
   document.body.classList.toggle('editing', m === 'edit');
+  // in edit the canvas panel sits in its own column beside the stage
+  if (m === 'edit') $('#editCol').appendChild($('#panelShape'));
+  else $('#props').insertBefore($('#panelShape'), $('#panelColour'));
   document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
   $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', edit: 'EDIT' }[m];
   buildShape(); regen(); saveState();
@@ -1438,7 +1569,9 @@ document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && k === 'z'){ e.preventDefault(); e.shiftKey ? edRedo() : edUndo(); return; }
     if ((e.ctrlKey || e.metaKey) && k === 'y'){ e.preventDefault(); edRedo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const tools = { b: 'pencil', e: 'erase', g: 'fill', i: 'pick' };
+    const tools = { b: 'pencil', e: 'erase', g: 'fill', i: 'pick', s: 'box', l: 'lasso', v: 'move' };
+    if (k === 'delete' || k === 'backspace'){ e.preventDefault(); edDeleteSel(); return; }
+    if (k === 'escape' && ed.sel){ ed.sel = null; drawEditor(); return; }
     if (tools[k]) { edTool(tools[k]); return; }
     if (k === 'm') { edSetMirror(!P.edit.mirror); return; }
     if (k === 'z') { edUndo(); return; }
@@ -1472,7 +1605,7 @@ $('#help').innerHTML = `
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
   <h3>Edit</h3>
-  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases, alt-click picks a colour, and dots show the other frame, or the layer behind, under the one you are drawing.</p>
+  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases and alt-click picks a colour. Box and lasso select part of the frame or layer, move drags it (or the whole layer when nothing is selected), Delete clears it and Escape lets go. Convert to voxel turns a sprite or net into layers, and a layer can become a sprite again. Dots show the other frame, or the layer behind, under the one you are drawing.</p>
   <h3>Keys</h3>
   <table>
     <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
@@ -1481,6 +1614,7 @@ $('#help').innerHTML = `
     <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
     <tr><td><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span></td><td>sprites, nets, voxels, edit</td></tr>
     <tr><td><span class="kbd">B</span> <span class="kbd">E</span> <span class="kbd">G</span> <span class="kbd">I</span> <span class="kbd">M</span></td><td>in edit: pencil, eraser, fill, pick colour, mirror</td></tr>
+    <tr><td><span class="kbd">S</span> <span class="kbd">L</span> <span class="kbd">V</span></td><td>in edit: box select, lasso, move</td></tr>
     <tr><td><span class="kbd">Ctrl+Z</span></td><td>in edit: undo (Ctrl+Shift+Z redoes)</td></tr>
     <tr><td>drag / double-click</td><td>turn the pick / stop it spinning</td></tr>
   </table>
