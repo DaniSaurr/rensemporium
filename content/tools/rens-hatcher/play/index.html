@@ -1159,7 +1159,8 @@ function edMirror(x, y){ const f = edFaceAt(x, y); return f ? f[0] + f[2] - 1 - 
 function drawEditor(){
   if (P.mode !== 'edit') return;
   const e = P.edit, f = e.frames[e.frame] || e.frames[0];
-  const k = Math.max(1, Math.floor(Math.min(stage.width * .92 / e.w, stage.height * .92 / e.h)));
+  const room = 56 * (stage.width / (stage.getBoundingClientRect().width || 1));   // space round the grid for the handles
+  const k = Math.max(1, Math.floor(Math.min((stage.width - room) / e.w, (stage.height - room) / e.h)));
   const L = ed.lay = { k, ox: Math.floor((stage.width - e.w * k) / 2), oy: Math.floor((stage.height - e.h * k) / 2) };
   sctx.fillStyle = '#1d1d1d'; sctx.fillRect(0, 0, stage.width, stage.height);
   const F = edFaces();
@@ -1211,11 +1212,70 @@ function drawEditor(){
     sctx.beginPath(); ed.drag.pts.forEach(([x, y], i) => { const X = L.ox + x * k, Y = L.oy + y * k; i ? sctx.lineTo(X, Y) : sctx.moveTo(X, Y); });
     sctx.lineWidth = 1.5; sctx.strokeStyle = '#fff'; sctx.setLineDash([5, 4]); sctx.stroke(); sctx.setLineDash([]);
   }
+  drawHandles();
   if (ed.hover && !ed.drag){
     sctx.strokeStyle = '#e8912b'; sctx.lineWidth = 2;
     sctx.strokeRect(L.ox + ed.hover[0] * k + 1, L.oy + ed.hover[1] * k + 1, k - 2, k - 2);
   }
 }
+/* resize handles round the canvas: corners and edge midpoints, each named by the sides it moves */
+const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+const HANDLE_CURSOR = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize' };
+function edHandlePos(hd){
+  const e = P.edit, L = ed.lay, x0 = L.ox, y0 = L.oy, x1 = L.ox + e.w * L.k, y1 = L.oy + e.h * L.k;
+  return [hd.includes('w') ? x0 : hd.includes('e') ? x1 : (x0 + x1) / 2, hd.includes('n') ? y0 : hd.includes('s') ? y1 : (y0 + y1) / 2];
+}
+function edHandleAt(ev){
+  if (!ed.lay || !P.edit || P.edit.fold === 'net') return null;
+  const r = stage.getBoundingClientRect(), dpr = stage.width / r.width, px = (ev.clientX - r.left) * dpr, py = (ev.clientY - r.top) * dpr;
+  const reach = 14 * dpr;
+  return HANDLES.find(hd => { const [hx, hy] = edHandlePos(hd); return Math.abs(px - hx) < reach && Math.abs(py - hy) < reach; }) || null;
+}
+function drawHandles(){
+  const e = P.edit, L = ed.lay; if (e.fold === 'net') return;
+  const dpr = stage.width / stage.getBoundingClientRect().width, arm = 12 * dpr, gap = 5 * dpr;
+  sctx.lineCap = 'square';
+  for (const hd of HANDLES){
+    const [x, y] = edHandlePos(hd), sx = hd.includes('w') ? -1 : hd.includes('e') ? 1 : 0, sy = hd.includes('n') ? -1 : hd.includes('s') ? 1 : 0;
+    const hot = ed.resize ? ed.resize.hd === hd : ed.handleHover === hd;
+    sctx.strokeStyle = hot ? '#e8912b' : 'rgba(255,255,255,.85)'; sctx.lineWidth = 3 * dpr;
+    sctx.beginPath();
+    const cx = x + sx * gap, cy = y + sy * gap;
+    if (sx && sy){ sctx.moveTo(cx, cy - sy * arm); sctx.lineTo(cx, cy); sctx.lineTo(cx - sx * arm, cy); }   // corner bracket
+    else if (sx){ sctx.moveTo(cx, cy - arm); sctx.lineTo(cx, cy + arm); }                                   // side bar
+    else { sctx.moveTo(cx - arm, cy); sctx.lineTo(cx + arm, cy); }
+    sctx.stroke();
+  }
+  sctx.lineCap = 'butt';
+  if (ed.resize){
+    // the new size, outlined before it is applied
+    const z = ed.resize, k = L.k;
+    const x = z.hd.includes('w') ? L.ox - (z.nw - e.w) * k : L.ox, y = z.hd.includes('n') ? L.oy - (z.nh - e.h) * k : L.oy;
+    sctx.strokeStyle = '#e8912b'; sctx.lineWidth = 2 * dpr; sctx.setLineDash([6 * dpr, 4 * dpr]);
+    sctx.strokeRect(x, y, z.nw * k, z.nh * k); sctx.setLineDash([]);
+    sctx.fillStyle = '#e8912b'; sctx.font = `${12 * dpr}px ui-monospace,Consolas,monospace`;
+    sctx.fillText(z.nw + '×' + z.nh, x, y - 8 * dpr);
+  }
+}
+function edResizeMove(ev){
+  const z = ed.resize, r = stage.getBoundingClientRect(), dpr = stage.width / r.width, k = ed.lay.k;
+  const dx = Math.round(((ev.clientX - r.left) * dpr - z.px) / k), dy = Math.round(((ev.clientY - r.top) * dpr - z.py) / k);
+  const clamp = v => Math.max(1, Math.min(32, v));
+  z.nw = clamp(z.hd.includes('e') ? z.w0 + dx : z.hd.includes('w') ? z.w0 - dx : z.w0);
+  z.nh = clamp(z.hd.includes('s') ? z.h0 + dy : z.hd.includes('n') ? z.h0 - dy : z.h0);
+  drawEditor();
+}
+function edResizeUp(){
+  const z = ed.resize, e = P.edit; ed.resize = null;
+  if (z.nw === e.w && z.nh === e.h){ drawEditor(); return; }
+  // the side opposite the handle stays put; along an untouched axis the set anchor still applies
+  const keep = e.anchor || [1, 2];
+  e.anchor = [z.hd.includes('w') ? 2 : z.hd.includes('e') ? 0 : keep[0], z.hd.includes('n') ? 2 : z.hd.includes('s') ? 0 : keep[1]];
+  edCanvasSize(z.nw, z.nh);
+  P.edit.anchor = keep;
+  buildEditPanels();
+}
+
 function edCell(ev){
   const r = stage.getBoundingClientRect(), dpr = stage.width / r.width, L = ed.lay; if (!L) return null;
   const x = Math.floor(((ev.clientX - r.left) * dpr - L.ox) / L.k), y = Math.floor(((ev.clientY - r.top) * dpr - L.oy) / L.k);
@@ -1342,6 +1402,13 @@ function edApply(x, y, tool){
 }
 stage.addEventListener('pointerdown', ev => {
   if (P.mode !== 'edit') return;
+  const hd = ev.button === 0 && edHandleAt(ev);
+  if (hd){
+    ev.preventDefault(); stage.setPointerCapture(ev.pointerId);
+    const r = stage.getBoundingClientRect(), dpr = stage.width / r.width;
+    ed.resize = { hd, px: (ev.clientX - r.left) * dpr, py: (ev.clientY - r.top) * dpr, w0: P.edit.w, h0: P.edit.h, nw: P.edit.w, nh: P.edit.h };
+    drawEditor(); return;
+  }
   const c = edCell(ev); if (!c) return;
   ev.preventDefault(); stage.setPointerCapture(ev.pointerId);
   const tool = ev.button === 2 ? 'erase' : ev.altKey ? 'pick' : ed.tool;
@@ -1354,6 +1421,9 @@ stage.addEventListener('pointerdown', ev => {
 stage.addEventListener('pointermove', ev => {
   if (P.mode !== 'edit') return;
   if (ed.drag){ edSelMove(ev); return; }
+  if (ed.resize){ edResizeMove(ev); return; }
+  const hd = edHandleAt(ev);
+  if (hd !== ed.handleHover){ ed.handleHover = hd; stage.style.cursor = hd ? HANDLE_CURSOR[hd] : ''; drawEditor(); }
   const c = edCell(ev);
   if (ed.down && c && ed.last){
     // fill in the cells between two mouse samples so fast strokes stay solid
@@ -1366,6 +1436,7 @@ stage.addEventListener('pointermove', ev => {
 });
 const edEnd = () => {
   if (P.mode !== 'edit') return;
+  if (ed.resize){ edResizeUp(); return; }
   if (ed.drag) edSelUp();
   if (!ed.before) return;
   if (edSnapshot() !== ed.before){ ed.undo.push(ed.before); if (ed.undo.length > 200) ed.undo.shift(); ed.redo = []; saveState(); }
@@ -1373,7 +1444,10 @@ const edEnd = () => {
 };
 stage.addEventListener('pointerup', edEnd);
 stage.addEventListener('pointercancel', edEnd);
-stage.addEventListener('pointerleave', () => { if (P.mode === 'edit' && !ed.down && ed.hover){ ed.hover = null; drawEditor(); } });
+stage.addEventListener('pointerleave', () => {
+  if (P.mode !== 'edit' || ed.down || ed.resize) return;
+  if (ed.hover || ed.handleHover){ ed.hover = null; ed.handleHover = null; stage.style.cursor = ''; drawEditor(); }
+});
 stage.addEventListener('contextmenu', ev => { if (P.mode === 'edit') ev.preventDefault(); });
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => edTool(b.dataset.tool));
 function edSetMirror(on){
@@ -1565,6 +1639,7 @@ function setMode(m){
   if (m === 'edit' && !P.edit) P.edit = blankEdit();
   P.mode = m;
   document.body.classList.toggle('editing', m === 'edit');
+  stage.style.cursor = '';
   // in edit the canvas panel sits in its own column beside the stage
   if (m === 'edit') $('#editCol').appendChild($('#panelShape'));
   else $('#props').insertBefore($('#panelShape'), $('#panelColour'));
@@ -1624,7 +1699,7 @@ $('#help').innerHTML = `
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
   <h3>Edit</h3>
-  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases and alt-click picks a colour. Box and lasso select part of the frame or layer, move drags it (or the whole layer when nothing is selected), Delete clears it and Escape lets go. Convert to voxel turns a sprite or net into layers, and a layer can become a sprite again. Dots show the other frame, or the layer behind, under the one you are drawing.</p>
+  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases and alt-click picks a colour. Drag the white handles round the canvas to resize it from that side. Box and lasso select part of the frame or layer, move drags it (or the whole layer when nothing is selected), Delete clears it and Escape lets go. Convert to voxel turns a sprite or net into layers, and a layer can become a sprite again. Dots show the other frame, or the layer behind, under the one you are drawing.</p>
   <h3>Keys</h3>
   <table>
     <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
