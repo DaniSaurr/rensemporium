@@ -654,7 +654,7 @@ function relayout(){
   layout = { cw, ch, cols, rows, ox: Math.floor((stage.width - cols * cw) / 2), oy: Math.floor((stage.height - rows * ch) / 2), dpr };
   $('#countInfo').textContent = cols * rows + ' on screen';
 }
-function regen(){ if (P.mode === 'edit') { edResize(); return; } cache = new Map(); pickIdx = -1; relayout(); drawStage(); }
+function regen(){ if (P.mode === 'edit') { drawToken++; edResize(); return; } cache = new Map(); pickIdx = -1; relayout(); drawStage(); }
 function getItem(i){
   if (!cache.has(i)) cache.set(i, makeItem(P.mode, itemSeed(i), P[P.mode]));
   return cache.get(i);
@@ -763,7 +763,13 @@ function drawPick(){
     pctx.imageSmoothingEnabled = false;
     pctx.drawImage(cv, (W - item.w * k) / 2, (W - item.h * k) / 2, item.w * k, item.h * k);
   } else {
-    const V = voxOf(item);
+    let V = voxOf(item);
+    if (item.fold === 'voxel' && item.cut && rec.live && item.frame > 0){
+      // cut away the layers in front, so the layer being painted is the front face
+      const cells = V.cells.slice(), wh = V.w * V.h;
+      cells.fill(-1, 0, wh * item.frame);
+      V = { w: V.w, h: V.h, d: V.d, cells, colors: V.colors };
+    }
     const flat = item.kind !== 'vox' && item.fold !== 'voxel';
     if (flat){
       // the flat picture in the corner, the 3D one in the middle
@@ -1067,7 +1073,7 @@ function blankEdit(){
 }
 function editItem(e){
   return { kind: 'edit', seed: e.id, w: e.w, h: e.h, frames: e.frames.map(f => Int16Array.from(f)), colors: e.colors.map(unhex),
-           fold: e.fold, net: e.net, depthMode: e.depthMode, depth: e.depth, col: { outline: 'none', shade: false } };
+           fold: e.fold, net: e.net, depthMode: e.depthMode, depth: e.depth, frame: e.frame, cut: e.cut !== false, col: { outline: 'none', shade: false } };
 }
 function openEditor(){
   if (!picked) return;
@@ -1139,8 +1145,10 @@ function drawEditor(){
   // the other frame, or the layer behind, shows faintly underneath
   const o = e.fold === 'voxel' ? e.frames[e.frame + 1] : e.frames.length > 1 ? e.frames[1 - e.frame] : null;
   if (o){
-    sctx.globalAlpha = .2;
-    o.forEach((v, i) => { if (v >= 0 && f[i] < 0){ sctx.fillStyle = e.colors[v]; sctx.fillRect(L.ox + (i % e.w) * k, L.oy + Math.floor(i / e.w) * k, k, k); } });
+    // dots, so they never pass for real pixels
+    const dot = Math.max(2, Math.round(k * .28)), off = Math.floor((k - dot) / 2);
+    sctx.globalAlpha = .7;
+    o.forEach((v, i) => { if (v >= 0 && f[i] < 0){ sctx.fillStyle = e.colors[v]; sctx.fillRect(L.ox + (i % e.w) * k + off, L.oy + Math.floor(i / e.w) * k + off, dot, dot); } });
     sctx.globalAlpha = 1;
   }
   f.forEach((v, i) => { if (v >= 0){ sctx.fillStyle = e.colors[v]; sctx.fillRect(L.ox + (i % e.w) * k, L.oy + Math.floor(i / e.w) * k, k, k); } });
@@ -1278,7 +1286,7 @@ function buildEditPanels(){
     field('Height', e.h, 1, 32, v => edCanvasSize(e.w, v));
   }
   if (e.fold === 'voxel'){
-    label('Layers, front to back. The layer behind shows faintly.');
+    label('Layers, front to back.');
     field('Layer', e.frame + 1, 1, e.frames.length, v => { e.frame = v - 1; edRefresh(false); });
     field('Depth', e.frames.length, 1, 32, v => edDepth(v));
     const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
@@ -1287,7 +1295,11 @@ function buildEditPanels(){
     const clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear layer';
     clr.onclick = () => { edPush(); e.frames[e.frame].fill(-1); edRefresh(); };
     row.append(cp, clr); body.appendChild(row);
-    label('[ and ] step through the layers.');
+    const cut = document.createElement('label'); cut.className = 'check';
+    cut.innerHTML = `<input type="checkbox"${e.cut !== false ? ' checked' : ''}> Cut away the layers in front`;
+    cut.firstChild.onchange = ev => { e.cut = ev.target.checked; edRefresh(); };
+    body.appendChild(cut);
+    label('[ and ] step through the layers. Dots show the layer behind.');
     buildEditColour();
     return;
   }
@@ -1410,7 +1422,7 @@ $('#help').innerHTML = `
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
   <h3>Edit</h3>
-  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases, alt-click picks a colour, and the second frame shows faintly underneath the first.</p>
+  <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases, alt-click picks a colour, and dots show the other frame, or the layer behind, under the one you are drawing.</p>
   <h3>Keys</h3>
   <table>
     <tr><td><span class="kbd">R</span></td><td>new seed</td></tr>
