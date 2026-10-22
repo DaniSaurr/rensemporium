@@ -62,6 +62,8 @@
   .layerstrip button:hover{border-color:var(--accent);}
   .layerstrip canvas{width:100%;height:100%;display:block;image-rendering:pixelated;}
   .layerstrip span{position:absolute;left:2px;bottom:1px;font-size:9px;color:var(--muted);text-shadow:0 0 2px #000;}
+  .depthlist .field{margin:4px 0;}
+  .depthlist .sw{display:inline-block;width:12px;height:12px;border:1px solid var(--line);border-radius:2px;margin-right:6px;vertical-align:-2px;}
   .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;}
   .seg button{height:28px;background:var(--widget);color:var(--muted);border:1px solid var(--line);cursor:pointer;font:inherit;font-size:12px;margin-left:-1px;}
   .seg button:first-child{margin-left:0;border-radius:5px 0 0 5px;}
@@ -260,6 +262,7 @@
             <button class="btn" id="exObj" title="Mesh with vertex colours">.obj</button>
             <button class="btn" id="exJson" title="Cells and colours">.json</button>
           </div>
+          <label class="field" id="artDirRow" title="Where the recipe says the PNGs live, inside the dungeon project"><span>Recipe PNG folder</span><input type="text" id="artDir" spellcheck="false" style="width:170px"></label>
         </div>
       </section>
 
@@ -309,7 +312,7 @@ const DEFAULTS = {
   sprite: { w: 8, h: 8, px: 5, gap: 1, density: 50, core: 30, mirrorX: true, mirrorY: false, cleanup: true, frames: 1 },
   net:    { w: 8, h: 6, d: 5, px: 4, density: 45, core: 20, matched: true, rim: true, holes: false, front: true, wrap: true },
   voxel:  { w: 12, h: 12, d: 12, thumb: 120, density: 55, core: 60, smooth: 2, mirrorX: true, mirrorZ: false, cleanup: true },
-  edit: null,
+  edit: null, artDir: 'art/sprites-hatcher',
   colour: { palette: 'random', n: 3, roles: true, eyes: true, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
             custom: '#2b1b2e #6b2d5c #b0306a #f06c9b #ffd0e0 #3a6b8c #9ad1d4' },
 };
@@ -695,32 +698,159 @@ function voxOf(item){
   }
   if (item.kind === 'edit' && item.fold === 'net')
     return (item._vox = netToVox({ ...item.net, W: item.w, px: item.frames[0], colors: item.colors }));
-  return (item._vox = extrude(item));
+  if (item.kind === 'edit' && !item.build) item.build = editBuild(item);
+  return (item._vox = buildVox(item));
 }
-// sprite -> voxels. bulge: thicker away from the outline; slab: one depth; lathe: turned round the middle column
-function extrude(it){
-  const { w, h } = it, f = it.frames[0], D = Math.max(1, it.depth || 2), mode = it.depthMode || 'bulge';
-  if (mode === 'lathe'){
-    const d = w, cells = new Int16Array(w * h * d).fill(-1), c = (w - 1) / 2;
-    for (let y = 0; y < h; y++) for (let Z = 0; Z < d; Z++) for (let X = 0; X < w; X++){
-      const xs = Math.round(c + Math.hypot(X - c, Z - c));
-      if (xs < w) cells[X + w * ((h - 1 - y) + h * Z)] = f[y * w + xs];
+/* ---------- the game's builders ----------
+   Ports of cluster.gd and lathe.gd, cell for cell, so the 3D view is what Godot builds from the
+   same picture: the same crop to the used rectangle, the same x - w/2 centring, y up from 0,
+   +z the front, Godot's rounding and its first-found tie-breaks.
+   A picture is { w, h, px (colour index or -1), colors }; cells come out as [x, y, z, colour index]. */
+const gdRound = v => Math.sign(v) * Math.round(Math.abs(v));
+const hexOf = c => hex(c).slice(1);
+const DEFAULT_BUILD = { type: 'relief', depth: 3, shell: 0, back: 'none', backDepth: 3, depths: {}, borderW: 0, borderD: 4, lid: 1, dome: false, bodyHex: '' };
+function cropPic(pic){
+  let x0 = pic.w, y0 = pic.h, x1 = -1, y1 = -1;
+  for (let y = 0; y < pic.h; y++) for (let x = 0; x < pic.w; x++) if (pic.px[y * pic.w + x] >= 0){ x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return { w: 0, h: 0, px: new Int16Array(0), colors: pic.colors };
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, px = new Int16Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) px[y * w + x] = pic.px[(y0 + y) * pic.w + x0 + x];
+  return { w, h, px, colors: pic.colors };
+}
+// lathe.gd: each row a disc as wide as the row, coloured from the column it lines up with
+function latheCells(pic){
+  const im = cropPic(pic), { w, h, px } = im, cx = (w - 1) * .5, out = [];
+  for (let y = 0; y < h; y++){
+    let left = -1, right = -1;
+    for (let x = 0; x < w; x++) if (px[y * w + x] >= 0){ if (left < 0) left = x; right = x; }
+    if (left < 0) continue;
+    const r = Math.max(cx - left, right - cx) + .5, rr = Math.ceil(r);
+    for (let vx = -rr; vx <= rr; vx++) for (let vz = -rr; vz <= rr; vz++){
+      if (vx * vx + vz * vz > r * r) continue;
+      const k = Math.abs(vx) >= Math.abs(vz) ? vz : vx;
+      const at = Math.max(left, Math.min(right, gdRound(cx + k)));
+      let c = px[y * w + at];
+      if (c < 0){
+        c = -1;
+        for (let d = 1; d <= right - left && c < 0; d++) for (const s2 of [at - d, at + d]) if (s2 >= left && s2 <= right && px[y * w + s2] >= 0){ c = px[y * w + s2]; break; }
+      }
+      out.push([vx, h - 1 - y, vz, c]);
     }
-    return { w, h, d, cells, colors: it.colors };
   }
-  const dist = new Int16Array(w * h);
-  for (let i = 0; i < w * h; i++) dist[i] = f[i] >= 0 ? 99 : 0;
-  for (let pass = 0; pass < D; pass++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
-    const i = y * w + x; if (!dist[i]) continue;
-    dist[i] = Math.min(dist[i], 1 + Math.min(x > 0 ? dist[i - 1] : 0, x < w - 1 ? dist[i + 1] : 0, y > 0 ? dist[i - w] : 0, y < h - 1 ? dist[i + w] : 0));
+  return out;
+}
+// slab_cells: flat at the back, each pixel pushed forward its colour's depth; a border can override
+function slabCells(pic, depth, depths = {}, border = []){
+  const im = cropPic(pic), { w, h, px, colors } = im, out = [], hw = Math.floor(w / 2);
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++){
+    const c = px[y * w + x]; if (c < 0) continue;
+    let n = depths[hexOf(colors[c])] ?? depth;
+    if (border.length === 2 && Math.min(x, y, w - 1 - x, h - 1 - y) < border[0]) n = border[1];
+    for (let z = 0; z < n; z++) out.push([x - hw, h - 1 - y, z, c]);
   }
-  const d = 2 * D - 1, cells = new Int16Array(w * h * d).fill(-1);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
-    const i = y * w + x; if (f[i] < 0) continue;
-    const t = mode === 'slab' ? D : Math.min(dist[i], D);
-    for (let z = D - t; z <= D - 2 + t; z++) cells[x + w * ((h - 1 - y) + h * z)] = f[i];
+  return out;
+}
+function edgeDistance(im){
+  const { w, h, px } = im, dist = new Int16Array(w * h), solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && px[y * w + x] >= 0;
+  let frontier = [];
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++)
+    if (solid(x, y) && (!solid(x + 1, y) || !solid(x - 1, y) || !solid(x, y + 1) || !solid(x, y - 1))){ dist[y * w + x] = 1; frontier.push([x, y]); }
+  while (frontier.length){
+    const next = [];
+    for (const [x, y] of frontier) for (const [a, b] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]])
+      if (solid(a, b) && !dist[b * w + a]){ dist[b * w + a] = dist[y * w + x] + 1; next.push([a, b]); }
+    frontier = next;
   }
-  return { w, h, d, cells, colors: it.colors };
+  return dist;
+}
+// relief_cells: a dome over a flat back; a shell hollows the back; a back picture domes backward too
+function reliefCells(pic, maxDepth, shell = 0, back = null, backDepth = 0){
+  const im = cropPic(pic), { w, h, px } = im, dist = edgeDistance(im), out = [], hw = Math.floor(w / 2);
+  const bk = back && back !== 'same' ? cropPic(back) : null;
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++){
+    const d = dist[y * w + x]; if (!d) continue;
+    const c = px[y * w + x], front = Math.min(d, maxDepth), b0 = shell <= 0 ? 0 : Math.max(0, front - shell);
+    for (let z = b0; z < front; z++) out.push([x - hw, h - 1 - y, z, c]);
+    if (backDepth > 0){
+      let bc = c;
+      if (bk && bk.w){   // the back is drawn as seen from behind, so x runs the other way
+        const bx = gdRound((1 - x / Math.max(1, w - 1)) * (bk.w - 1)), by = gdRound(y / Math.max(1, h - 1) * (bk.h - 1));
+        const v = bk.px[by * bk.w + bx]; if (v >= 0) bc = v;
+      }
+      for (let z = 1; z <= Math.min(d, backDepth); z++) out.push([x - hw, h - 1 - y, -z, bc]);
+    }
+  }
+  return out;
+}
+// body_cells: a deep body in the commonest outline colour, the picture on top as a lid (domed if asked)
+function bodyCells(pic, depth, bodyHex, lid, dome, colors){
+  const im = cropPic(pic), { w, h, px } = im, hw = Math.floor(w / 2), solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && px[y * w + x] >= 0;
+  let body;
+  if (bodyHex){ body = colors.findIndex(c => hexOf(c) === bodyHex); if (body < 0){ colors.push(unhex(bodyHex)); body = colors.length - 1; } }
+  else {
+    const counts = new Map();
+    for (let x = 0; x < w; x++) for (let y = 0; y < h; y++)
+      if (solid(x, y) && !(solid(x + 1, y) && solid(x - 1, y) && solid(x, y + 1) && solid(x, y - 1))){ const k = px[y * w + x]; counts.set(k, (counts.get(k) || 0) + 1); }
+    let best = -1; for (const [k, n] of counts) if (best < 0 || n > counts.get(best)) best = k;
+    body = best;
+  }
+  const swell = dome ? new Set(reliefCells(pic, lid).map(c => c[0] + ',' + c[1] + ',' + c[2])) : null, out = [];
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++){
+    if (!solid(x, y)) continue;
+    const X = x - hw, Y = h - 1 - y;
+    for (let z = 0; z < depth; z++) out.push([X, Y, z, body]);
+    let k = lid;
+    if (dome){ k = 0; while (swell.has(X + ',' + Y + ',' + k)) k++; }
+    for (let z = 0; z < k; z++) out.push([X, Y, depth + z, px[y * w + x]]);
+  }
+  return out;
+}
+function cellsToV(list, colors){
+  if (!list.length) return { w: 1, h: 1, d: 1, cells: Int16Array.of(-1), colors };
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (const [x, y, z] of list){ x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, d = z1 - z0 + 1, cells = new Int16Array(w * h * d).fill(-1);
+  for (const [x, y, z, c] of list) cells[(x - x0) + w * ((y - y0) + h * (z - z0))] = c;
+  return { w, h, d, cells, colors };
+}
+// the old edit depth modes, read as builds
+function editBuild(e){
+  if (e.build) return e.build;
+  const d = e.depth || 2;
+  return e.depthMode === 'lathe' ? { ...DEFAULT_BUILD, type: 'lathe' } : e.depthMode === 'slab' ? { ...DEFAULT_BUILD, type: 'slab', depth: 2 * d - 1 }
+    : { ...DEFAULT_BUILD, type: 'relief', depth: d, back: 'same', backDepth: Math.max(1, d - 1) };
+}
+function buildVox(item){
+  const b = { ...DEFAULT_BUILD, ...item.build }, colors = item.colors.map(c => c.slice());
+  const pic = { w: item.w, h: item.h, px: item.frames[0], colors };
+  const backPic = b.back === 'picture' && item.frames[1] ? { w: item.w, h: item.h, px: item.frames[1], colors } : b.back === 'same' ? 'same' : null;
+  let list;
+  if (b.type === 'lathe') list = latheCells(pic);
+  else if (b.type === 'slab') list = slabCells(pic, b.depth, b.depths || {}, b.borderW > 0 ? [b.borderW, b.borderD] : []);
+  else if (b.type === 'body') list = bodyCells(pic, b.depth, b.bodyHex, b.lid, b.dome, colors);
+  else list = reliefCells(pic, b.depth, b.shell, backPic, b.back === 'none' ? 0 : b.backDepth);
+  return cellsToV(list, colors);
+}
+// one recipe part, in the dungeon's own words
+function recipePart(b, png, backPng, net){
+  if (net) return { png, net: [net.w, net.h, net.d], at: [0, 0, 0] };
+  b = { ...DEFAULT_BUILD, ...b };
+  const part = { png };
+  if (b.type === 'slab'){
+    part.slab = b.depth;
+    if (b.depths && Object.keys(b.depths).length) part.depths = b.depths;
+    if (b.borderW > 0) part.border = [b.borderW, b.borderD];
+  } else if (b.type === 'relief'){
+    part.relief = b.depth;
+    if (b.shell > 0) part.shell = b.shell;
+    if (b.back !== 'none'){ part.back = b.back === 'same' ? 'same' : backPng; part.back_relief = b.backDepth; }
+  } else if (b.type === 'body'){
+    part.body = b.depth; part.lid = b.lid;
+    if (b.dome) part.dome = true;
+    if (b.bodyHex) part.body_color = b.bodyHex;
+  }
+  part.at = [0, 0, 0];
+  return part;
 }
 
 /* ---------- voxel renderer (orthographic, painter's sort) ---------- */
@@ -1029,10 +1159,11 @@ function pick(rec, item){
   $('#pickBadge').textContent = rec.mode;
   $('#pickSeed').textContent = '#' + rec.seed;
   const it = picked.item, p = rec.params;
-  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + it.depthMode) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
+  $('#pickSize').textContent = rec.mode === 'edit' ? `${it.w}×${it.h}` + (it.fold === 'net' ? ` net of ${it.net.w}×${it.net.h}×${it.net.d}` : it.fold === 'voxel' ? `×${it.frames.length}` : ' ' + (it.build ? it.build.type : '')) : rec.mode === 'net' ? `${p.w}×${p.h}×${p.d} net ${it.W}×${it.H}` : rec.mode === 'voxel' ? `${p.w}×${p.h}×${p.d}` : `${p.w}×${p.h}` + (p.frames > 1 ? ' ×2 frames' : '');
   const show = (id, on) => { $(id).hidden = !on; };
   const flat = rec.mode === 'sprite' || (rec.mode === 'edit' && it.fold === 'sprite'), netty = rec.mode === 'net' || (rec.mode === 'edit' && it.fold === 'net');
-  show('#exBitsy', flat); show('#exShape', flat); show('#exRecipe', netty);
+  show('#exBitsy', flat); show('#exShape', flat);
+  show('#exRecipe', netty || !!it.build || (rec.mode === 'edit' && it.fold !== 'voxel'));
   show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
   show('#editBtn', !rec.live);
   show('#breedBtn', !rec.live && rec.mode !== 'edit');
@@ -1062,7 +1193,7 @@ function drawPick(){
     if (flat){
       // the flat picture in the corner, the 3D one in the middle
       // a two-frame sprite plays in the corner; voxel layers are not frames, so they never play
-      const cvs = itemCanvases(item), cv = cvs[item.fold === 'sprite' ? frameTick % cvs.length : 0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
+      const cvs = itemCanvases(item), cv = cvs[item.fold === 'sprite' && !(item.build && item.build.back === 'picture') ? frameTick % cvs.length : 0], fw = item.W || item.w, fh = item.H || item.h, k = Math.max(1, Math.floor(W * .26 / Math.max(fw, fh)));
       pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
       pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
@@ -1175,10 +1306,32 @@ $('#exShape').onclick = async () => {
   const data = { title: baseName(picked.rec), author: '', size: { x: G, y: G }, colors: keys, tiles };
   download(baseName(picked.rec) + '.kenshape', await gzip(new TextEncoder().encode(JSON.stringify(data))));
 };
+function picCanvas(w, h, px, colors){
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++){ const v = px[i]; if (v >= 0){ out.set(colors[v], i * 4); out[i * 4 + 3] = 255; } }
+  return rgbaCanvas(w, h, out);
+}
+// PNGs at one pixel each and a recipe in the dungeon's format; drop them into the project as named
 $('#exRecipe').onclick = async () => {
   if (!picked) return;
-  const p = picked.rec.params, t = JSON.stringify({ png: `art/sprites/${baseName(picked.rec)}.png`, net: [p.w, p.h, p.d] });
-  try { await navigator.clipboard.writeText(t); toast('recipe part copied'); } catch (e) { toast(t); }
+  const it = picked.item, name = baseName(picked.rec), dir = (P.artDir || 'art/sprites-hatcher').replace(/\/+$/, '');
+  const files = [];
+  let part;
+  if (it.kind === 'net'){
+    files.push([name + '.png', picCanvas(it.W, it.H, Array.from(it.px, v => v < 0 ? -1 : v), it.colors)]);
+    part = recipePart(null, `${dir}/${name}.png`, null, it);
+  } else if (it.kind === 'edit' && it.fold === 'net'){
+    files.push([name + '.png', picCanvas(it.w, it.h, it.frames[0], it.colors)]);
+    part = recipePart(null, `${dir}/${name}.png`, null, it.net);
+  } else if (it.build || it.kind === 'edit'){
+    const b = it.build || editBuild(it);
+    files.push([name + '.png', picCanvas(it.w, it.h, it.frames[0], it.colors)]);
+    if (b.back === 'picture' && it.frames[1]) files.push([name + '_back.png', picCanvas(it.w, it.h, it.frames[1], it.colors)]);
+    part = recipePart(b, `${dir}/${name}.png`, `${dir}/${name}_back.png`);
+  } else return;
+  for (const [fname, cv] of files) download(fname, await canvasBlob(cv));
+  download(name + '.json', new Blob([JSON.stringify({ note: "made in ren's hatcher", parts: [part] }, null, 1)], { type: 'application/json' }));
+  toast(`recipe: put the PNGs in ${dir}/ and the json in art/recipes/`);
 };
 
 function voxList(V){ const out = []; for (let z = 0; z < V.d; z++) for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++){ const v = V.cells[x + V.w * (y + V.h * z)]; if (v >= 0) out.push([x, y, z, v]); } return out; }
@@ -1260,6 +1413,8 @@ function renderKept(){
   });
 }
 $('#keepBtn').onclick = keepPicked;
+$('#artDir').value = P.artDir || 'art/sprites-hatcher';
+$('#artDir').onchange = ev => { P.artDir = ev.target.value.trim() || 'art/sprites-hatcher'; saveState(); };
 $('#breedBtn').onclick = startBreed;
 $('#breedEnd').onclick = endBreed;
 scrubify($('#breedStrength'), () => { if (!breed) return; breed.strength = Math.max(1, Math.min(12, Math.round(+$('#breedStrength').value || 1))); regen(); pickIdx = 0; drawMarks(); });
@@ -1429,11 +1584,11 @@ document.querySelectorAll('.panel-head').forEach(h => h.onclick = () => h.parent
 const ed = { tool: 'pencil', cur: 0, down: null, last: null, before: '', undo: [], redo: [], hover: null, lay: null };
 function blankEdit(){
   const colors = makeColors(mulberry32(P.seed), 3);
-  return { id: P.seed, w: 8, h: 8, frames: [Array(64).fill(-1)], colors: colors.map(hex), fold: 'sprite', net: null, depthMode: 'bulge', depth: 2, mirror: true, frame: 0 };
+  return { id: P.seed, w: 8, h: 8, frames: [Array(64).fill(-1)], colors: colors.map(hex), fold: 'sprite', net: null, build: { ...DEFAULT_BUILD }, mirror: true, frame: 0 };
 }
 function editItem(e){
   return { kind: 'edit', seed: e.id, w: e.w, h: e.h, frames: e.frames.map(f => Int16Array.from(f)), colors: e.colors.map(unhex),
-           fold: e.fold, net: e.net, depthMode: e.depthMode, depth: e.depth, frame: e.frame, cut: e.cut === true, col: { outline: 'none', shade: false } };
+           fold: e.fold, net: e.net, build: e.fold === 'sprite' ? editBuild(e) : null, frame: e.frame, cut: e.cut === true, col: { outline: 'none', shade: false } };
 }
 function openEditor(){
   if (!picked) return;
@@ -1461,7 +1616,7 @@ function openEditor(){
     e = { w, h, frames, colors: item.colors.map(hex), fold: 'voxel', net: null, mirror: rec.params.mirrorX !== false };
   } else return;
   const before = P.edit ? edSnapshot() : null;
-  P.edit = { depthMode: 'bulge', depth: 2, ...e, frame: 0, id: rec.seed };
+  P.edit = { build: item.build ? { ...DEFAULT_BUILD, ...item.build } : { ...DEFAULT_BUILD }, ...e, frame: 0, id: rec.seed };
   // whatever was being edited before stays one undo away
   if (before){ ed.undo.push(before); ed.redo = []; }
   ed.cur = 0; ed.sel = null;
@@ -1692,7 +1847,7 @@ function edToVoxel(){
   const e = P.edit, V = voxOf(editItem(e)), frames = [];
   for (let l = 0; l < V.d; l++){ const z = V.d - 1 - l, f = []; for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++) f.push(V.cells[x + V.w * ((V.h - 1 - y) + V.h * z)]); frames.push(f); }
   edPush(); ed.sel = null;
-  P.edit = { id: e.id, w: V.w, h: V.h, frames, colors: e.colors.slice(), fold: 'voxel', net: null, depthMode: 'bulge', depth: 2,
+  P.edit = { id: e.id, w: V.w, h: V.h, frames, colors: e.colors.slice(), fold: 'voxel', net: null, build: null,
              mirror: e.mirror, cut: false, frame: Math.floor(V.d / 2) };
   buildEditPanels(); edResize(); edRefresh(); toast('now voxels, ' + V.w + '×' + V.h + '×' + V.d);
 }
@@ -1700,7 +1855,7 @@ function edLayerToSprite(){
   const e = P.edit;
   edPush(); ed.sel = null;
   P.edit = { id: e.id, w: e.w, h: e.h, frames: [e.frames[e.frame].slice()], colors: e.colors.slice(), fold: 'sprite', net: null,
-             depthMode: 'bulge', depth: 2, mirror: e.mirror, frame: 0 };
+             build: { ...DEFAULT_BUILD }, mirror: e.mirror, frame: 0 };
   buildEditPanels(); edResize(); edRefresh(); toast('layer ' + (e.frame + 1) + ' is a sprite now. Ctrl+Z goes back to the voxels');
 }
 
@@ -1903,11 +2058,12 @@ function buildEditPanels(){
     buildEditColour();
     return;
   }
-  label('Frames');
-  const fr = e.frames.length > 1 ? [[0, 'Frame 1'], [1, 'Frame 2']] : [[0, 'Frame 1']];
+  const sided = e.fold === 'sprite' && e.build && e.build.back === 'picture';
+  label(sided ? 'Front and back. The back is drawn as seen from behind.' : 'Frames');
+  const fr = sided ? [[0, 'Front'], [1, 'Back']] : e.frames.length > 1 ? [[0, 'Frame 1'], [1, 'Frame 2']] : [[0, 'Frame 1']];
   body.appendChild(seg(fr, e.frame, v => { e.frame = v; buildEditPanels(); drawEditor(); }));
   const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
-  if (e.fold !== 'net'){
+  if (e.fold !== 'net' && !sided){
     const b = document.createElement('button'); b.className = 'btn';
     b.textContent = e.frames.length > 1 ? 'Drop frame 2' : 'Add frame 2';
     b.onclick = () => { edPush(); if (e.frames.length > 1){ e.frames.length = 1; e.frame = 0; } else { e.frames.push(e.frames[0].slice()); e.frame = 1; } buildEditPanels(); edRefresh(); };
@@ -1919,11 +2075,7 @@ function buildEditPanels(){
   if (e.fold === 'net'){
     label(`Folds into a ${e.net.w}×${e.net.h}×${e.net.d} box, the same way boxnet.gd does. Paint inside the blue faces.`);
   } else {
-    label('3D');
-    body.appendChild(seg([['bulge', 'Bulge'], ['slab', 'Slab'], ['lathe', 'Lathe']], e.depthMode, v => { e.depthMode = v; buildEditPanels(); edRefresh(); }));
-    if (e.depthMode !== 'lathe') field('Depth', e.depth, 1, 12, v => { e.depth = v; edRefresh(); });
-    label(e.depthMode === 'lathe' ? 'Turned round the middle column, like a candle or a pot. The right half sets the profile.'
-      : e.depthMode === 'slab' ? 'The same thickness everywhere, a cut-out.' : 'Thicker the further a pixel is from the outline.');
+    buildEdit3D(body, e, field, label);
   }
   const conv = document.createElement('button'); conv.className = 'btn'; conv.style.width = '100%'; conv.style.marginTop = '10px';
   conv.textContent = 'Convert to voxel'; conv.title = 'Turn the 3D version into voxel layers you can edit';
@@ -1931,6 +2083,66 @@ function buildEditPanels(){
   body.appendChild(conv);
   buildEditColour();
 }
+const BUILD_NOTES = {
+  relief: 'Domes forward from the outline over a flat back, like the masks and the skulls. A back picture domes the back too.',
+  slab: 'Pushed back from the picture: each colour can stand out its own depth, like the doors, windows and curtains.',
+  lathe: 'Spun round the middle, like the candles, urns and pillars. Each row becomes a disc as wide as the row.',
+  body: 'A deep body in the outline colour with the picture as its lid, like the generated coffin.',
+};
+function buildEdit3D(body, e, field, label){
+  e.build = editBuild(e);
+  const b = e.build, again = () => { buildEditPanels(); edRefresh(); };
+  label('3D, built the way the dungeon builds it');
+  body.appendChild(seg([['relief', 'Relief'], ['slab', 'Slab'], ['lathe', 'Lathe'], ['body', 'Body']], b.type, v => { b.type = v; again(); }));
+  if (b.type === 'relief'){
+    field('Depth', b.depth, 1, 16, v => { b.depth = v; edRefresh(); });
+    field('Shell', b.shell, 0, 8, v => { b.shell = v; edRefresh(); });
+    label('Back');
+    body.appendChild(seg([['none', 'Flat'], ['same', 'Same'], ['picture', 'Picture']], b.back, v => {
+      edPush(); b.back = v;
+      if (v === 'picture' && e.frames.length < 2) e.frames.push(backFromFront(e));
+      if (v === 'picture') e.frame = 0;
+      again();
+    }));
+    if (b.back !== 'none') field('Back depth', b.backDepth, 1, 16, v => { b.backDepth = v; edRefresh(); });
+  } else if (b.type === 'slab'){
+    field('Depth', b.depth, 1, 24, v => { b.depth = v; buildEditPanels(); edRefresh(); });
+    field('Border', b.borderW, 0, 8, v => { b.borderW = v; buildEditPanels(); edRefresh(); });
+    if (b.borderW > 0) field('Border depth', b.borderD, 1, 24, v => { b.borderD = v; edRefresh(); });
+    label('Depth for each colour');
+    const list = document.createElement('div'); list.className = 'depthlist';
+    e.colors.forEach(c => {
+      const k = c.slice(1).toLowerCase(), row = document.createElement('label'); row.className = 'field';
+      row.innerHTML = `<span><i class="sw" style="background:${c}"></i>${k}</span><input type="number" min="1" max="24" value="${b.depths[k] ?? b.depth}">`;
+      const inp = row.querySelector('input');
+      scrubify(inp, () => { const v = Math.max(1, Math.min(24, Math.round(+inp.value || 1))); if (v === b.depth) delete b.depths[k]; else b.depths[k] = v; edRefresh(); });
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+  } else if (b.type === 'body'){
+    field('Body depth', b.depth, 1, 32, v => { b.depth = v; edRefresh(); });
+    field('Lid', b.lid, 1, 8, v => { b.lid = v; edRefresh(); });
+    const dome = document.createElement('label'); dome.className = 'check';
+    dome.innerHTML = `<input type="checkbox"${b.dome ? ' checked' : ''}> Dome the lid`;
+    dome.firstChild.onchange = ev => { b.dome = ev.target.checked; edRefresh(); };
+    body.appendChild(dome);
+    const f = document.createElement('label'); f.className = 'field';
+    f.innerHTML = `<span>Sides</span><select><option value="">outline colour</option>${e.colors.map(c => `<option value="${c.slice(1).toLowerCase()}"${b.bodyHex === c.slice(1).toLowerCase() ? ' selected' : ''}>${c}</option>`).join('')}</select>`;
+    f.lastChild.onchange = ev => { b.bodyHex = ev.target.value; edRefresh(); };
+    body.appendChild(f);
+  }
+  label(BUILD_NOTES[b.type]);
+}
+// a first back picture: the front's outline seen from behind, in its commonest colour
+function backFromFront(e){
+  const f = e.frames[0], w = e.w, counts = new Map();
+  f.forEach(v => { if (v >= 0) counts.set(v, (counts.get(v) || 0) + 1); });
+  let best = 0; for (const [k, n] of counts) if (!counts.has(best) || n > counts.get(best)) best = k;
+  const out = Array(f.length).fill(-1);
+  for (let i = 0; i < f.length; i++){ const x = i % w, y = Math.floor(i / w); if (f[y * w + (w - 1 - x)] >= 0) out[i] = best; }
+  return out;
+}
+
 function buildEditColour(){
   const e = P.edit, body = $('#colourBody'); body.innerHTML = '';
   ed.cur = Math.min(ed.cur, e.colors.length - 1);
