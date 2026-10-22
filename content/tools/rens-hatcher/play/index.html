@@ -46,6 +46,12 @@
   .swatch{aspect-ratio:1/1;border:2px solid var(--line);border-radius:5px;cursor:pointer;padding:0;}
   .swatch.on{border-color:var(--select);box-shadow:0 0 0 1px var(--select);}
   .swatch.add{background:var(--widget);color:var(--text);font-size:15px;}
+  .layerstrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;margin:6px 0 8px;}
+  .layerstrip button{position:relative;padding:0;border:2px solid var(--line);border-radius:4px;background:var(--field);cursor:pointer;aspect-ratio:1/1;overflow:hidden;}
+  .layerstrip button.on{border-color:var(--select);}
+  .layerstrip button:hover{border-color:var(--accent);}
+  .layerstrip canvas{width:100%;height:100%;display:block;image-rendering:pixelated;}
+  .layerstrip span{position:absolute;left:2px;bottom:1px;font-size:9px;color:var(--muted);text-shadow:0 0 2px #000;}
   .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;}
   .seg button{height:28px;background:var(--widget);color:var(--muted);border:1px solid var(--line);cursor:pointer;font:inherit;font-size:12px;margin-left:-1px;}
   .seg button:first-child{margin-left:0;border-radius:5px 0 0 5px;}
@@ -1113,7 +1119,7 @@ $('#editBtn').onclick = openEditor;
 function edRefresh(save = true){
   const rec = { mode: 'edit', seed: P.edit.id, params: P.edit, colour: { ...P.colour }, live: true };
   pick(rec, editItem(P.edit));
-  drawEditor();
+  drawEditor(); drawStrip();
   if (save) saveState();
 }
 function edResize(){
@@ -1200,8 +1206,17 @@ function edApply(x, y, tool){
     return;
   }
   const v = tool === 'erase' ? -1 : ed.cur;
-  f[y * W + x] = v;
-  if (e.mirror){ const mx = edMirror(x, y); if (mx !== null) f[y * W + mx] = v; }
+  const cols = [x]; if (e.mirror){ const mx = edMirror(x, y); if (mx !== null && mx !== x) cols.push(mx); }
+  if (e.fold === 'voxel' && e.through){
+    // through every layer: erase carves the whole column, the pencil recolours what is already there
+    for (const cx of cols){
+      const i = y * W + cx; let any = false;
+      for (const fr of e.frames){ if (v < 0) fr[i] = -1; else if (fr[i] >= 0){ fr[i] = v; any = true; } }
+      if (v >= 0 && !any) f[i] = v;
+    }
+    return;
+  }
+  for (const cx of cols) f[y * W + cx] = v;
 }
 stage.addEventListener('pointerdown', ev => {
   if (P.mode !== 'edit') return;
@@ -1235,7 +1250,12 @@ stage.addEventListener('pointercancel', edEnd);
 stage.addEventListener('pointerleave', () => { if (P.mode === 'edit' && !ed.down && ed.hover){ ed.hover = null; drawEditor(); } });
 stage.addEventListener('contextmenu', ev => { if (P.mode === 'edit') ev.preventDefault(); });
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => edTool(b.dataset.tool));
-$('#mirrorTool').onclick = () => { P.edit.mirror = !P.edit.mirror; $('#mirrorTool').classList.toggle('on', P.edit.mirror); drawEditor(); saveState(); };
+function edSetMirror(on){
+  P.edit.mirror = on; $('#mirrorTool').classList.toggle('on', on);
+  const c = $('#mirrorChk'); if (c) c.checked = on;
+  drawEditor(); saveState(); toast(on ? 'mirror on' : 'mirror off');
+}
+$('#mirrorTool').onclick = () => edSetMirror(!P.edit.mirror);
 $('#undoTool').onclick = edUndo;
 $('#redoTool').onclick = edRedo;
 
@@ -1250,6 +1270,19 @@ function edCanvasSize(nw, nh){
   });
   e.w = nw; e.h = nh; edResize(); edRefresh();
 }
+function drawStrip(){
+  const strip = $('#layerStrip'), e = P.edit; if (!strip || !e || e.fold !== 'voxel') return;
+  [...strip.children].forEach((b, z) => {
+    b.classList.toggle('on', z === e.frame);
+    const cv = b.firstChild, c = cv.getContext('2d'), f = e.frames[z]; if (!f) return;
+    c.fillStyle = P.colour.bg; c.fillRect(0, 0, e.w, e.h);
+    f.forEach((v, i) => { if (v >= 0){ c.fillStyle = e.colors[v]; c.fillRect(i % e.w, Math.floor(i / e.w), 1, 1); } });
+  });
+}
+stage.addEventListener('wheel', ev => {
+  if (P.mode !== 'edit' || !P.edit || P.edit.fold !== 'voxel') return;
+  ev.preventDefault(); edLayer(ev.deltaY > 0 ? 1 : -1);
+}, { passive: false });
 function edDepth(n){
   const e = P.edit; if (n === e.frames.length) return;
   edPush();
@@ -1281,6 +1314,10 @@ function buildEditPanels(){
     body.appendChild(f);
   };
   const label = t => { const p = document.createElement('p'); p.className = 'hintline'; p.style.margin = '10px 0 5px'; p.textContent = t; body.appendChild(p); };
+  const mir = document.createElement('label'); mir.className = 'check';
+  mir.innerHTML = `<input type="checkbox" id="mirrorChk"${e.mirror ? ' checked' : ''}> Mirror left / right <span class="kbd">M</span>`;
+  mir.firstChild.onchange = ev => edSetMirror(ev.target.checked);
+  body.appendChild(mir);
   if (e.fold !== 'net'){
     field('Width', e.w, 1, 32, v => edCanvasSize(v, e.h));
     field('Height', e.h, 1, 32, v => edCanvasSize(e.w, v));
@@ -1295,11 +1332,23 @@ function buildEditPanels(){
     const clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear layer';
     clr.onclick = () => { edPush(); e.frames[e.frame].fill(-1); edRefresh(); };
     row.append(cp, clr); body.appendChild(row);
+    const strip = document.createElement('div'); strip.className = 'layerstrip'; strip.id = 'layerStrip';
+    e.frames.forEach((_, z) => {
+      const b = document.createElement('button'); b.title = 'Layer ' + (z + 1);
+      b.innerHTML = `<canvas width="${e.w}" height="${e.h}"></canvas><span>${z + 1}</span>`;
+      b.onclick = () => { e.frame = z; buildEditPanels(); edRefresh(false); };
+      strip.appendChild(b);
+    });
+    body.appendChild(strip);
+    const thr = document.createElement('label'); thr.className = 'check';
+    thr.innerHTML = `<input type="checkbox" id="throughChk"${e.through ? ' checked' : ''}> Paint through every layer <span class="kbd">T</span>`;
+    thr.firstChild.onchange = ev => { e.through = ev.target.checked; saveState(); };
+    body.appendChild(thr);
     const cut = document.createElement('label'); cut.className = 'check';
     cut.innerHTML = `<input type="checkbox"${e.cut !== false ? ' checked' : ''}> Cut away the layers in front`;
     cut.firstChild.onchange = ev => { e.cut = ev.target.checked; edRefresh(); };
     body.appendChild(cut);
-    label('[ and ] step through the layers. Dots show the layer behind.');
+    label('[ and ] or the mouse wheel step through the layers. Dots show the layer behind. With paint through on, the eraser cuts all the way through and the pencil recolours every layer at that spot.');
     buildEditColour();
     return;
   }
@@ -1391,9 +1440,10 @@ document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const tools = { b: 'pencil', e: 'erase', g: 'fill', i: 'pick' };
     if (tools[k]) { edTool(tools[k]); return; }
-    if (k === 'm') { $('#mirrorTool').click(); return; }
+    if (k === 'm') { edSetMirror(!P.edit.mirror); return; }
     if (k === 'z') { edUndo(); return; }
     if (k === '[') { edLayer(-1); return; }
+    if (k === 't' && P.edit.fold === 'voxel') { P.edit.through = !P.edit.through; const c = $('#throughChk'); if (c) c.checked = P.edit.through; toast(P.edit.through ? 'painting through every layer' : 'painting one layer'); return; }
     if (k === ']') { edLayer(1); return; }
     if (k === 'r') return;
   }
