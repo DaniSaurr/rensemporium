@@ -76,6 +76,13 @@
 
   #stageWrap{position:relative;background:var(--bg);overflow:hidden;}
   #stage{display:block;width:100%;height:100%;cursor:pointer;image-rendering:pixelated;}
+  #breedBar{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;gap:10px;background:rgba(20,20,20,.9);border:1px solid #5fbf60;
+    padding:5px 8px 5px 11px;border-radius:5px;font-size:12px;color:var(--text);}
+  #breedBar[hidden]{display:none;}
+  #breedBar #breedName{font-family:ui-monospace,Consolas,monospace;color:#8fe6a8;}
+  #breedBar label{display:flex;align-items:center;gap:6px;color:var(--muted);}
+  #breedBar input{width:56px;height:26px;text-align:center;cursor:ew-resize;}
+  #breedBar .btn{flex:none;padding:5px 9px;}
   #modeBadge{position:absolute;right:12px;top:12px;background:rgba(20,20,20,.86);border:1px solid var(--accent);
     padding:5px 11px;color:#fff;font-family:ui-monospace,Consolas,monospace;font-size:12px;border-radius:5px;pointer-events:none;}
   #hint{position:absolute;left:12px;bottom:12px;background:rgba(20,20,20,.82);border:1px solid var(--line-soft);
@@ -212,6 +219,9 @@
     <div id="stageWrap">
       <canvas id="stage"></canvas>
       <div id="modeBadge">—</div>
+      <div id="breedBar" hidden><span id="breedName"></span>
+        <label title="How far the variations stray">strength <input type="number" id="breedStrength" min="1" max="12" value="3"></label>
+        <button class="btn" id="breedEnd" title="Back to the whole grid (Esc)">Back to all</button></div>
       <div id="toast"></div>
       <div id="hint"><span class="x" id="hintX">✕</span>
         Click anything to pick it. <span class="kbd">K</span> saves the pick. <span class="kbd">R</span> rolls a new seed and <span class="kbd">Z</span> goes back.
@@ -238,6 +248,7 @@
             <button class="btn primary" id="keepBtn" title="Save (K)">Save</button>
             <label class="check" style="margin:0 4px" title="Turn the 3D view by itself (or double-click it)"><input type="checkbox" id="spinChk" checked> Spin</label>
             <button class="btn" id="editBtn" title="Open in the editor (4)">Edit</button>
+            <button class="btn" id="breedBtn" title="Fill the grid with variations of this (B)">More like this</button>
             <label class="field" style="margin:0;flex:1;justify-content:flex-end"><span>PNG scale</span><input type="number" id="pngScale" min="1" max="32" value="1" style="width:64px" /></label>
           </div>
           <div class="exports" id="exports" hidden>
@@ -296,10 +307,10 @@ const ri = (rng, n) => Math.floor(rng() * n);
 const DEFAULTS = {
   mode: 'sprite', seed: 1,
   sprite: { w: 8, h: 8, px: 5, gap: 1, density: 50, core: 30, mirrorX: true, mirrorY: false, cleanup: true, frames: 1 },
-  net:    { w: 8, h: 6, d: 5, px: 4, density: 45, core: 20, matched: true, rim: true, holes: false },
+  net:    { w: 8, h: 6, d: 5, px: 4, density: 45, core: 20, matched: true, rim: true, holes: false, front: true, wrap: true },
   voxel:  { w: 12, h: 12, d: 12, thumb: 120, density: 55, core: 60, smooth: 2, mirrorX: true, mirrorZ: false, cleanup: true },
   edit: null,
-  colour: { palette: 'random', n: 3, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
+  colour: { palette: 'random', n: 3, roles: true, eyes: true, bands: false, outline: 'none', shade: false, bg: '#000000', transparent: false,
             custom: '#2b1b2e #6b2d5c #b0306a #f06c9b #ffd0e0 #3a6b8c #9ad1d4' },
 };
 const P = JSON.parse(JSON.stringify(DEFAULTS));
@@ -315,6 +326,7 @@ const FIELDS = {
   net: [
     ['w','Width',2,32],['h','Height',2,32],['d','Depth',2,32],['px','Pixel size',1,12],
     ['density','Fill %',0,100],['core','Pull to middle %',0,100],
+    ['front','A front face','check'],['wrap','Bands round the sides','check'],
     ['matched','Matched sides','check'],['rim','Rim','check'],['holes','Holes','check'],
   ],
   voxel: [
@@ -325,8 +337,8 @@ const FIELDS = {
 };
 const MODE_NOTE = {
   sprite: 'Only half of each sprite is random. The mirror does the rest.',
-  net: 'Laid out as top / left front right back / bottom, the same as boxnet.gd. The fold is shown under Picked.',
-  voxel: 'A cube of cells, each filled or not, mirrored like the sprites. Drag the pick to turn it.',
+  net: 'Laid out as top / left front right back / bottom, the same as boxnet.gd. The front faces you in the fold under Picked.',
+  voxel: 'A cube of cells, each filled or not, mirrored like the sprites and shown from the front. Drag the pick to turn it.',
 };
 
 /* ---------- colour ---------- */
@@ -364,7 +376,7 @@ let colourOverride = null;
 const P_COLOUR = () => colourOverride || P.colour;
 
 /* ---------- 2D pattern ---------- */
-function keepLargest(c, n, neighbours){
+function keepLargest(c, n, neighbours, mirrors){
   const seen = new Uint8Array(n); let best = null;
   for (let i = 0; i < n; i++){
     if (c[i] < 0 || seen[i]) continue;
@@ -373,8 +385,18 @@ function keepLargest(c, n, neighbours){
     if (!best || comp.length > best.length) best = comp;
   }
   if (!best) return;
-  const keep = new Uint8Array(n); for (const i of best) keep[i] = 1;
+  const keep = new Uint8Array(n); for (const i of best){ keep[i] = 1; if (mirrors) for (const j of mirrors(i)) keep[j] = 1; }
   for (let i = 0; i < n; i++) if (!keep[i]) c[i] = -1;
+}
+function mirrors2D(w, h, mx, my){
+  return i => { const x = i % w, y = Math.floor(i / w), out = [];
+    if (mx) out.push(y * w + (w - 1 - x)); if (my) out.push((h - 1 - y) * w + x); if (mx && my) out.push((h - 1 - y) * w + (w - 1 - x));
+    return out; };
+}
+function mirrors3D(w, h, d, mx, mz){
+  return i => { const x = i % w, y = Math.floor(i / w) % h, z = Math.floor(i / (w * h)), I = (a, b, e) => a + w * (b + h * e), out = [];
+    if (mx) out.push(I(w - 1 - x, y, z)); if (mz) out.push(I(x, y, d - 1 - z)); if (mx && mz) out.push(I(w - 1 - x, y, d - 1 - z));
+    return out; };
 }
 function genPattern(rng, w, h, o){
   const c = new Int16Array(w * h).fill(-1);
@@ -399,8 +421,54 @@ function genPattern(rng, w, h, o){
   }
   if (o.cleanup) keepLargest(c, w * h, i => {
     const x = i % w; return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w < w * h ? i + w : -1];
-  });
+  }, mirrors2D(w, h, o.mirrorX, o.mirrorY));
   return c;
+}
+
+/* ---------- colour roles ----------
+   One body colour, then each accent claims cells by a rule (a band of rows, the tops, the feet,
+   the spine, the outline). Every rule is symmetric, so mirrored shapes stay mirrored. */
+const ROLE_RULES = ['band', 'top', 'bottom', 'core', 'edge'];
+function eyeColour(body){ return body[0] * .3 + body[1] * .59 + body[2] * .11 > 140 ? [24, 20, 28] : [245, 242, 230]; }
+function applyRoles2D(c, w, h, rng, n){
+  for (let i = 0; i < c.length; i++) if (c[i] >= 0) c[i] = 0;
+  const rules = ROLE_RULES.slice(), filled = (x, y) => x >= 0 && y >= 0 && x < w && y < h && c[y * w + x] >= 0;
+  // an accent takes the first rule that leaves the body colour in charge: all accents together get 40% at most
+  const body = c.reduce((t, v) => t + (v >= 0), 0), mid = (w - 1) / 2;
+  let budget = Math.floor(body * .4);
+  for (let a = 1; a < n && rules.length; a++){
+    while (rules.length){
+      const rule = rules.splice(ri(rng, rules.length), 1)[0], rows = new Set();
+      if (rule === 'band'){ const ys = [...new Set(Array.from(c.keys()).filter(i => c[i] >= 0).map(i => Math.floor(i / w)))]; for (let k = 0; k < 1 + ri(rng, 2) && ys.length; k++) rows.add(ys.splice(ri(rng, ys.length), 1)[0]); }
+      const hits = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+        if (c[y * w + x] !== 0) continue;
+        const hit = rule === 'band' ? rows.has(y) : rule === 'top' ? !filled(x, y - 1) : rule === 'bottom' ? !filled(x, y + 1)
+          : rule === 'core' ? Math.abs(x - mid) < 1 : !filled(x - 1, y) || !filled(x + 1, y);
+        if (hit) hits.push(y * w + x);
+      }
+      if (!hits.length || hits.length > budget) continue;
+      for (const i of hits) c[i] = a;
+      budget -= hits.length;
+      break;
+    }
+  }
+}
+// eyes: two enclosed holes in the upper half light up, or failing that two cells inside the body
+function applyEyes2D(c, w, h, rng, eye, mirror){
+  const filled = (x, y) => x >= 0 && y >= 0 && x < w && y < h && c[y * w + x] >= 0;
+  const holes = [], inner = [];
+  for (let y = 1; y < Math.ceil(h * .6); y++) for (let x = 1; x < (mirror ? Math.floor(w / 2) : w - 1); x++){
+    if (mirror && w % 2 && x === (w - 1) / 2) continue;
+    const ring = filled(x - 1, y) && filled(x + 1, y) && filled(x, y - 1) && filled(x, y + 1);
+    if (!ring) continue;
+    (filled(x, y) ? inner : holes).push([x, y]);
+  }
+  const pool = holes.length ? holes : inner;
+  if (!pool.length) return false;
+  const [x, y] = pool[ri(rng, pool.length)];
+  c[y * w + x] = eye; if (mirror) c[y * w + (w - 1 - x)] = eye;
+  return true;
 }
 
 /* ---------- sprite ---------- */
@@ -408,23 +476,25 @@ function genSprite(seed, p){
   const rng = mulberry32(seed), col = P_COLOUR();
   const n = col.palette === 'mono' ? 1 : col.n;
   const colors = makeColors(rng, n);
+  const roles = col.roles && !col.bands && col.palette !== 'mono';
   const f0 = genPattern(rng, p.w, p.h, { ...p, n, bands: col.bands });
+  if (roles) applyRoles2D(f0, p.w, p.h, rng, n);
+  if (col.eyes){ const e = colors.length; if (applyEyes2D(f0, p.w, p.h, rng, e, p.mirrorX)) colors.push(eyeColour(colors[0])); }
   const frames = [f0];
-  if (p.frames > 1){
-    // second frame: the lower rows step outward by one, so legs and fins twitch
-    const f1 = f0.slice(), w = p.w, y0 = Math.floor(p.h * .6), half = Math.floor(w / 2);
-    for (let y = y0; y < p.h; y++){
-      const row = f0.slice(y * w, y * w + w);
-      for (let x = 0; x < w; x++){
-        let src;
-        if (p.mirrorX) src = x < half ? x + 1 : x > w - 1 - half ? x - 1 : x;
-        else src = x + 1;
-        f1[y * w + x] = src >= 0 && src < w ? row[src] : -1;
-      }
+  if (p.frames > 1) frames.push(twitch(f0, p));
+  return { kind: 'sprite', seed, w: p.w, h: p.h, frames, colors, col: { ...col }, p: { ...p } };
+}
+// second frame: the lower rows step outward by one, so legs and fins twitch
+function twitch(f0, p){
+  const f1 = f0.slice(), w = p.w, y0 = Math.floor(p.h * .6), half = Math.floor(w / 2);
+  for (let y = y0; y < p.h; y++){
+    const row = f0.slice(y * w, y * w + w);
+    for (let x = 0; x < w; x++){
+      const src = p.mirrorX ? (x < half ? x + 1 : x > w - 1 - half ? x - 1 : x) : x + 1;
+      f1[y * w + x] = src >= 0 && src < w ? row[src] : -1;
     }
-    frames.push(f1);
   }
-  return { kind: 'sprite', seed, w: p.w, h: p.h, frames, colors, col: { ...col } };
+  return f1;
 }
 function outlineColour(item){
   const o = item.col.outline;
@@ -457,9 +527,16 @@ function genNet(seed, p){
   const rimIdx = colors.length; colors.push(mul(colors[0], .55));
   const { w, h, d } = p, W = 2 * d + 2 * w, H = 2 * d + h;
   const px = new Int16Array(W * H).fill(-2);           // -2 outside the net, -1 a hole
-  const face = (fw, fh) => genPattern(rng, fw, fh, { density: p.density, core: p.core, mirrorX: true, mirrorY: false, n: n - 1, bands: col.bands, cleanup: false });
-  const front = face(w, h), left = face(d, h), top = face(w, d);
-  const back = p.matched ? front : face(w, h), right = p.matched ? left : face(d, h), bottom = p.matched ? top : face(w, d);
+  // with a front, the other five faces go quiet so the front reads as the face of the thing
+  const quiet = p.front ? .45 : 1;
+  const face = (fw, fh, k = quiet) => genPattern(rng, fw, fh, { density: p.density * k, core: p.core, mirrorX: true, mirrorY: false, n: n - 1, bands: col.bands, cleanup: false });
+  let front;
+  if (p.front){
+    front = genPattern(rng, w, h, { density: Math.min(95, p.density * 1.3), core: Math.max(p.core, 70), mirrorX: true, mirrorY: false, n: n - 1, bands: col.bands, cleanup: true });
+    if (col.eyes){ const e = colors.length; if (applyEyes2D(front, w, h, rng, e - 1, true)) colors.push(eyeColour(colors[1] || colors[0])); }
+  } else front = face(w, h, 1);
+  const left = face(d, h), top = face(w, d);
+  const back = p.matched && !p.front ? front : face(w, h), right = p.matched ? left : face(d, h), bottom = p.matched ? top : face(w, d);
   const paste = (pat, ox, oy, fw, fh) => {
     for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++){
       const v = pat[y * fw + x];
@@ -471,7 +548,16 @@ function genNet(seed, p){
   paste(top, d, 0, w, d);
   paste(left, 0, d, d, h); paste(front, d, d, w, h); paste(right, d + w, d, d, h); paste(back, 2 * d + w, d, w, h);
   paste(bottom, d, d + h, w, d);
-  return { kind: 'net', seed, w, h, d, W, H, px, colors, col: { ...col } };
+  if (p.wrap && h > 2){
+    // one or two bands at the same heights on all four sides, so they meet at the corners
+    const rows = new Set(), colour = 1 + ri(rng, n - 1);
+    for (let k = 0; k < 1 + ri(rng, 2); k++) rows.add(1 + ri(rng, h - 2));
+    for (const y of rows) for (let x = 0; x < W; x++){
+      const i = (d + y) * W + x;
+      if (px[i] === 0 || px[i] === -1) px[i] = colour;          // patterns and rims stay on top
+    }
+  }
+  return { kind: 'net', seed, w, h, d, W, H, px, colors, col: { ...col }, p: { ...p }, npat: n, rimIdx };
 }
 function netRGBA(item){
   const out = new Uint8ClampedArray(item.W * item.H * 4);
@@ -536,8 +622,9 @@ function genVox(seed, p){
     }
     c.set(s);
   }
+  const roles = col.roles && !col.bands && col.palette !== 'mono';
   // colour in patches: a coarse grid of picks, mirrored like the shape
-  if (!col.bands && n > 1){
+  if (!roles && !col.bands && n > 1){
     const B = Math.max(2, Math.round(Math.max(w, h, d) / 4)), bw = Math.ceil(w / B), bh = Math.ceil(h / B), bd = Math.ceil(d / B);
     const blocks = Array.from({ length: bw * bh * bd }, () => ri(rng, n));
     for (let z = 0; z < d; z++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
@@ -549,7 +636,7 @@ function genVox(seed, p){
   if (p.cleanup) keepLargest(c, w * h * d, i => {
     const x = i % w, y = Math.floor(i / w) % h, z = Math.floor(i / (w * h));
     return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1, z > 0 ? i - w * h : -1, z < d - 1 ? i + w * h : -1];
-  });
+  }, mirrors3D(w, h, d, p.mirrorX, p.mirrorZ));
   // stand it on the floor
   let minY = h;
   for (let i = 0; i < c.length; i++) if (c[i] >= 0) minY = Math.min(minY, Math.floor(i / w) % h);
@@ -558,7 +645,43 @@ function genVox(seed, p){
     for (let z = 0; z < d; z++) for (let y = minY; y < h; y++) for (let x = 0; x < w; x++) s[I(x, y - minY, z)] = c[I(x, y, z)];
     c.set(s);
   }
-  return { kind: 'vox', seed, w, h, d, cells: c, colors, col: { ...col } };
+  if (roles) applyRoles3D(c, w, h, d, rng, n, p.mirrorX);
+  if (col.eyes){ const e = colors.length; if (applyEyes3D(c, w, h, d, rng, e, p.mirrorX)) colors.push(eyeColour(colors[0])); }
+  return { kind: 'vox', seed, w, h, d, cells: c, colors, col: { ...col }, p: { ...p } };
+}
+function applyRoles3D(c, w, h, d, rng, n){
+  const I = (x, y, z) => x + w * (y + h * z), filled = (x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < w && y < h && z < d && c[I(x, y, z)] >= 0;
+  for (let i = 0; i < c.length; i++) if (c[i] >= 0) c[i] = 0;
+  const rules = ['band', 'top', 'bottom', 'core'];
+  for (let a = 1; a < n; a++){
+    const rule = rules.length ? rules.splice(ri(rng, rules.length), 1)[0] : 'band', rows = new Set();
+    for (let k = 0; k < 1 + ri(rng, 2); k++) rows.add(ri(rng, h));
+    const mid = (w - 1) / 2;
+    for (let z = 0; z < d; z++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+      if (c[I(x, y, z)] !== 0) continue;
+      const hit = rule === 'band' ? rows.has(y) : rule === 'top' ? !filled(x, y + 1, z) : rule === 'bottom' ? !filled(x, y - 1, z) : Math.abs(x - mid) < 1;
+      if (hit) c[I(x, y, z)] = a;
+    }
+  }
+}
+// eyes on the front (+z): the frontmost voxel of a column in the upper part, with front neighbours round it
+function applyEyes3D(c, w, h, d, rng, eye, mirror){
+  const I = (x, y, z) => x + w * (y + h * z);
+  const frontZ = (x, y) => { for (let z = d - 1; z >= 0; z--) if (c[I(x, y, z)] >= 0) return z; return -1; };
+  let top = -1, bot = h;
+  for (let i = 0; i < c.length; i++) if (c[i] >= 0){ const y = Math.floor(i / w) % h; top = Math.max(top, y); bot = Math.min(bot, y); }
+  if (top < 0) return false;
+  const pool = [];
+  for (let y = Math.floor(bot + (top - bot) * .5); y < top; y++) for (let x = 1; x < (mirror ? Math.floor(w / 2) : w - 1); x++){
+    if (mirror && w % 2 && x === (w - 1) / 2) continue;
+    const z = frontZ(x, y); if (z < 0) continue;
+    if ([[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].every(([a, b]) => Math.abs(frontZ(a, b) - z) <= 1)) pool.push([x, y, z]);
+  }
+  if (!pool.length) return false;
+  const [x, y, z] = pool[ri(rng, pool.length)];
+  c[I(x, y, z)] = eye;
+  if (mirror){ const z2 = frontZ(w - 1 - x, y); if (z2 >= 0) c[I(w - 1 - x, y, z2)] = eye; }
+  return true;
 }
 function voxOf(item){
   if (item.kind === 'vox') return item;
@@ -567,7 +690,7 @@ function voxOf(item){
   if (item.kind === 'edit' && item.fold === 'voxel'){
     // each frame is one layer, front to back, drawn as seen from the front
     const { w, h } = item, d = item.frames.length, cells = new Int16Array(w * h * d).fill(-1);
-    item.frames.forEach((f, z) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cells[x + w * ((h - 1 - y) + h * z)] = f[y * w + x]; });
+    item.frames.forEach((f, l) => { const z = d - 1 - l; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) cells[x + w * ((h - 1 - y) + h * z)] = f[y * w + x]; });
     return (item._vox = { w, h, d, cells, colors: item.colors });
   }
   if (item.kind === 'edit' && item.fold === 'net')
@@ -621,7 +744,8 @@ function visibleFaces(V){
 function drawVox(ctx, V, yaw, pitch, cx, cy, s, gridZ){
   const faces = V._faces || (V._faces = visibleFaces(V));
   const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-  const rot = (x, y, z) => { const x1 = x * cyw - z * syw, z1 = x * syw + z * cyw; return [x1, y * cp - z1 * sp, y * sp + z1 * cp]; };
+  // the camera sits on +z looking back, so +z is the front, as in Godot and boxnet.gd
+  const rot = (x, y, z) => { z = -z; const x1 = x * cyw - z * syw, z1 = x * syw + z * cyw; return [x1, y * cp - z1 * sp, y * sp + z1 * cp]; };
   const ox = V.w / 2, oy = V.h / 2, oz = V.d / 2;
   const L = [-.45, .8, -.4], ll = Math.hypot(...L);
   const rn = FACES.map(f => rot(...f.n));
@@ -658,6 +782,100 @@ function drawVox(ctx, V, yaw, pitch, cx, cy, s, gridZ){
   }
 }
 const voxScale = (V, size) => size / (Math.hypot(V.w, V.h, V.d) * 1.05);
+// thumbnails look at the front from a little to the side and above, so the mirror line runs up the middle
+const VIEW_YAW = 0.38, VIEW_PITCH = -0.34;
+
+/* ---------- mutation: the same thing, nudged ----------
+   A few cells grow, shrink or take a neighbour's colour, and now and then a colour drifts. Mirrors hold. */
+const clamp255 = v => Math.max(0, Math.min(255, v));
+function nudgeColour(colors, rng){ const j = ri(rng, colors.length); colors[j] = colors[j].map(v => clamp255(v + ri(rng, 71) - 35)); }
+function mutate(item, seed, strength){
+  const rng = mulberry32(seed), edits = Math.max(1, Math.round(strength * (.6 + rng() * .8)));
+  const colors = item.colors.map(c => c.slice());
+  if (item.kind === 'sprite'){
+    const p = item.p, w = item.w, h = item.h, f = item.frames[0].slice();
+    const set = (x, y, v) => {
+      f[y * w + x] = v;
+      if (p.mirrorX) f[y * w + (w - 1 - x)] = v;
+      if (p.mirrorY) f[(h - 1 - y) * w + x] = v;
+      if (p.mirrorX && p.mirrorY) f[(h - 1 - y) * w + (w - 1 - x)] = v;
+    };
+    mutateCells(rng, edits, colors, () => { const out = []; f.forEach((v, i) => { if (v >= 0) out.push([i % w, Math.floor(i / w)]); }); return out; },
+      ([x, y]) => [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < w && b < h),
+      ([x, y]) => f[y * w + x], ([x, y], v) => set(x, y, v),
+      () => countPieces(f, w * h, i => { const x = i % w; return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w < w * h ? i + w : -1]; }));
+    if (p.cleanup) keepLargest(f, w * h, i => { const x = i % w; return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w < w * h ? i + w : -1]; }, mirrors2D(w, h, p.mirrorX, p.mirrorY));
+    const frames = [f]; if (item.frames.length > 1) frames.push(twitch(f, p));
+    return { ...item, seed, frames, colors, _cv: undefined, _vox: undefined };
+  }
+  if (item.kind === 'net'){
+    // flip pattern cells inside the faces; matched faces take the same flip
+    const { w, h, d, W } = item, px = item.px.slice(), faces = netFaces(w, h, d), pair = { 2: 4, 4: 2, 1: 3, 3: 1, 0: 5, 5: 0 };
+    for (let e = 0; e < edits; e++){
+      if (rng() < .15){ nudgeColour(colors, rng); continue; }
+      const fi = ri(rng, 6), [fx, fy, fw, fh] = faces[fi], r = item.p.rim ? 1 : 0;
+      if (fw - 2 * r < 1 || fh - 2 * r < 1) continue;
+      const x = r + ri(rng, fw - 2 * r), y = r + ri(rng, fh - 2 * r), cur = px[(fy + y) * W + fx + x];
+      if (cur === item.rimIdx) continue;
+      const v = cur > 0 && cur < item.npat ? (item.p.holes ? -1 : 0) : 1 + ri(rng, item.npat - 1);
+      const targets = [fi]; if (item.p.matched && !(item.p.front && (fi === 2 || fi === 4))) targets.push(pair[fi]);
+      for (const t of targets){ const [tx, ty, tw] = faces[t]; px[(ty + y) * W + tx + x] = v; px[(ty + y) * W + tx + (tw - 1 - x)] = v; }
+    }
+    return { ...item, seed, px, colors, _cv: undefined, _vox: undefined };
+  }
+  // voxels
+  const { w, h, d } = item, p = item.p, c = item.cells.slice(), I = (x, y, z) => x + w * (y + h * z);
+  const set = ([x, y, z], v) => {
+    c[I(x, y, z)] = v;
+    if (p.mirrorX) c[I(w - 1 - x, y, z)] = v;
+    if (p.mirrorZ) c[I(x, y, d - 1 - z)] = v;
+    if (p.mirrorX && p.mirrorZ) c[I(w - 1 - x, y, d - 1 - z)] = v;
+  };
+  mutateCells(rng, edits * 3, colors, () => { const out = []; c.forEach((v, i) => { if (v >= 0) out.push([i % w, Math.floor(i / w) % h, Math.floor(i / (w * h))]); }); return out; },
+    ([x, y, z]) => [[x - 1, y, z], [x + 1, y, z], [x, y - 1, z], [x, y + 1, z], [x, y, z - 1], [x, y, z + 1]].filter(([a, b, e]) => a >= 0 && b >= 0 && e >= 0 && a < w && b < h && e < d),
+    ([x, y, z]) => c[I(x, y, z)], set,
+    () => countPieces(c, w * h * d, i => {
+      const x = i % w, y = Math.floor(i / w) % h, z = Math.floor(i / (w * h));
+      return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1, z > 0 ? i - w * h : -1, z < d - 1 ? i + w * h : -1];
+    }));
+  if (p.cleanup) keepLargest(c, w * h * d, i => {
+    const x = i % w, y = Math.floor(i / w) % h, z = Math.floor(i / (w * h));
+    return [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1, z > 0 ? i - w * h : -1, z < d - 1 ? i + w * h : -1];
+  }, mirrors3D(w, h, d, p.mirrorX, p.mirrorZ));
+  return { ...item, seed, cells: c, colors, _faces: undefined, _cv: undefined };
+}
+// the shared edit loop: grow from the body, shave an edge, borrow a neighbour's colour, or drift a colour
+function mutateCells(rng, edits, colors, filledList, around, get, set, pieces){
+  for (let done = 0, tries = 0; done < edits && tries < edits * 8; tries++){
+    const r = rng(), cells = filledList(); if (!cells.length) return;
+    const at = cells[ri(rng, cells.length)], nb = around(at);
+    if (r < .38){ const empty = nb.filter(q => get(q) < 0); if (empty.length){ set(empty[ri(rng, empty.length)], get(at)); done++; } }
+    else if (r < .72){
+      if (cells.length > 2 && (nb.length < 4 || nb.some(q => get(q) < 0))){
+        // a shave that would split the thing in two is put back
+        const before = pieces(), old = get(at); set(at, -1);
+        if (pieces() > before) set(at, old); else done++;
+      }
+    }
+    else if (r < .9){ const full = nb.filter(q => get(q) >= 0 && get(q) !== get(at)); if (full.length){ set(at, get(full[ri(rng, full.length)])); done++; } }
+    else { nudgeColour(colors, rng); done++; }
+  }
+}
+function countPieces(c, n, neighbours){
+  const seen = new Uint8Array(n); let count = 0;
+  for (let i = 0; i < n; i++){
+    if (c[i] < 0 || seen[i]) continue;
+    count++; const stack = [i]; seen[i] = 1;
+    while (stack.length){ const j = stack.pop(); for (const k of neighbours(j)) if (k >= 0 && k < n && c[k] >= 0 && !seen[k]){ seen[k] = 1; stack.push(k); } }
+  }
+  return count;
+}
+function netFaces(w, h, d){ return [[d, 0, w, d], [0, d, d, h], [d, d, w, h], [d + w, d, d, h], [2 * d + w, d, w, h], [d, d + h, w, d]]; }
+// a record rebuilds its item: generated from seed and settings, or mutated from its parent record
+function itemFromRec(rec){
+  if (rec.mutation) return mutate(itemFromRec(rec.mutation.parent), rec.mutation.seed, rec.mutation.strength);
+  return withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params));
+}
 
 /* ---------- items and bitmaps ---------- */
 function makeItem(mode, seed, params){
@@ -676,7 +894,7 @@ function itemCanvases(item, thumb){
   else if (item.kind === 'net') item._cv = [rgbaCanvas(item.W, item.H, netRGBA(item))];
   else {
     const cv = document.createElement('canvas'); cv.width = cv.height = thumb;
-    drawVox(cv.getContext('2d'), item, Math.PI / 4, -0.62, thumb / 2, thumb / 2, voxScale(item, thumb));
+    drawVox(cv.getContext('2d'), item, VIEW_YAW, VIEW_PITCH, thumb / 2, thumb / 2, voxScale(item, thumb));
     item._cv = [cv];
   }
   return item._cv;
@@ -686,8 +904,9 @@ function itemCanvases(item, thumb){
 const stage = $('#stage'), sctx = stage.getContext('2d');
 let layout = null, cache = new Map(), hoverIdx = -1, pickIdx = -1, frameTick = 0, drawToken = 0;
 
+let breed = null;   // { rec, item, strength } while the grid shows one thing's variations
 function cellSize(){
-  const m = P.mode, p = P[m];
+  const m = P.mode, p = breed ? { ...P[m], w: breed.rec.params.w, h: breed.rec.params.h, d: breed.rec.params.d } : P[m];
   if (m === 'sprite') return [(p.w + 2 * p.gap) * p.px, (p.h + 2 * p.gap) * p.px];
   if (m === 'net') return [(2 * p.d + 2 * p.w + 2) * p.px, (2 * p.d + p.h + 2) * p.px];
   return [p.thumb, p.thumb];
@@ -702,7 +921,7 @@ function relayout(){
 }
 function regen(){ if (P.mode === 'edit') { drawToken++; edResize(); return; } cache = new Map(); pickIdx = -1; relayout(); drawStage(); }
 function getItem(i){
-  if (!cache.has(i)) cache.set(i, makeItem(P.mode, itemSeed(i), P[P.mode]));
+  if (!cache.has(i)) cache.set(i, breed ? (i === 0 ? breed.item : mutate(breed.item, itemSeed(i), breed.strength)) : makeItem(P.mode, itemSeed(i), P[P.mode]));
   return cache.get(i);
 }
 function drawCell(ctx, i, x, y, cw, ch, frame){
@@ -756,7 +975,29 @@ function redrawCell(i){
   if (P.colour.transparent) checker(sctx, x, y, L.cw, L.ch); else { sctx.fillStyle = P.colour.bg; sctx.fillRect(x, y, L.cw, L.ch); }
   drawCell(sctx, i, x, y, L.cw, L.ch, frameTick % 2);
 }
-function drawMarks(){ markRect(pickIdx, '#e8912b'); if (hoverIdx !== pickIdx) markRect(hoverIdx, '#5b88cc'); }
+function drawMarks(){ if (breed && pickIdx !== 0) markRect(0, '#5fbf60'); markRect(pickIdx, '#e8912b'); if (hoverIdx !== pickIdx) markRect(hoverIdx, '#5b88cc'); }
+function recFor(i){
+  if (!breed) return { mode: P.mode, seed: itemSeed(i), params: { ...P[P.mode] }, colour: { ...P.colour } };
+  if (i === 0) return breed.rec;
+  const b = breed.rec;
+  return { mode: b.mode, seed: itemSeed(i), params: b.params, colour: b.colour, mutation: { parent: b, seed: itemSeed(i), strength: breed.strength } };
+}
+function startBreed(){
+  if (!picked || picked.rec.live || picked.item.kind === 'edit') return;
+  const rec = picked.rec, item = picked.item, strength = breed ? breed.strength : 3;
+  if (P.mode !== rec.mode) setMode(rec.mode);
+  breed = { rec, item, strength };
+  $('#breedBar').hidden = false; $('#breedStrength').value = strength; $('#hint').classList.add('hide');
+  $('#breedName').textContent = 'more like #' + (rec.mutation ? rec.mutation.seed : rec.seed);
+  $('#modeBadge').textContent = 'FAMILY';
+  regen(); pickIdx = 0; drawMarks();
+}
+function endBreed(){
+  if (!breed) return;
+  breed = null; $('#breedBar').hidden = true;
+  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', edit: 'EDIT' }[P.mode];
+  regen();
+}
 function cellAt(e){
   const r = stage.getBoundingClientRect(), L = layout, dpr = L.dpr;
   const x = (e.clientX - r.left) * dpr - L.ox, y = (e.clientY - r.top) * dpr - L.oy;
@@ -775,15 +1016,15 @@ stage.addEventListener('click', e => {
   if (P.mode === 'edit') return;
   const i = cellAt(e); if (i < 0) return;
   const old = pickIdx; pickIdx = i; redrawCell(old);
-  pick({ mode: P.mode, seed: itemSeed(i), params: { ...P[P.mode] }, colour: { ...P.colour } }, getItem(i));
+  pick(recFor(i), getItem(i));
   drawMarks();
 });
 
 /* ---------- picked ---------- */
 const pickCv = $('#pickCv'), pctx = pickCv.getContext('2d');
-let picked = null, view = { yaw: Math.PI / 4, pitch: -0.55, spin: true }, keptOn = -1;
+let picked = null, view = { yaw: 0.38, pitch: -0.34, spin: true }, keptOn = -1;
 function pick(rec, item){
-  picked = { rec, item: item || withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params)) };
+  picked = { rec, item: item || itemFromRec(rec) };
   $('#pickEmpty').style.display = 'none'; $('#exports').hidden = false;
   $('#pickBadge').textContent = rec.mode;
   $('#pickSeed').textContent = '#' + rec.seed;
@@ -794,6 +1035,7 @@ function pick(rec, item){
   show('#exBitsy', flat); show('#exShape', flat); show('#exRecipe', netty);
   show('#exVox', rec.mode !== 'sprite'); show('#exObj', rec.mode !== 'sprite'); show('#exJson', true);
   show('#editBtn', !rec.live);
+  show('#breedBtn', !rec.live && rec.mode !== 'edit');
   if (!item || rec.mode !== 'edit') $('#pngScale').value = rec.mode === 'voxel' ? 4 : 1;
   drawPick();
 }
@@ -813,7 +1055,7 @@ function drawPick(){
     if (item.fold === 'voxel' && item.cut && rec.live && item.frame > 0){
       // cut away the layers in front, so the layer being painted is the front face
       const cells = V.cells.slice(), wh = V.w * V.h;
-      cells.fill(-1, 0, wh * item.frame);
+      cells.fill(-1, wh * (V.d - item.frame));
       V = { w: V.w, h: V.h, d: V.d, cells, colors: V.colors };
     }
     const flat = item.kind !== 'vox' && item.fold !== 'voxel';
@@ -824,7 +1066,7 @@ function drawPick(){
       pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
     drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (flat ? W * .08 : 0), voxScale(V, W * (flat ? .72 : .9)),
-      item.fold === 'voxel' && rec.live ? item.frame + .5 : undefined);
+      item.fold === 'voxel' && rec.live ? V.d - 1 - item.frame + .5 : undefined);
   }
 }
 let drag = null;
@@ -857,7 +1099,7 @@ function download(name, blob){
 }
 const canvasBlob = cv => new Promise(r => cv.toBlob(r, 'image/png'));
 function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800); }
-const baseName = rec => `hatcher_${rec.mode}_${rec.seed}`;
+const baseName = rec => `hatcher_${rec.mode}_${rec.mutation ? rec.mutation.seed : rec.seed}`;
 function itemPNG(item, rec, scale){
   let cv;
   if (item.kind === 'sprite' || (item.kind === 'edit' && item.fold !== 'voxel')){
@@ -979,7 +1221,7 @@ $('#sheetBtn').onclick = async () => {
   const c = cv.getContext('2d'); paintBg(c, cv.width, cv.height);
   for (let i = 0; i < L.cols * L.rows; i++){
     const item = getItem(i);
-    if (item.kind === 'vox'){ drawVox(c, item, Math.PI / 4, -0.62, (i % L.cols) * cw + cw / 2, Math.floor(i / L.cols) * ch + ch / 2, voxScale(item, cw)); }
+    if (item.kind === 'vox'){ drawVox(c, item, VIEW_YAW, VIEW_PITCH, (i % L.cols) * cw + cw / 2, Math.floor(i / L.cols) * ch + ch / 2, voxScale(item, cw)); }
     else drawCell(c, i, (i % L.cols) * cw, Math.floor(i / L.cols) * ch, cw, ch, 0);
   }
   download(`hatcher_${P.mode}_sheet_${P.seed}.png`, await canvasBlob(cv));
@@ -1000,11 +1242,11 @@ function renderKept(){
   $('#keptBadge').textContent = kept.length;
   kept.forEach((rec, i) => {
     const el = document.createElement('div'); el.className = 'kept' + (i === keptOn ? ' on' : ''); el.title = rec.mode + ' #' + rec.seed;
-    const item = withColour(rec.colour, () => makeItem(rec.mode, rec.seed, rec.params));
+    const item = itemFromRec(rec);
     const cv = document.createElement('canvas'); cv.width = cv.height = 64;
     const c = cv.getContext('2d');
     if (!rec.colour.transparent){ c.fillStyle = rec.colour.bg; c.fillRect(0, 0, 64, 64); }
-    if (item.kind === 'vox' || item.fold === 'voxel'){ const V = voxOf(item); drawVox(c, V, Math.PI / 4, -0.62, 32, 32, voxScale(V, 64)); }
+    if (item.kind === 'vox' || item.fold === 'voxel'){ const V = voxOf(item); drawVox(c, V, VIEW_YAW, VIEW_PITCH, 32, 32, voxScale(V, 64)); }
     else { const src = itemCanvases(item)[0], k = Math.max(1, Math.floor(56 / Math.max(src.width, src.height))); c.imageSmoothingEnabled = false; c.drawImage(src, (64 - src.width * k) / 2, (64 - src.height * k) / 2, src.width * k, src.height * k); }
     el.appendChild(cv);
     const rm = document.createElement('button'); rm.className = 'rm'; rm.textContent = '✕'; rm.title = 'Remove';
@@ -1016,13 +1258,16 @@ function renderKept(){
   });
 }
 $('#keepBtn').onclick = keepPicked;
+$('#breedBtn').onclick = startBreed;
+$('#breedEnd').onclick = endBreed;
+scrubify($('#breedStrength'), () => { if (!breed) return; breed.strength = Math.max(1, Math.min(12, Math.round(+$('#breedStrength').value || 1))); regen(); pickIdx = 0; drawMarks(); });
 $('#keptClear').onclick = () => { if (kept.length && confirm('Forget everything saved?')) { kept = []; keptOn = -1; saveKept(); renderKept(); } };
 $('#keptJson').onclick = () => download('hatcher_saved.json', new Blob([JSON.stringify(kept, null, 1)], { type: 'application/json' }));
 // one sheet per mode, every cell the size of the largest; sprites at 1px so Godot can slice them
 $('#keptSheet').onclick = async () => {
   const recs = kept.filter(k => k.mode === P.mode);
   if (!recs.length){ toast('nothing saved in this mode'); return; }
-  const items = recs.map(r => withColour(r.colour, () => makeItem(r.mode, r.seed, r.params)));
+  const items = recs.map(itemFromRec);
   const scale = Math.max(1, +$('#pngScale').value || 1);
   const imgs = items.map((it, i) => itemPNG(it, recs[i], scale));
   const cw = Math.max(...imgs.map(c => c.width)), ch = Math.max(...imgs.map(c => c.height)), cols = Math.ceil(Math.sqrt(imgs.length));
@@ -1079,10 +1324,10 @@ const PRESETS = {
 const between = (a, b) => a + Math.floor(Math.random() * (b - a + 1)), chance = n => Math.random() < n;
 const SHUFFLE = {
   sprite: () => ({ w: between(5, 16), h: between(5, 16), density: between(35, 70), core: between(0, 70), mirrorX: chance(.9), mirrorY: chance(.2), cleanup: chance(.7) }),
-  net:    () => ({ w: between(4, 14), h: between(4, 12), d: between(3, 10), density: between(30, 65), core: between(0, 60), matched: chance(.7), rim: chance(.7), holes: chance(.2) }),
+  net:    () => ({ w: between(4, 14), h: between(4, 12), d: between(3, 10), density: between(30, 65), core: between(0, 60), matched: chance(.7), rim: chance(.7), holes: chance(.2), front: chance(.8), wrap: chance(.6) }),
   voxel:  () => ({ w: between(6, 16), h: between(6, 16), d: between(6, 16), density: between(40, 70), core: between(30, 80), smooth: between(0, 3), mirrorX: chance(.85), mirrorZ: chance(.3), cleanup: chance(.8) }),
 };
-const SHAPE_KEYS = { sprite: ['w', 'h', 'density', 'core', 'mirrorX', 'mirrorY', 'cleanup'], net: ['w', 'h', 'd', 'density', 'core', 'matched', 'rim', 'holes'],
+const SHAPE_KEYS = { sprite: ['w', 'h', 'density', 'core', 'mirrorX', 'mirrorY', 'cleanup'], net: ['w', 'h', 'd', 'density', 'core', 'matched', 'rim', 'holes', 'front', 'wrap'],
                      voxel: ['w', 'h', 'd', 'density', 'core', 'smooth', 'mirrorX', 'mirrorZ', 'cleanup'] };
 const shapeHistory = { sprite: [], net: [], voxel: [] }, shapeName = {};
 function setShape(values, name){
@@ -1152,7 +1397,9 @@ function buildColour(){
     body.appendChild(r);
   }
   const chk = (key, label) => { const l = document.createElement('label'); l.className = 'check'; l.innerHTML = `<input type="checkbox"${c[key] ? ' checked' : ''}> ${label}`; l.firstChild.onchange = e => { c[key] = e.target.checked; regenSoon(); }; body.appendChild(l); };
-  chk('bands', 'Colour by row');
+  if (P.mode !== 'net'){ chk('roles', 'Colour by role'); }
+  chk('eyes', P.mode === 'net' ? 'Eyes on the front' : 'Eyes');
+  if (!P.colour.roles || P.mode === 'net') chk('bands', 'Colour by row');
   if (P.mode === 'sprite'){
     const o = field('Outline', `<select>${['none', 'dark', 'light', 'black'].map(v => `<option${v === c.outline ? ' selected' : ''}>${v}</option>`).join('')}</select>`);
     o.onchange = () => { c.outline = o.value; regenSoon(); };
@@ -1208,7 +1455,7 @@ function openEditor(){
     e = { w: item.w, h: item.h, frames, colors: keys.length ? keys : ['#e6e6e6'], fold: 'sprite', net: null, mirror: rec.params.mirrorX !== false };
   } else if (item.kind === 'vox'){
     const { w, h, d } = item, frames = [];
-    for (let z = 0; z < d; z++){ const f = []; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) f.push(item.cells[x + w * ((h - 1 - y) + h * z)]); frames.push(f); }
+    for (let l = 0; l < d; l++){ const z = d - 1 - l, f = []; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) f.push(item.cells[x + w * ((h - 1 - y) + h * z)]); frames.push(f); }
     e = { w, h, frames, colors: item.colors.map(hex), fold: 'voxel', net: null, mirror: rec.params.mirrorX !== false };
   } else return;
   const before = P.edit ? edSnapshot() : null;
@@ -1441,7 +1688,7 @@ function edDeleteSel(){
 /* conversions; the old edit stays one undo away */
 function edToVoxel(){
   const e = P.edit, V = voxOf(editItem(e)), frames = [];
-  for (let z = 0; z < V.d; z++){ const f = []; for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++) f.push(V.cells[x + V.w * ((V.h - 1 - y) + V.h * z)]); frames.push(f); }
+  for (let l = 0; l < V.d; l++){ const z = V.d - 1 - l, f = []; for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++) f.push(V.cells[x + V.w * ((V.h - 1 - y) + V.h * z)]); frames.push(f); }
   edPush(); ed.sel = null;
   P.edit = { id: e.id, w: V.w, h: V.h, frames, colors: e.colors.slice(), fold: 'voxel', net: null, depthMode: 'bulge', depth: 2,
              mirror: e.mirror, cut: false, frame: Math.floor(V.d / 2) };
@@ -1721,6 +1968,7 @@ function setSeed(s, remember = true){
   P.seed = s >>> 0; $('#seedIn').value = P.seed; regen(); saveState();
 }
 function setMode(m){
+  if (breed && breed.rec.mode !== m){ breed = null; $('#breedBar').hidden = true; }
   if (m === 'edit' && !P.edit) P.edit = blankEdit();
   P.mode = m;
   document.body.classList.toggle('editing', m === 'edit');
@@ -1729,7 +1977,7 @@ function setMode(m){
   if (m === 'edit') $('#editCol').appendChild($('#panelShape'));
   else $('#props').insertBefore($('#panelShape'), $('#panelColour'));
   document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  $('#modeBadge').textContent = { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', edit: 'EDIT' }[m];
+  $('#modeBadge').textContent = breed ? 'FAMILY' : { sprite: 'SPRITES', net: 'BOX NETS', voxel: 'VOXEL FIELD', edit: 'EDIT' }[m];
   buildShape(); regen(); saveState();
   if (m === 'edit') edRefresh(false);
 }
@@ -1764,6 +2012,8 @@ document.addEventListener('keydown', e => {
   else if (k === 'r') $('#shuffleBtn').click();
   else if (k === 'z') $('#backBtn').click();
   else if (k === 'k') keepPicked();
+  else if (k === 'b') startBreed();
+  else if (k === 'escape' && breed) endBreed();
   else if (k === 'e') $('#sheetBtn').click();
   else if (k === 'h') $('#helpBtn').click();
   else if (k === 'escape') $('#help').classList.remove('show');
@@ -1784,6 +2034,10 @@ $('#help').innerHTML = `
   <p>Six faces laid out as an unfolded box, the same layout the dungeon's boxnet.gd folds. Save the PNG at scale 1, copy the recipe part, and it is a prop.</p>
   <h3>Voxel field</h3>
   <p>A box of cells, each one full or empty, mirrored left to right. Export .vox for MagicaVoxel, .obj for Blender (colours are in the vertices), or .json for your own loader.</p>
+  <h3>More like this</h3>
+  <p>Pick something and press More like this (B). The grid fills with its variations: a few cells grown or shaved, a colour borrowed from a neighbour, a colour drifting. The original sits in the green square. Pick a good variation and go again. Strength sets how far they stray, and R rolls a fresh set.</p>
+  <h3>Colour</h3>
+  <p>Colour by role gives each sprite one body colour, then hands each accent one job: a band, the tops, the feet, the spine or the outline. Eyes lights up two holes in the upper half, or two cells inside the body, in white or near black, whichever shows against the body.</p>
   <h3>Edit</h3>
   <p>Edit opens the pick pixel by pixel, with its 3D version turning under Picked as you draw. Sprites can bulge, stay flat as a slab, or turn on a lathe. Box nets fold as you paint them. Voxel picks open as a stack of layers, front to back, and <span class="kbd">[</span> <span class="kbd">]</span> step through them. Whatever you were editing before stays one undo away. Swatches recolour everything that uses them. Right-click erases and alt-click picks a colour. Drag the white handles round the canvas to resize it from that side. Box and lasso select part of the frame or layer, move drags it (or the whole layer when nothing is selected), Delete clears it and Escape lets go. Convert to voxel turns a sprite or net into layers, and a layer can become a sprite again. Dots show the other frame, or the layer behind, under the one you are drawing.</p>
   <h3>Keys</h3>
@@ -1792,6 +2046,7 @@ $('#help').innerHTML = `
     <tr><td><span class="kbd">Shift+R</span></td><td>shuffle the shape settings</td></tr>
     <tr><td><span class="kbd">Z</span></td><td>previous seed</td></tr>
     <tr><td><span class="kbd">K</span></td><td>save the pick</td></tr>
+    <tr><td><span class="kbd">B</span></td><td>more like this (Esc goes back to all)</td></tr>
     <tr><td><span class="kbd">E</span></td><td>export what's on screen</td></tr>
     <tr><td><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> <span class="kbd">4</span></td><td>sprites, nets, voxels, edit</td></tr>
     <tr><td><span class="kbd">B</span> <span class="kbd">E</span> <span class="kbd">G</span> <span class="kbd">I</span> <span class="kbd">M</span></td><td>in edit: pencil, eraser, fill, pick colour, mirror</td></tr>
