@@ -613,7 +613,7 @@ function visibleFaces(V){
   }
   return out;
 }
-function drawVox(ctx, V, yaw, pitch, cx, cy, s){
+function drawVox(ctx, V, yaw, pitch, cx, cy, s, gridZ){
   const faces = V._faces || (V._faces = visibleFaces(V));
   const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
   const rot = (x, y, z) => { const x1 = x * cyw - z * syw, z1 = x * syw + z * cyw; return [x1, y * cp - z1 * sp, y * sp + z1 * cp]; };
@@ -627,9 +627,23 @@ function drawVox(ctx, V, yaw, pitch, cx, cy, s){
     const pts = FACES[fi].q.map(q => rot(x + q[0] - ox, y + q[1] - oy, z + q[2] - oz));
     list.push([pts.reduce((a, p) => a + p[2], 0), pts, fi, v]);
   }
+  if (gridZ !== undefined){
+    // a grid through one layer, one square per voxel, sorted in with the faces so voxels in front still cover it
+    for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++){
+      const pts = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map(([a, b]) => rot(a - ox, b - oy, gridZ - oz));
+      list.push([pts.reduce((a, p) => a + p[2], 0), pts, -1, -1]);
+    }
+  }
   list.sort((a, b) => b[0] - a[0]);
   const cache = {};
   for (const [, pts, fi, v] of list){
+    if (fi < 0){
+      ctx.beginPath();
+      pts.forEach((p, i) => { const sx = cx + p[0] * s, sy = cy - p[1] * s; i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+      ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1; ctx.stroke();
+      continue;
+    }
     const key = v + ':' + fi;
     const col = cache[key] || (cache[key] = 'rgb(' + mul(V.colors[v], shade[fi]).join(',') + ')');
     ctx.fillStyle = ctx.strokeStyle = col;
@@ -804,7 +818,8 @@ function drawPick(){
       pctx.imageSmoothingEnabled = false; pctx.globalAlpha = .9;
       pctx.drawImage(cv, 10, 10, fw * k, fh * k); pctx.globalAlpha = 1;
     }
-    drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (flat ? W * .08 : 0), voxScale(V, W * (flat ? .72 : .9)));
+    drawVox(pctx, V, view.yaw, view.pitch, W / 2, W / 2 + (flat ? W * .08 : 0), voxScale(V, W * (flat ? .72 : .9)),
+      item.fold === 'voxel' && rec.live ? item.frame + .5 : undefined);
   }
 }
 let drag = null;
@@ -1103,7 +1118,7 @@ function blankEdit(){
 }
 function editItem(e){
   return { kind: 'edit', seed: e.id, w: e.w, h: e.h, frames: e.frames.map(f => Int16Array.from(f)), colors: e.colors.map(unhex),
-           fold: e.fold, net: e.net, depthMode: e.depthMode, depth: e.depth, frame: e.frame, cut: e.cut !== false, col: { outline: 'none', shade: false } };
+           fold: e.fold, net: e.net, depthMode: e.depthMode, depth: e.depth, frame: e.frame, cut: e.cut === true, col: { outline: 'none', shade: false } };
 }
 function openEditor(){
   if (!picked) return;
@@ -1363,7 +1378,7 @@ function edToVoxel(){
   for (let z = 0; z < V.d; z++){ const f = []; for (let y = 0; y < V.h; y++) for (let x = 0; x < V.w; x++) f.push(V.cells[x + V.w * ((V.h - 1 - y) + V.h * z)]); frames.push(f); }
   edPush(); ed.sel = null;
   P.edit = { id: e.id, w: V.w, h: V.h, frames, colors: e.colors.slice(), fold: 'voxel', net: null, depthMode: 'bulge', depth: 2,
-             mirror: e.mirror, cut: true, frame: Math.floor(V.d / 2) };
+             mirror: e.mirror, cut: false, frame: Math.floor(V.d / 2) };
   buildEditPanels(); edResize(); edRefresh(); toast('now voxels, ' + V.w + '×' + V.h + '×' + V.d);
 }
 function edLayerToSprite(){
@@ -1563,13 +1578,13 @@ function buildEditPanels(){
     thr.firstChild.onchange = ev => { e.through = ev.target.checked; saveState(); };
     body.appendChild(thr);
     const cut = document.createElement('label'); cut.className = 'check';
-    cut.innerHTML = `<input type="checkbox"${e.cut !== false ? ' checked' : ''}> Cut away the layers in front`;
+    cut.innerHTML = `<input type="checkbox"${e.cut ? ' checked' : ''}> Cut away the layers in front`;
     cut.firstChild.onchange = ev => { e.cut = ev.target.checked; edRefresh(); };
     body.appendChild(cut);
     const conv = document.createElement('button'); conv.className = 'btn'; conv.style.width = '100%'; conv.style.marginTop = '6px';
     conv.textContent = 'This layer to new sprite'; conv.onclick = edLayerToSprite;
     body.appendChild(conv);
-    label('[ and ] or the mouse wheel step through the layers. Dots show the layer behind. With paint through on, the eraser cuts all the way through and the pencil recolours every layer at that spot.');
+    label('[ and ] or the mouse wheel step through the layers. The white grid in the 3D view marks the layer you are on, and dots show the layer behind. With paint through on, the eraser cuts all the way through and the pencil recolours every layer at that spot.');
     buildEditColour();
     return;
   }
