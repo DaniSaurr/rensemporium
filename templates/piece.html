@@ -14,7 +14,7 @@
 {% block main %}
 <article class="piece">
   <header class="piece-head">
-    <h1>{{ p.title }}</h1>
+    <h1 data-bouffont>{{ p.title }}</h1>
     <p class="facts"><span>{{ p.year }}</span></p>
     {% if p.facts %}<dl class="factrow">{% for k, v in p.facts %}<div><dt>{{ k }}</dt><dd>{{ v }}</dd></div>{% endfor %}</dl>{% endif %}
     {% if p.tags %}

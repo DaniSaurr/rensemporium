@@ -4,7 +4,7 @@
 {% block aitoggle %}{% if branch.key not in ("games", "tools") %}{{ super() }}{% endif %}{% endblock %}
 {% block main %}
 <header class="room-head">
-  <h1>{{ branch.label }}</h1>
+  <h1 data-bouffont>{{ branch.label }}</h1>
   {% if branch.intro %}<p>{{ branch.intro }}</p>{% endif %}
   {% if not branch.pieces %}<p class="count">nothing in here yet.</p>{% endif %}
 </header>
