@@ -987,7 +987,8 @@ function renderKept(){
     const rm = document.createElement('button'); rm.className = 'rm'; rm.textContent = '✕'; rm.title = 'Remove';
     rm.onclick = e => { e.stopPropagation(); kept.splice(i, 1); if (keptOn === i) keptOn = -1; saveKept(); renderKept(); };
     el.appendChild(rm);
-    el.onclick = () => { keptOn = i; pick(rec); renderKept(); };
+    // while editing, a kept one goes straight onto the canvas, so Picked always shows what is being edited
+    el.onclick = () => { keptOn = i; pick(rec); if (P.mode === 'edit'){ openEditor(); toast('opened kept piece. Ctrl+Z goes back'); } renderKept(); };
     list.appendChild(el);
   });
 }
