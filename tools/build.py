@@ -247,7 +247,7 @@ def main():
 
     # "lately": the most recently changed lead from each room, newest first
     lately = []
-    for b in branches:
+    for b in [b for b in branches if not b.get("unlisted")]:
         leads = [p for p in b["leads"] if p.get("thumb")]
         if leads:
             top = max(leads, key=lambda p: p["sort_date"])
@@ -291,7 +291,7 @@ def main():
             body = re.sub(r"<!--draft-->.*?<!--/draft-->", "", body, flags=re.S)
         meta = load_toml(about / "about.toml") if (about / "about.toml").exists() else {}
         write(OUT / "about" / "index.html", env.get_template("about.html").render(root="../", site=site, body=body, links=meta.get("links", [])))
-    write(OUT / "gazetteer" / "index.html", env.get_template("gazetteer.html").render(root="../", site=site, branches=branches))
+    write(OUT / "gazetteer" / "index.html", env.get_template("gazetteer.html").render(root="../", site=site, branches=[b for b in branches if not b.get("unlisted")]))
     (OUT / ".nojekyll").write_text("")
     n = sum(len(b["pieces"]) for b in branches)
     print(f"built {len(branches)} branches, {n} pieces -> {OUT}")

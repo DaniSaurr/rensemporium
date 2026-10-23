@@ -1,3 +1,4 @@
 label = "writing"
 order = 4
 intro = ""
+unlisted = true  # pages still build, but no map place, lately entry or gazetteer listing
