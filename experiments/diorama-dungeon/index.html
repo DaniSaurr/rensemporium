@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>diorama dungeon · ren's emporium</title>
+<meta name="description" content="">
+
+<link rel="icon" href="../../static/img/icon.png">
+<link rel="stylesheet" href="../../static/css/site.css?v=a52abf39">
+</head>
+<body class="">
+
+
+<a class="back" href="../../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<article class="piece">
+  <header class="piece-head">
+    <h1 data-bouffont>diorama dungeon</h1>
+    <p class="facts"><span>2026</span></p>
+    
+    
+    <div class="tags"><span class="tag">in progress</span></div>
+    
+  </header>
+
+  
+  <div class="hero">
+    <img src="room-alive.gif" alt="a voxel crypt lit magenta, two masks circling in the middle while candles flicker">
+  </div>
+  
+
+  
+
+  
+
+  
+  <div class="prose">
+    
+    <h2>the idea</h2>
+<p>A dungeon built like a toy diorama: rooms cut open and seen from above at the Diablo angle, each room lit in its own colour, and everything in it made from pixel-art sprites pushed out into 3D. The plan is one room first. It's a carnival crypt, lit magenta, mixing two folders from my reference library: carnival maximalism and gothic romanticism.</p>
+
+<h2>first attempt</h2>
+<figure><img src="first-attempt.png" alt="an isometric cutaway room of blue brick with a brazier, barrels, a chest and a small knight"><figcaption>first attempt</figcaption></figure>
+<p>The lighting worked, but the sprites didn't. They came from the cheapest generator style at 64 pixels and were squashed down to 32. They had shading painted in, which fought the real lights. And they were round things drawn from the front, so the barrel turned into a flat card with a bump in it. I threw the set away and started again, one stage at a time.</p>
+
+<h2>sprite style</h2>
+<figure><img src="style-tests.png" alt="four pixel-art harlequin masks in four different styles"><figcaption>one mask prompt, four retro diffusion styles, 32 pixels each</figcaption></figure>
+<p>All four styles were useful for different jobs, so each one gets a role: characters, small props, flat wall pieces and big furniture. What holds them together is a shared twelve-colour palette that every sprite is forced into.</p>
+<figure><img src="palette-test.png" alt="a mask, a candle cluster and a harlequin coffin, all in magenta, cream and violet"><figcaption>drafts locked to the crypt palette (strip, bottom left)</figcaption></figure>
+
+<h2>into 3D</h2>
+<p>A sprite becomes a stack of voxels. A coffin and a candle can't be pushed out the same way, so there are four rules for it.</p>
+<figure><img src="methods.gif" alt="four voxel models turning: a coffin, a drum of candles, and two masks"><figcaption>slab, lathe, bulge, relief</figcaption></figure>
+<p><b>Slab</b> pushes every pixel back the same distance. It suits upright things with a flat front, like the coffin. <b>Lathe</b> spins the sprite's outline around a vertical axis, for round things like candles and urns. <b>Bulge</b> makes pixels deeper the further they are from the edge, so faces puff out like pillows. <b>Relief</b> is bulge with a flat back, and the back can take a sprite of its own. Boxes are folded from an unfolded net, further down.</p>
+<figure><img src="relief-test.png" alt="a mask shown from four angles in three depth modes, the last with a ribbon on its back"><figcaption>bulge, relief with a plain back, relief with a back sprite</figcaption></figure>
+
+<h2>the masks</h2>
+<p>The relief mask with the ribbon on its back looked like a little creature, so the masks became the monsters of this room. Two of them float around for now, at the top of this page.</p>
+
+<h2>candles</h2>
+<p>The first prop made for the room. Three drafts, each a single candle on a tall 32 by 64 canvas, spun with the lathe. All three stayed.</p>
+<figure><img src="candles.gif" alt="three voxel candles turning: a plain white one, a fat magenta one with a ribbon, and a cream one in a violet candlestick"><figcaption>the three candles, with their sprites on the right</figcaption></figure>
+<p>The cluster cost nothing to make. Shorter candles are the same sprites with rows cut out of the middle, so each one keeps its flame and drips. They stand on a dish drawn by hand, forty pixels wide, and everything is merged on one voxel grid. Where two candles touch they fuse together like real wax.</p>
+<figure><img src="candle-cluster.gif" alt="a cluster of five voxel candles of different heights on a violet dish, turning"><figcaption>five candles on a dish</figcaption></figure>
+
+<h2>drawn by hand</h2>
+<p>These four had no generator involved. Each is drawn in code, pixel by pixel, from the same twelve colours. The trunk is the first box. It's drawn flat as an unfolded net: lid on top, four sides in a row, base underneath. Then it gets folded up into a hollow voxel box.</p>
+<figure><img src="drawn-sprites.png" alt="four flat pixel drawings: a harlequin banner, a stone pillar, an unfolded box net for a trunk, and a striped urn"><figcaption>the drawings</figcaption></figure>
+<figure><img src="drawn-props.gif" alt="the same four turning in 3D: a cloth banner, a fluted pillar, a purple trunk with a pink harlequin front, and a striped urn"><figcaption>banner as cloth one voxel thick, pillar and urn lathed, trunk folded from its net</figcaption></figure>
+
+<h2>by hand or by generator</h2>
+<p>The same four, asked of retro diffusion with the same palette and at the same sizes, three cents each. Its banner, pillar and urn are richer than the drawn ones. The banner has proper diamonds and a rod with end caps, the pillar is weathered, and the urn has a better shape. It wouldn't draw the trunk as a net and gave back a closed chest seen from the front, so that one is pushed back as a deep block, and its sides smear.</p>
+<figure><img src="hand-vs-api.gif" alt="two rows of four turning props: the hand-drawn set on top, the generated set below"><figcaption>top row by hand, bottom row generated</figcaption></figure>
+<p>The generated banner, pillar and urn stay. The trunk stays hand-drawn, folded from its net.</p>
+
+<h2>stained glass</h2>
+<p>Drawn by hand, 32 by 48. The pointed arch comes from two circles, each centred on the opposite side. Inside are a rose of eight petals and three lancets of diamond panes. In 3D each colour gets its own depth. The stone stands three voxels deep, the lead two, the glass one, so the glass sits back inside its frame and the leads stand proud.</p>
+<p>The drawing takes settings for width, number of lights, glass colours and what goes in the head of the arch, so variations come cheap. A narrow lancet in ember glass. Two lights under a glass mask, so the room's monsters show up in its windows too. And a round rose of sixteen petals.</p>
+<figure><img src="window-sprites.png" alt="four pixel-art windows: three lights under a rose, a narrow gold lancet, two violet lights under a white mask, and a round rose window"><figcaption>the drawings</figcaption></figure>
+<figure><img src="windows.gif" alt="the four windows turning in 3D, glass set back in grey stone frames"><figcaption>stone 3, lead 2, glass 1</figcaption></figure>
+<p>The round rose works better as relief, domed forward over a flat back like a glass boss, with the stone ring stepping down at its edge. All four windows stay.</p>
+<figure><img src="rose-relief.gif" alt="the round rose window turning twice over: flat on the left, domed on the right"><figcaption>slab, then relief</figcaption></figure>
+<p>Then the back got hollowed to follow the dome, like a dish, so the rose is a curved shell two voxels thick. From behind, the stone ring steps down into a sunken bowl of glass.</p>
+<figure><img src="rose-dish.gif" alt="the rose window turning twice over: a solid dome on the left, a hollow dish on the right"><figcaption>relief, then dish</figcaption></figure>
+
+<h2>door and coffin</h2>
+<p>Both drawn by hand. The door uses the window's arch with a thicker ring of stone, oak planks, two iron straps with studs and a gold ring. The planks sit back inside the arch and the straps stand on them. The generated coffin from the palette test came out blobby in 3D, so it was redrawn: six-sided, widest at the shoulders, a harlequin lid and a little mask plaque. It's built as a deep box. The plum rim makes plain sides, the lid stands one voxel proud and the plaque two, and the gold handles become rails down each side.</p>
+<figure><img src="door-coffin-sprites.png" alt="pixel drawings of a pointed oak door in a stone arch and a harlequin coffin"><figcaption>the drawings</figcaption></figure>
+<figure><img src="door-coffin.gif" alt="the coffin and the door turning in 3D"><figcaption></figcaption></figure>
+<p>Both stay.</p>
+<p>Then a sketch over the old blobby coffin: keep its face, but give it a body. So there's a new rule, a lid on a body. The puffy lid from the bulge test sits on a body that runs the outline back twelve voxels, tapering at the head and foot like a real one. A flat four-voxel lid came first, but a second mock-up asked for the domed one.</p>
+<figure><img src="coffin-sketch.png" alt="a screenshot of the flat generated coffin with a deep box sketched behind it in black pen"><figcaption>the sketch</figcaption></figure>
+<figure><img src="coffin-mockup.png" alt="a mock-up of the generated coffin with a puffy domed lid on a grey body"><figcaption>the mock-up</figcaption></figure>
+<figure><img src="coffins.gif" alt="two coffins turning: the generated one on a grey body, and the hand-drawn harlequin one"><figcaption>generated lid on a body, and the drawn coffin</figcaption></figure>
+<p>This one stays too.</p>
+
+<h2>altar</h2>
+<p>The second box, drawn as a net like the trunk. A wine cloth with a gold border and a cream runner covers the top. On three sides it hangs halfway down to a gold trim and a scalloped pink ruffle, with stone blocks below, and the back is bare stone. The first try at dressing it used the generated candles, and they towered over it, because they're drawn at a bigger pixel scale than the altar. So the tapers on it are drawn at the altar's own scale, five pixels wide.</p>
+<figure><img src="altar-net.png" alt="the altar's unfolded net: cloth on top, three draped sides and a stone back in a row, a dark base below"><figcaption>the net</figcaption></figure>
+<figure><img src="altar.gif" alt="the altar turning, plain and then with two gold tapers on top"><figcaption>plain, and dressed</figcaption></figure>
+<p>Both versions stay.</p>
+
+<h2>curtain</h2>
+<p>A velvet panel on a gold rod with rings, a swinging hem and tassels. Each fold is drawn as shading, from pink on the ridge through wine and violet to plum in the valley. In 3D each of those colours gets its own depth, so the shading becomes real folds. Two panels side by side frame a gap like a stage.</p>
+<figure><img src="curtain.gif" alt="a velvet curtain turning, then a pair of curtains"><figcaption>one panel, and a pair</figcaption></figure>
+<p>The curtain stays.</p>
+
+<h2>portrait</h2>
+<p>A clown in a gilt frame. It has a striped pointed hat, diamond eyes and a wine nose, with a ruff and harlequin shoulders on a dark violet ground. The frame stands four voxels deep and the painting one, so the canvas sits back inside it.</p>
+<figure><img src="portrait.gif" alt="a framed clown portrait turning, its painting set back in a deep gold frame"><figcaption></figcaption></figure>
+<p>Then two generated portraits to compare, at three cents each. One is a sad clown in a gold and grey frame. The other is a jester in a mask behind thick gold. Their frames aren't in the palette's exact gold, so the depth goes by distance from the edge instead of by colour: anything within four pixels of the edge stands four deep.</p>
+<figure><img src="portraits.gif" alt="three framed portraits turning: a sad clown, a masked jester, and the hand-drawn clown"><figcaption>generated, generated, by hand</figcaption></figure>
+<p>All three stay.</p>
+
+<h2>all together</h2>
+<p>Every prop kept so far, one to a grid cell under flat grey light. Nothing is scaled, so one pixel of every sprite is the same size in the room, and the sizes they were drawn at show up honestly. The generated candles stand taller than the masks, and the generated coffin is half the size of the drawn one.</p>
+<figure><img src="layout-grid.jpg" alt="an isometric grid of floor tiles with one prop on each: a door, curtains, windows, portraits, a banner, a pillar, two altars, two coffins, a trunk, an urn, candles and the two masks"><figcaption>one prop per cell, one voxel size</figcaption></figure>
+
+<h2>the room</h2>
+<p>The props put into a room at last, still under flat light. The floor, the two back walls and the plinth are built from voxels the same size as the props, so the bricks and flagstones match everything standing on them. The door, the coffins, the portraits and the banner line the left wall. The altar stands between the curtains under the rose, with the windows beside it. Pillars, the giant candles, the urn and the trunk stand on the floor, and the two masks float in the middle.</p>
+<figure><img src="room-crypt.jpg" alt="an isometric cutaway crypt with brick walls and a chequered floor, furnished with a door, coffins, portraits, curtains around an altar, stained-glass windows, pillars, giant candles, a trunk and two floating masks"><figcaption>the carnival crypt, before lighting</figcaption></figure>
+<p>That first room was too loud and too big. The violet in the bricks and floor was as strong as the props, and everything bunched against the back walls. The second pass cuts the walls and floor back to grey stone with the odd violet brick and shrinks the floor from 224 voxels to 160. It also mirrors the room across the diagonal from the back corner toward the camera. The altar turns to face out of the corner between two pillars and two curtains, and every piece on one wall has a partner on the other. The masks hover in the middle as a pair, with the candle cluster in front. The lancet, the banner and the drawn portrait sit this one out.</p>
+<figure><img src="room-crypt-2.jpg" alt="a smaller, symmetrical crypt in grey stone: an altar in the corner between pillars and curtains, windows, coffins and portraits mirrored on the two walls, two masks floating in the middle and a cluster of candles in front"><figcaption>calmer, smaller, mirrored</figcaption></figure>
+
+<h2>lighting</h2>
+<p>The room is lit by what's in it. Each recipe can mark some of its voxels as glowing, by colour and by height, so a flame glows but the gold frame beside it doesn't. Every glowing part brings its own light. Each candle flame gets a warm flickering light, and each stained-glass window throws magenta into the room as if the sun were behind it. A soft spot falls on the altar, and the two masks each get a faint pink light in front so their faces read. The rest is a dim violet ambient, glow around anything bright, and shadow gathering in the corners.</p>
+<figure><img src="room-lit.jpg" alt="the crypt lit in magenta and violet, candles glowing warm, stained glass glowing pink, the altar under a soft light and the two masks floating in the middle"><figcaption>lit</figcaption></figure>
+<figure><img src="room-lit.gif" alt="the lit crypt with its candle lights flickering"><figcaption>the candles flicker; the windows hold steady</figcaption></figure>
+
+<h2>alive</h2>
+<p>The small things came next, all drawn by hand. There's a wax puddle to lathe, a bone and a skull, and a music box. The box is a net with a dancer spun on its lid and a wind-up key at the back. Tapers gather at the pillars, and two more masks lie asleep face-up on the floor. Every piece still has a partner across the diagonal. The candle cluster became a pair, so the music box has the front of the room to itself. From there an aisle runs between the clusters, past the masks, to the altar.</p>
+<figure><img src="clutter.png" alt="small pixel drawings: a wax puddle, a bone, a skull, a music box net, a gold key and a tiny dancer"><figcaption>the small things</figcaption></figure>
+<p>Then the masks were set loose. Each one circles the same point, the two always opposite each other, turning a full circle and bobbing twice per loop. Each carries its own pink light, so the glow moves with them across the floor. The pillars first stopped short of the tops of the walls. Scaling isn't allowed, so they were lengthened like the candles were shortened, by repeating rows from the middle of the shaft until they stand ninety-six voxels tall.</p>
+<figure><img src="room-alive.gif" alt="the lit crypt, the two masks circling and spinning in the middle while the candles flicker"><figcaption></figcaption></figure>
+
+<h2>room two: candy grotesque</h2>
+<p>The second room mixes two other folders from the library, candy character art and biomechanical grotesque. That means cute bodies with the wrong anatomy, and props that are half alive. Nothing is decided yet, so it starts with drafts. There are two palettes, acid and lavender, and four creatures drafted in both, next to three drawn by hand. One is a wrapped sweet with three stacked eyes, one a lollipop whose spiral coils into an eye, and one a sliced jawbreaker with an eye for a core.</p>
+<figure><img src="candy-creatures.gif" alt="fourteen small voxel creatures turning in pairs, one acid green and one lavender: sweets, lollipops, jawbreakers, jellies with one eye, a many-eyed ball and a snail"><figcaption>round candy creatures, acid and lavender</figcaption></figure>
+<p>Then a reference came in, and it was wilder than any of these. Its creatures are gangly, all claws, wings, tails and antlers, with big glossy eyes and patterned skins. One has zebra stripes, one a turquoise checkerboard, one red flecks on pink. A third palette was taken from it, and six creatures drafted side-on, since a profile extrudes well. The generator dropped the patterns at that size, so the stripes, checks and flecks were painted back on by hand.</p>
+<figure><img src="candy-palettes.png" alt="three rows of twelve colour swatches: acid greens and pinks, lavenders with pink and mint, and sky blue, pink, red, turquoise, teal, grey and cream"><figcaption>three palettes</figcaption></figure>
+<figure><img src="candy-ref-creatures.gif" alt="six voxel creatures turning: a striped bat-winged cat, a checkered creature with a spiral tail, a crawler, a pink fleshling with antlers, a moth and a spiny grub"><figcaption>in the reference's spirit</figcaption></figure>
+<p>The ones kept were the many-eyed balls, the jawbreakers, the one-eyed jellies and the lollipop eyes, each in both palettes, and the pink fleshling with its red flecks.</p>
+<p>A creature that's mostly eye shouldn't have one on its back as well, but relief puts the front picture on both sides. So each one got a back, drawn without its eyes. The eye pixels are grown over with body colour, or on the lollipop and the jawbreaker the spiral and rings just carry on through. Now the front domes forward and the back domes backward, each with its own picture. The fleshling is drawn side-on, so its far side keeps a matching eye.</p>
+<figure><img src="candy-kept.gif" alt="nine voxel creatures turning, each showing an eyeless, speckled or ringed back as it comes round"><figcaption>the keepers, with their backs</figcaption></figure>
+
+<h2>what kind of room</h2>
+<p>Every creature kept was mostly eye, so the room should be somewhere eyes are grown, kept or sold. Three small rooms tried it, each in its own palette and lighting. A hatchery glows green from its tank of frogspawn eyes, with egg racks, incubators and speckled eggs. An optician's in lavender has eye charts, cabinets of eyes in jars and specimen jars. A sweet shop under a sky-blue backdrop has a striped counter, gumball machines full of eyes, eyeball cupcakes and pails of lollies, with the fleshling wandering through. The room builder now takes any room file with its own wall, floor and light colours.</p>
+<figure><img src="rooms-b-ideas.jpg" alt="three small voxel rooms side by side: a dark green hatchery with a glowing tank, a lavender optician's with eye charts and cabinets, and a pale sweet shop with a counter, gumball machines and cupcakes"><figcaption>hatchery, optician's, sweet shop</figcaption></figure>
+<p>All three stay, as three different rooms: one where the eyes are grown, one where they are kept and one where they are sold.</p>
+
+<h2>the hatchery</h2>
+<p>The first of the three to be built out to full size. Its centrepiece is the generated tank of frogspawn eyes, stretched to sixty pixels by repeating rows of glass. It stands in an iron ring under a valve cap, both drawn by hand, and glows lime from the back corner. Pipes run up either side. The walls carry honeycomb brood cells and the generated egg racks, with egg sacs hanging near the top. On the floor are incubators, nests of eggs under brood lamps, two eggs mid-hatch with an eye at the crack, the many-eyed balls and a slime trough at the front. The two jellies hop in a slow circle in the middle.</p>
+<figure><img src="hatchery-parts.png" alt="pixel sprites: a tall glass tank of eyes, a honeycomb of eggs and eyes, a brood lamp, a slime trough, a nest, a hatching egg with an eye, an egg sac and a speckled egg"><figcaption>some of the parts</figcaption></figure>
+<figure><img src="hatchery-alive.gif" alt="a dark green voxel hatchery glowing from a tall tank of eyes, two jellies hopping in the middle among nests, eggs and incubators"><figcaption>the hatchery</figcaption></figure>
+
+<h2>the optician's</h2>
+<p>Where the eyes are kept, in lavender. The centrepiece is drawn by hand, a giant eye forty pixels across on a fluted pedestal, its mint iris glowing and a web of pink veins running to the nerve on its back. Eye charts, cabinets of jarred eyes and boards of spectacles hang on the walls. Below them are two examination chairs, two cut-open eye models, specimen jars, eye-drop bottles and a few loose glass eyes. The lavender jawbreaker and lollipop hop round each other in the middle.</p>
+<figure><img src="optician-alive.gif" alt="a lavender voxel optician's with a giant glowing eye on a pedestal in the corner, eye charts and cabinets on the walls, and two candy creatures hopping in the middle"><figcaption>the optician's</figcaption></figure>
+
+<h2>the sweet shop</h2>
+<p>Where the eyes are sold, in the reference's own colours. A giant jar of candy eyes stands in the corner between two giant lollipops. The lollipops are the lolly creatures lengthened to sixty-four pixels by repeating rows of stick. In front are the counter, shelves of sweet jars, cash registers with an eye for a display, gumball machines, candy-floss carts with an eye in the floss, sundaes, cupcakes, gumdrops and wrapped sweets. The fleshling walks a slow loop through the middle. It first floated and spun like the masks, which is wrong for something with three legs, so legged creatures now get a walking gait. They keep their feet on the floor, always face the way they're going, and bob and rock a little on each step.</p>
+<figure><img src="sweetshop-alive.gif" alt="a pale pink voxel sweet shop with a giant jar of eyes between two giant lollipops, counters and shelves, and a pink creature wandering through"><figcaption>the sweet shop</figcaption></figure>
+
+<h2>a game</h2>
+<p>All of this is turning into a dungeon crawler, closer to Enter the Gungeon than Diablo. You go room to room shooting your way through, on levels generated from the pieces above. The player is a placeholder capsule for now, with twin-stick controls and a dodge roll.</p>
+<figure><img src="game-play.gif" alt="an isometric voxel dungeon, a pale capsule moving through crypt, sweet shop and hatchery rooms while creatures fire pink bullets"><figcaption>playing itself</figcaption></figure>
+
+<h3>levels</h3>
+<p>A floor is nine rooms, each shaped like a tetromino and packed against the last as in Tetris, with a door wherever a new room grew from an old one. Every room takes one of the four themes, so a level wanders from crypt to hatchery to sweet shop. Props stand around the corners of each cell and leave the middle lines clear. Those lines are where the runners go, carpets in the theme's colours from door to door, so the way through a room reads at a glance. The biggest cell holds a centrepiece. Flat-backed furniture like coffins and cabinets finds a wall and stands square against it.</p>
+
+<h3>rooms</h3>
+<p>The first walls and floors were plain grey brick and flagstones, too generic for rooms this particular, so each theme now draws its own, voxel by voxel. The crypt has a harlequin wainscot under a gold rail, gothic stone with a bone cornice and dark marble. The hatchery has honeycomb tiles under mossy brick and wet green tiles with slime. The optician's has clinical white tiles, lavender wallpaper printed with small eyes and a checker floor. The sweet shop has candy stripes over a mint wainscot, a scalloped cream top and pink checks. A wall between two rooms is painted on each side to match. Every room brings its own light and its own creatures.</p>
+<figure><img src="game-themes.jpg" alt="four generated levels, one per theme: a crypt with harlequin walls and candles, a green hatchery, a lavender optician's with giant eyes, and a pink-striped sweet shop"><figcaption>crypt, hatchery, optician's, sweet shop</figcaption></figure>
+
+<h3>fighting</h3>
+<p>The creatures made for the rooms are the enemies. Masks, eyeballs and jawbreakers float, keep their distance and fire rings. Jellies and lollipops hop toward you and spit three at a time. The fleshling walks after you on its three legs and fires in bursts. Beaten, they burst into chunks of their own colours with a flash of their room's light.</p>
+<p>The props are cover, and cover doesn't last. Every solid thing can be shot down from either side, and bigger things take longer. A hit throws sparks in the bullet's colour, chips off a bit of the prop and leaves a scorch that fades. When something finally goes it bursts the same way the creatures do. The rubble rests a moment, then sinks into the floor.</p>
+<figure><img src="game-break.gif" alt="close up: bullets hitting an egg rack in a sweet shop, sparks and chips flying until it bursts into pieces"><figcaption>wearing something down</figcaption></figure>
+
+<h3>walls and camera</h3>
+<p>Every wall stands full height, so the rooms feel enclosed. Rays run from the player toward the camera, and a wall they pass through fades away completely. The other walls of your room on the camera's side drop to a quarter, so you can see inside without losing its outline. The camera orbits the player with the right mouse button, or in quarter turns with Q and E, and the fading follows it round. The first version of the orbit swung wildly. The follow script eased the camera's position in a straight line and aimed it at the wrong point, so mid-turn it cut across the circle. Now a point eases after the player, and the camera always sits on its circle round that point, looking straight at it.</p>
+<figure><img src="game-orbit.gif" alt="the camera circling slowly round the capsule, walls fading in and out as they pass in front of it"><figcaption>orbiting</figcaption></figure>
+
+<h3>floors</h3>
+<p>After a round of play the rooms felt cramped, so cells are twice the size now, and big cells are dressed as four smaller spots. Doorways stop at a lintel instead of running floor to ceiling. Creatures only step where they stay inside their room and clear of props, so they can't be shoved into walls any more. The game is three floors. The crypt comes first, then the hatchery and optician's together, then the sweet shop. Once a floor is cleared, the way down opens as a glowing disc in the room farthest from the start. Every number behind all this sits on a slider in a dev menu, along with a plain account of how a floor is put together.</p>
+<figure><img src="game-floors.jpg" alt="a crypt floor with large rooms, doorways under lintels and a glowing exit disc in a far room"><figcaption>the way down, open</figcaption></figure>
+
+<h3>outside and unseen</h3>
+<p>Under each floor lies a marbled field of colour, bands folding through each other like paint on water, in a palette for that floor. The crypt sits on neon over a starry dark. The hatchery and optician's float over acid green, yellow and orange, and the sweet shop over a soft rainbow. Each level's seed shifts the swirl. When the camera turned, the field first swung round with the level, which was dizzying. Counter-turning it still felt dizzy in play, so now it doesn't turn at all. It's painted behind the level and only slides a little as you walk.</p>
+<p>Rooms you haven't reached are already there, filled to the top of their walls with drifting fog. It's navy in the crypt, green on the second floor and pink in the sweet shop, all with white wisps through it. Coming up to a doorway breathes it out over about a second. A first try hid unseen rooms outright and let them pop in, which looked wrong.</p>
+<figure><img src="game-fog.jpg" alt="three floors side by side: the crypt under navy and white fog over neon bands, the hatchery under green fog over acid stripes, the sweet shop under pink fog over a pastel rainbow"><figcaption>crypt, hatchery and optician's, sweet shop</figcaption></figure>
+<figure><img src="game-backdrop.gif" alt="the camera circling the player while the bands of colour underneath stay put"><figcaption>the field stays put as the camera turns</figcaption></figure>
+
+<h3>the crypt, room by room</h3>
+<p>The crypt floor splits into four kinds of room, all with the crypt's walls but each with pieces of its own. The chapel has pews, a lectern, a font and organ pipes. The ossuary has shelves and heaps of skulls and a throne of bones. The vault has burial niches with name plaques and iron gates among the coffins and urns. The toy cupboard has a rocking horse, toy blocks, a doll's house, porcelain dolls and jack-in-the-boxes. Free-standing pieces turn every which way so a room of them doesn't line up like stock on a shelf.</p>
+<figure><img src="crypt-rooms.jpg" alt="four crypt rooms: a chapel with pews and organ, an ossuary of skull shelves, a vault of niches and gates, a toy cupboard of horses and blocks"><figcaption>chapel, ossuary, vault, toy cupboard</figcaption></figure>
+<p>Every piece was drawn by hand and then drafted through the generator too, to compare. The generated lectern, candle creature and ghost-fire skull went in; the rest stayed hand-drawn.</p>
+<figure><img src="crypt-hand-vs-api.jpg" alt="two rows of crypt pieces in 3D, hand-drawn above and generated below"><figcaption>by hand above, generated below</figcaption></figure>
+
+<h3>what lives there</h3>
+<p>Some masks hang dormant on the walls with the portraits and wake when you come close, peeling off to join the fight. Candle walkers totter after you and drip wax that slows you. A few shots put the flame out, and then they stand as props to be broken. A smaller candle runs faster and trails yellow wax. Ghost-fire skulls weave after you, and one passing a snuffed candle lights it again. After a hit a skull backs off and circles before it dives in again.</p>
+<figure><img src="wicklets.png" alt="three small candle creatures; the hand-drawn one on the left was kept"><figcaption>small candle drafts; the left one stayed</figcaption></figure>
+<p>The toy cupboard's dolls are monsters from behind. Each has a toothed maw down her back and three eyes in her hair, and only shots to the back hurt her. She charges in straight lines, runs past if you step aside and turns when she meets a wall. The jack-in-the-boxes sit shut like toys, then spring up as you pass, fire a ring and wind down again. They can only be hurt while they're up.</p>
+<figure><img src="doll-back.png" alt="a porcelain doll from the front and, from behind, a monster with a toothed maw"><figcaption>front and back</figcaption></figure>
+<figure><img src="crypt-doll.gif" alt="a doll charging past the player and being shot in the back"><figcaption>dodge, then shoot her back</figcaption></figure>
+<figure><img src="jack-back.png" alt="a jack-in-the-box from the front and the back"><figcaption></figcaption></figure>
+<p>Creatures that have seen you follow you through doorways now, though they only shoot once they're in your room. Getting hit was too vague, with distances measured centre to centre. Now contact counts from the edges of the bodies, and a hit shoves you back, holds the world still for a beat and leaves you blinking, safe for a second or so.</p>
+
+<h3>the witch</h3>
+<p>The player is a witch, built from one shared body and parts that swap: hat, hair, top, skirt, stockings and boots, cape, and whatever she holds. Three looks are drawn so far, each from the library. The jester carries a bauble staff under a belled hat. The gothic one wears a wide brim and holds a small wand. The candy one has her hair in buns and waves a star. Any part goes with any other.</p>
+<figure><img src="witch-looks.png" alt="a jester witch with a staff, a gothic witch in a pointed hat and a pink-haired candy girl with a star wand, each seen from the front and the back"><figcaption>jester, gothic, candy; front and back</figcaption></figure>
+<p>Every part is drawn from the front and from behind. In 3D the front picture bulges forward and the back picture bulges backward, so her hair and cape are there when she walks away from you. Her body is cut at the joints into head, hat, torso, skirt, two arms, a hand and two legs. Nothing is keyframed. Her arms and legs swing against each other at the pace she moves, her hips bob and squash on each step, she leans into turns, and her head and hat trail behind on springs. The first version was bald and stiff, and her shots came out of her middle. Now the wand arm comes up to point when she fires and the shot leaves the tip.</p>
+<figure><img src="witch-walk.gif" alt="the three looks walking and casting in the crypt"><figcaption></figcaption></figure>
+
+<h3>in a browser</h3>
+<p>The game now runs in a web page. A browser gets Godot's lighter renderer, and the build doesn't pack the raw pictures, so the sprites are read back out of the imported textures instead. Meshes are built once and kept, so going down a floor doesn't rebuild every candle. In a browser the shadows, the smoothing and the small lights inside props are switched off, and the glow carries the candles on its own. Shadows were the cost: on the lighter renderer, dropping them took it from 30 frames a second to about 105.</p>
+
+<h3>between floors</h3>
+<p>Building a floor used to freeze the last frame of the old one. Now a toy-theatre curtain closes over it. A playbill drops in on two cords with the next floor's number and name, and under them the floor's creatures stand in a row on a strip of stage, unnamed. The new floor is built while the bill hangs there, and then the bill flies up and the curtains part. All of it is drawn in code on a coarse pixel grid. Each floor has its own velvet: magenta for the crypt, acid green for the hatchery and candy stripes for the sweet shop.</p>
+<figure><img src="playbill.jpg" alt="magenta velvet curtains with a gold fringe, and a cream playbill reading floor 1, the crypt, with seven little creatures standing along its foot"><figcaption></figcaption></figure>
+<figure><img src="curtain.gif" alt="the curtains closing over the crypt, the playbill dropping and lifting, and the curtains opening again"><figcaption></figcaption></figure>
+<p>Walls also thin out when a creature is behind them now, the same way they do for the witch, but only in rooms you've already seen. Masks still asleep on the walls, shut boxes and snuffed candles don't count, so they can still pass for furniture.</p>
+
+<h3>by hand, a little</h3>
+<p>Every room used to be a tetromino of five-metre cells with props rolled into the corners, which is why the floors felt generated. Underneath the cells there is now a grid four times finer, so walls, doors and floors can be laid a metre and a quarter at a time. The rooms you knew stay as they were. Alongside them come side chapels of one or two cells, halls up to three cells square, narrow corridors that join two rooms end to end, and shallow niches let into outer walls, each holding a single piece.</p>
+<figure><img src="shapes.jpg" alt="three crypt floors seen from above, with narrow corridors, small chapels and niches along the outer walls"><figcaption></figcaption></figure>
+<figure><img src="corridor.jpg" alt="a narrow corridor with a curtain on its back wall running between two rooms"><figcaption></figcaption></figure>
+<p>The first room is drawn by hand in a small text file, one character to a square. It's a crossing with four piers round the middle, the same on every floor, with no creatures in it. Under the plan sit a few layouts of slots, each marking a centrepiece, a piece against a wall or a loose piece by a pier. Each run picks a layout and fills it from the floor's own pieces, and slots that mirror each other get the same piece, so the room stays symmetrical while its contents change.</p>
+<figure><img src="start-layouts.jpg" alt="the same cross-shaped crypt room three times, furnished differently each time"><figcaption></figcaption></figure>
+<p>The other rooms are dressed by rules now, the kind a set dresser might keep to. Nothing stands on a runner. A centrepiece closes the view at the end of a dead-end arm, or stands in a crossing. Some doorways get a matching pair, one either side. Each straight run of wall takes a single kind of piece, spaced evenly and mirrored about its middle, and the inner corners hold small clusters. The creatures start on points spread across the open floor, never right inside a doorway.</p>
+<figure><img src="dressed-rooms.jpg" alt="four rooms from the three floors, with pieces in even rows along their walls and clear runners down the middle"><figcaption></figcaption></figure>
+
+<h3>out of the room</h3>
+<p>Small rooms were hard to fight in, with nowhere to back off to, so creatures that have seen you now come after you when you leave. They hurry while you're in another room, and they fire through a doorway only once they can see you. The dolls follow too. They used to get stuck in doorways and against furniture. Now creatures placed tight against a wall step out onto open floor, routes go round solid props, and anything that bumps into something steers round it. A doll also now rests a little longer after a charge, and shots to her side count as well as shots to her back. Jack-in-the-boxes keep their ring for when you're close, and from across the room they pop up for one long aimed shot. Your own shots fizzle out in a puff of fog if they fly into a room you haven't reached yet.</p>
+<p>The floors run the other way now. You start in the sweet shop, go down through the hatchery and the optician's, and finish in the crypt.</p>
+<figure><img src="sweetshop-bill.jpg" alt="pink and cream striped curtains with a playbill reading floor 1, the sweet shop, above a pink creature, a lollipop with an eye and a round green eye on legs"><figcaption></figcaption></figure>
+
+<h3>props that didn't read</h3>
+<p>Going over the candy floors piece by piece, twelve of the props were good ideas that didn't read at play size. A nest the same green as its eggs, a trough that was a dark box, a cut-away eye that looked like a disc, a specimen jar whose one eye had been turned into a ring all the way round. Each was drawn again by hand and drafted through the generator, then built in 3D side by side. Ten of the hand versions went in. For the specimen jar and the candyfloss, the generated drafts won.</p>
+<figure><img src="redraw-compare.jpg" alt="twelve props from nests and troughs to a sundae and a cash register, each shown as the old version, a hand redraw and a generated draft"><figcaption>before, by hand, generated</figcaption></figure>
+
+<h3>the way down</h3>
+<p>When the last creature on a floor dies, a portal opens in the room where it fell, on clear floor near the spot and never right on top of you. It's a round disc after one of Dani's references: eight ragged dark arms winding in toward a bright four-pointed star, smaller stars twinkling round it, the rim falling off to black, all on a coarse pixel grid. It takes the colours of the floor it leads to, so the sweet shop's portal is green for the hatchery and the crypt's is pink for the sweet shop. Walk into it and the witch is pulled in, spinning and shrinking, and the curtain closes.</p>
+<figure><img src="portal.jpg" alt="a round pixel portal, lilac with dark spiral arms and a bright star at its heart, standing in a crypt room"><figcaption></figcaption></figure>
+<p>The finer grid had made each floor take fifteen seconds or more to build, long enough for Windows to call the game frozen. Floors, walls and mouldings are now built straight from their visible faces, with touching faces of one colour merged and each theme's patterns worked out once. A floor takes two or three seconds now, and the build hands back a frame every few hundredths of a second, so the curtain keeps moving while it happens. Losing your last heart used to leave the witch standing still forever. Now she topples over and the run starts again from the first floor. The jack-in-the-boxes went from purple and black to red and black.</p>
+<figure><img src="jack-red.jpg" alt="a jack-in-the-box with a red and black grid pattern, popped up and shut"><figcaption></figcaption></figure>
+
+<h3>wands, and a run</h3>
+<p>The thing in the witch's hand now decides how she shoots. The jester's bauble staff throws slow, heavy orbs that glance off walls twice. The gothic wand fires fast needles that go through two creatures and into a third. The candy wand throws three stars at once in a fan. A run starts in the first room with three plinths across the crossing, a wand floating over each on a cushion of its own colour. Walk into one and it flies to her hand while the other two go up in smoke. Until then the doorways out are solid fog. There are six floors now, two for each theme, and the second of each pair is half as big again, with more corridors, halls and niches.</p>
+<figure><img src="plinths.jpg" alt="a plinth with a glowing pink top and a wand floating over it, in the pastel start room of the sweet shop"><figcaption></figcaption></figure>
+<figure><img src="wands.jpg" alt="the witch firing three ways: gold orbs, violet needles and pink stars"><figcaption>orbs, needles, stars</figcaption></figure>
+
+<h3>more of her</h3>
+<p>Every style of the witch is a small file now, read by the game on its own: its name, where it sits in the outfit menu, and its wand, down to what the shot looks like. Adding a style means drawing its parts and writing that file. Six themed styles came next, drafted through the generator so Dani could pick a look and then drawn by hand on the shared body, front and back. There are two keepers for the hatchery, one in goggles with an egg staff and one in an eggshell hood with a slime dropper. For the optician's there's a monocle and a lorgnette, and a nurse with a glass-eye wand. The crypt has a mourner in a veil under a crown of candles, and the sweet shop a confectioner in a cupcake hat, armed with a piping bag. Every part mixes with every other, old or new.</p>
+<figure><img src="witch-styles.png" alt="six versions of the witch, front and back: two in green hatchery dress, two in lavender optician's dress, one in black mourning with candles on her head, one with a cupcake hat"><figcaption>keeper, brooder, optician, oculist, mourner, confectioner</figcaption></figure>
+<figure><img src="witch-styles-3d.jpg" alt="the six new styles built in 3D in the game, each firing her wand"><figcaption></figcaption></figure>
+
+  </div>
+  
+
+  
+
+  
+
+  
+  <section class="made-with" aria-label="made with">
+    <span class="mw-label">made with</span>
+    <ul><li title="godot: 4.7.1"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5598.683c-1.096.244-2.1812.5831-3.1983 1.0951.023.8981.081 1.7582.199 2.6323-.395.253-.81.47-1.178.766-.375.288-.7581.564-1.0971.9011-.6781-.448-1.3962-.869-2.1352-1.2411C1.3532 5.6934.608 6.6186 0 7.6546c.458.7411.936 1.4352 1.4521 2.0942h.014v6.3565c.012 0 .023 0 .035.003l3.8963.376c.204.02.364.184.378.3891l.12 1.7201 3.3994.242.234-1.587c.03-.206.207-.358.415-.358h4.1114c.208 0 .385.152.415.358l.234 1.587 3.3993-.242.12-1.72a.4196.4196 0 01.378-.3891l3.8954-.376c.012 0 .023-.003.035-.003v-.5071h.002V9.7498h.014c.516-.659.994-1.3531 1.4521-2.0942-.608-1.036-1.3541-1.9611-2.1512-2.8192-.739.372-1.4571.793-2.1352 1.2411-.339-.337-.721-.613-1.096-.901-.369-.296-.7841-.5131-1.1781-.7661.117-.8741.175-1.7342.199-2.6323-1.0171-.512-2.1012-.851-3.1983-1.095-.438.736-.838 1.533-1.1871 2.3121-.414-.069-.829-.094-1.2461-.099h-.016c-.417.005-.832.03-1.2461.099-.349-.779-.749-1.576-1.1881-2.3121l.001-.001zM6.4765 9.9889c1.2971 0 2.3492 1.0511 2.3492 2.3482s-1.052 2.3482-2.3492 2.3482c-1.296 0-2.3482-1.051-2.3482-2.3482 0-1.297 1.0511-2.3482 2.3482-2.3482zm11.049 0c1.296 0 2.3482 1.0511 2.3482 2.3482s-1.0511 2.3482-2.3482 2.3482-2.3492-1.051-2.3492-2.3482c0-1.297 1.051-2.3482 2.3492-2.3482zm-10.824.9301c-.861 0-1.559.698-1.559 1.5591s.698 1.5582 1.559 1.5582c.8611 0 1.5592-.698 1.5592-1.5582 0-.86-.697-1.559-1.5591-1.559zm10.598 0c-.8611 0-1.5582.698-1.5582 1.5591s.697 1.5582 1.5581 1.5582c.8611 0 1.5592-.698 1.5592-1.5582 0-.86-.697-1.559-1.5592-1.559zm-5.2985.453c.417 0 .757.308.757.6871v2.1622c0 .379-.339.687-.757.687s-.756-.308-.756-.687V12.059c0-.379.339-.687.756-.687zM1.4601 16.9464c.002.377.006.789.006.871 0 3.7014 4.6944 5.4795 10.5269 5.5005h.014c5.8325-.02 10.5259-1.7991 10.5259-5.5004 0-.084.005-.495.007-.871l-3.5023.338-.121 1.729a.421.421 0 01-.389.3901l-4.1814.296a.4203.4203 0 01-.415-.358l-.238-1.6141h-3.3863l-.238 1.6141a.4192.4192 0 01-.4451.357l-4.1513-.296c-.208-.015-.375-.181-.389-.389l-.12-1.7292-3.5044-.337z"/></svg><span>godot</span></li><li title="python"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></svg><span>python</span></li><li title="claude: opus 5.5"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span>claude</span></li></ul>
+  </section>
+  
+
+  
+  <p class="credits">sprites drafted with retro diffusion<br>models stored in kenney shape&#39;s .kenshape format</p>
+  
+</article>
+<script src="../../static/js/lightbox.js" defer></script>
+
+</main>
+<footer class="footer">
+  <p><a href="../">back to experiments</a></p>
+  <p><a href="../../about/">about</a> · <a href="../../gazetteer/">gazetteer</a></p>
+</footer>
+<script type="module" src="../../static/js/bouffont-title.js"></script>
+</body>
+</html>

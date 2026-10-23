@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>drawings · ren's emporium</title>
+<meta name="description" content="">
+
+<link rel="icon" href="../static/img/icon.png">
+<link rel="stylesheet" href="../static/css/site.css?v=a52abf39">
+</head>
+<body class="">
+
+<button class="ai-toggle" id="ai-toggle" type="button" aria-pressed="false">ai assisted: <span>shown</span></button>
+<script>
+(function () {
+  const btn = document.getElementById("ai-toggle"), root = document.documentElement;
+  function paint() { const hid = root.classList.contains("hide-ai"); btn.querySelector("span").textContent = hid ? "hidden" : "shown"; btn.setAttribute("aria-pressed", hid); }
+  btn.addEventListener("click", function () {
+    root.classList.toggle("hide-ai");
+    try { localStorage.setItem("ren-hide-ai", root.classList.contains("hide-ai") ? "1" : "0"); } catch (e) {}
+    paint();
+  });
+  paint();
+})();
+</script>
+
+
+<a class="back" href="../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<header class="room-head">
+  <h1 data-bouffont>drawings</h1>
+  
+  
+</header>
+
+
+
+<section class="year">
+<h2 class="year-head">2026</h2>
+<div class="leads timeline">
+
+  <a class="card" href="characters-2026/" data-ai="1">
+    <div class="thumb"><img src="characters-2026/thumbs/2026-33.webp" alt=""></div>
+    <div class="meta">
+      <h2>characters</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="art-2026/">
+    <div class="thumb"><img src="art-2026/thumbs/2026-07.webp" alt=""></div>
+    <div class="meta">
+      <h2>2026</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="shapes-journey/">
+    <div class="thumb"><img src="shapes-journey/shape-01.jpg" alt=""></div>
+    <div class="meta">
+      <h2>shapes journey</h2>
+      <div class="when">2026</div>
+      <p>this is a gallery of shape from my exploration of sacred geometry.</p>
+    </div>
+  </a>
+
+  <a class="card" href="choodle/">
+    <div class="thumb"><img src="choodle/choodle.png" alt=""></div>
+    <div class="meta">
+      <h2>choodle</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="logogram/">
+    <div class="thumb"><img src="logogram/logogram.png" alt=""></div>
+    <div class="meta">
+      <h2>logogram</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="easter-art-2026/">
+    <div class="thumb"><img src="easter-art-2026/easter-2026-01.jpg" alt=""></div>
+    <div class="meta">
+      <h2>easter art 2026</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2025</h2>
+<div class="leads timeline">
+
+  <a class="card" href="art-2025/">
+    <div class="thumb"><img src="art-2025/thumbs/2025-01.webp" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>2025</h2>
+      <div class="when">2025</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="misc/">
+    <div class="thumb"><img src="misc/misc-01.gif" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>misc</h2>
+      <div class="when"></div>
+      <p>misc stuff</p>
+    </div>
+  </a>
+
+  <a class="card" href="easter-art-2025/">
+    <div class="thumb"><img src="easter-art-2025/easter-2025-01.png" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>easter art 2025</h2>
+      <div class="when">2025</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2018</h2>
+<div class="leads timeline">
+
+  <a class="card" href="archive-2015-18/">
+    <div class="thumb"><img src="archive-2015-18/thumbs/archive-06.webp" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>archive 2015–18</h2>
+      <div class="when">2015–18</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2017</h2>
+<div class="leads timeline">
+
+  <a class="card" href="walk-cycles/">
+    <div class="thumb"><img src="walk-cycles/walk-01.gif" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>walk cycles</h2>
+      <div class="when">2017</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="tasario-map/">
+    <div class="thumb"><img src="tasario-map/tasario.png" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>tasario map</h2>
+      <div class="when">2017</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+
+
+</main>
+<footer class="footer">
+  
+  <p><a href="../about/">about</a> · <a href="../gazetteer/">gazetteer</a></p>
+</footer>
+<script type="module" src="../static/js/bouffont-title.js"></script>
+</body>
+</html>
