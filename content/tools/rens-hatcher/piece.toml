@@ -1,10 +1,11 @@
 title = "ren's hatcher"
 year = "2026"
-updated = "2026-10-22"
+updated = "2026-10-23"
 made_with = ["javascript", "html"]
 lead = true
 order = 3
-draft = true
 blurb = ""
+thumb = "hatcher.jpg"
+hero = { type = "image", src = "hatcher.jpg", alt = "the hatcher with a sprite picked from the grid" }
 links = [ { label = "open ren's hatcher", href = "play/", big = true } ]
 ai = [ { tool = "claude", models = ["opus 5.5"] } ]

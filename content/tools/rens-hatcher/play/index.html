@@ -1355,18 +1355,54 @@ function drawSlot(slot, side, seed, c, pal, ctx = {}){
     if (extra === 'braids') both(s => { const bx = mx(s, 5.5); for (let y = CHIN; y < WAIST + 3; y++) p.put(bx + ((y % 2) ? 0 : s), y, (y % 3) ? c.hair : c.hair_d); p.put(bx, WAIST + 3, c.band); });
     if (extra === 'drills') both(s => { for (let y = HEAD_TOP + 4; y < WAIST; y++){ const bx = mx(s, 6.5) + ((y % 4) < 2 ? 0 : s); p.put(bx, y, c.hair); p.put(bx + s, y, (y % 4) === 1 ? c.hairLight : c.hair_d); } });
     if (extra === 'ahoge') for (let k = 0; k < 4; k++) p.put(X + (k > 1 ? 1 : 0) + (k > 2 ? 1 : 0), HEAD_TOP - 3 - k, c.hair);
-    if (extra === 'streak'){ const sx = Math.trunc(X + pick([-3, 2])); for (let y = HEAD_TOP - 2; y <= length; y++) if (p.px[y * WW + sx] >= 0) p.put(sx, y, c.alt); }
+    if (extra === 'streak'){ const sx = Math.trunc(X + pick([-3, 2])); for (let y = HEAD_TOP - 2; y <= length; y++) if (p.px[y * WW + sx] >= 0 && !(y >= HEAD_TOP + 5 && y <= CHIN && Math.abs(sx - X) < 4.6)) p.put(sx, y, c.alt); }   // never over the face
     if (extra === 'spiky') for (let x = Math.trunc(X - 5); x <= X + 5; x += 2) p.put(x, HEAD_TOP - 3, c.hair);
-    // on the face, so it moves with the head: glasses, a monocle, a patch, a blindfold, a mask, freckles
-    const face = pick(['none', 'none', 'none', 'none', 'none', 'none', 'none', 'glasses', 'glasses', 'monocle', 'patch', 'blindfold', 'mask', 'freckles', 'freckles']);
-    if (face === 'patch') p.rowC(17, 5, c.shade);              // the patch's strap, round the back of the head too
+    // on the face, so it moves with the head. The eyes are 2 x 2 at x 11-12 and 15-16, rows 19-20;
+    // everything here is fitted round them: rounded lenses, a one-pixel bridge, arms to the edge of the head
+    const face = pick(['none', 'none', 'none', 'none', 'none', 'none', 'none', 'glasses', 'glasses', 'glasses', 'monocle', 'patch', 'blindfold', 'mask', 'freckles', 'freckles']);
+    info.face = face;
+    const EYES = [11, 15];
+    const lens = (ex, col, inner = true) => {            // a rounded ring round one eye: no corners
+      p.put(ex, 18, col); p.put(ex + 1, 18, col); p.put(ex, 21, col); p.put(ex + 1, 21, col);
+      const outer = ex === EYES[0] ? ex - 1 : ex + 2, inside = ex === EYES[0] ? ex + 2 : ex - 1;
+      p.put(outer, 19, col); p.put(outer, 20, col);
+      if (inner) p.put(inside, 19, col);                  // the inner sides meet as the bridge
+    };
     if (face === 'blindfold') for (const y of [19, 20]) p.rowC(y, 5.2, c.band);   // one band over the eyes and round the back
+    if (face === 'patch' && !front) p.rowC(16, 5, c.shade);                         // the strap round the back of the head
     if (front){
-      const eyes = [X - 2.5, X + 1.5], ring = (ex, col) => { for (let y = 18; y <= 21; y++) for (let x = ex - 1; x <= ex + 2; x++) if (y === 18 || y === 21 || x === ex - 1 || x === ex + 2) p.put(x, y, col); };
-      if (face === 'glasses'){ const g = pick(['#f2b23a', INK, c.alt]); ring(eyes[0], g); ring(eyes[1], g); p.put(X, 19, g); }
-      if (face === 'monocle'){ ring(eyes[1], '#f2b23a'); for (let y = 22; y < SHOULDER + 2; y++) p.put(eyes[1] + 2 + (y > CHIN ? 1 : 0), y, '#f2b23a'); }
-      if (face === 'patch') for (let y = 18; y <= 21; y++) for (let x = eyes[0] - 1; x <= eyes[0] + 2; x++) p.put(x, y, INK);
-      if (face === 'mask') for (let y = 18; y <= 21; y++) for (let x = Math.trunc(X - 4.5); x <= X + 4.5; x++){ const inEye = eyes.some(ex => x >= ex && x <= ex + 1 && (y === 19 || y === 20)); if (!inEye) p.put(x, y, c.alt); }
+      if (face === 'glasses'){
+        // a frame colour that stands off her hair and skin, picked at random among those that do
+        const far = col2 => Math.min(...[c.hair, SKIN].map(o => unhex(col2).reduce((t, v, i) => t + Math.abs(v - unhex(o)[i]), 0)));
+        const frames = ['#f2b23a', INK, c.alt, '#b8bcc8', c.band].filter(f => far(f) > 150);
+        const frame = frames.length ? pick(frames) : INK, kind = pick(['round', 'round', 'round', 'shades']);
+        info.glasses = kind;
+        if (kind === 'shades'){
+          // dark lenses filling the whole rounded lens, one glint each
+          const tint = '#2a2236';
+          for (const ex of EYES){
+            for (const [dx, dy] of [[0, 18], [1, 18], [-1, 19], [0, 19], [1, 19], [2, 19], [-1, 20], [0, 20], [1, 20], [2, 20], [0, 21], [1, 21]]) p.put(ex + dx, dy, tint);
+            p.put(ex, 19, '#c8f0ff');
+          }
+          p.put(13, 19, tint); p.put(14, 19, tint);
+        } else for (const ex of EYES) lens(ex, frame);
+        p.put(9, 19, frame); p.put(18, 19, frame);        // the arms, to the edge of the head
+      }
+      if (face === 'monocle'){
+        lens(EYES[1], '#f2b23a', false); p.put(EYES[1] - 1, 19, '#f2b23a'); p.put(EYES[1] - 1, 20, '#f2b23a');
+        for (let y = 22; y <= SHOULDER + 1; y++) p.put(18 + (y > CHIN ? 1 : 0), y, '#f2b23a');   // the chain
+      }
+      if (face === 'patch'){
+        const ex = EYES[0];
+        for (const [dx, dy] of [[0, 18], [1, 18], [-1, 19], [0, 19], [1, 19], [2, 19], [-1, 20], [0, 20], [1, 20], [2, 20], [0, 21], [1, 21]]) p.put(ex + dx, dy, INK);
+        p.put(9, 19, c.shade); for (let k = 0; k < 4; k++) p.put(13 + k, 17 - k, c.shade);   // the strap, up over the brow
+      }
+      if (face === 'mask'){
+        const dist = (a2, b2) => unhex(a2).reduce((t, v, i) => t + Math.abs(v - unhex(b2)[i]), 0);
+        const col = [INK, c.alt, c.band, c.main].sort((a2, b2) => Math.min(dist(b2, c.hair), dist(b2, SKIN)) - Math.min(dist(a2, c.hair), dist(a2, SKIN)))[0];
+        for (const ex of EYES) lens(ex, col);
+        for (const [x, y] of [[9, 18], [18, 18], [10, 21], [17, 21]]) p.put(x, y, col);   // the wings at the corners
+      }
       if (face === 'freckles') for (const [dx, dy] of [[-4, 21], [-3, 22], [3, 21], [4, 22]]) p.put(X + dx, dy, '#c98a6a');
     }
   } else if (slot === 'top'){
@@ -3175,7 +3211,7 @@ $('#help').innerHTML = `
   <h3>Creatures</h3>
   <p>A front picture domed forward and a back picture domed backward, built the way the jellies and eyeballs are. The back can be plain, spotted, striped down the spine, or the same as the front. Edit opens both, as Front and Back.</p>
   <h3>Witch</h3>
-  <p>Whole outfits on the witch's own body. Hats: pointed (drooping, patched, with buckles, goggles, feathers, stars, moons), crowns, bows, horns, hoods, berets, top hats, bonnets, caps, antlers, halos, flower crowns, mushrooms, ears, jester points, veils. Hair in seven lengths with buns, tails, side tails, braids, ringlets, a stray strand, a streak or spikes, and sometimes glasses, a monocle, a patch, a blindfold, a mask or freckles. Bodices in a dozen patterns with puffed, short, long, bell or no sleeves and a collar; skirts, long dresses, tutus, tiers, trousers or shorts; stockings and shoes; capes, cloaks, wings (feathered, bat, butterfly), backpacks, tails, baskets; and fourteen things to hold. Each outfit takes a colour scheme: harmony, one colour, contrast, pastel, dark or two-tone. They are drawn with the same shapes and anchor rows as the dungeon's outfit scripts, each slot front and back. The wand's shot follows what she holds: staffs fire orbs, short wands and droppers needles, star wands stars. Outfit saves a zip of the slot pictures and the set JSON. More like this changes a slot or two and keeps the rest.</p>
+  <p>Whole outfits on the witch's own body. Hats: pointed (drooping, patched, with buckles, goggles, feathers, stars, moons), crowns, bows, horns, hoods, berets, top hats, bonnets, caps, antlers, halos, flower crowns, mushrooms, ears, jester points, veils. Hair in seven lengths with buns, tails, side tails, braids, ringlets, a stray strand, a streak or spikes, and sometimes something on the face: round, half-rim or dark glasses, a monocle, an eyepatch, a blindfold, a domino mask or freckles. Bodices in a dozen patterns with puffed, short, long, bell or no sleeves and a collar; skirts, long dresses, tutus, tiers, trousers or shorts; stockings and shoes; capes, cloaks, wings (feathered, bat, butterfly), backpacks, tails, baskets; and fourteen things to hold. Each outfit takes a colour scheme: harmony, one colour, contrast, pastel, dark or two-tone. They are drawn with the same shapes and anchor rows as the dungeon's outfit scripts, each slot front and back. The wand's shot follows what she holds: staffs fire orbs, short wands and droppers needles, star wands stars. Outfit saves a zip of the slot pictures and the set JSON. More like this changes a slot or two and keeps the rest.</p>
   <h3>Tiles</h3>
   <p>A room theme: one cell of wall face and one cell of floor, at the dungeon's 64 by 72. The wall stacks a plinth, a wainscot (harlequin, stripes, honeycomb, clinical tiles or panels), a rail, an upper wall (bricks, half-drop wallpaper, stripes or stone), a cornice and corner pilasters. The floor is flags, checks, slime tiles, boards or small tiles, with the runner crossing it. Tiles .zip saves the wall, floor and runner as pictures with the colours and parts in theme.json. More like this swaps a part or two.</p>
   <h3>Voxel field</h3>
