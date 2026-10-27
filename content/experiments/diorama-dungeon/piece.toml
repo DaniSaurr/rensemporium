@@ -1,7 +1,7 @@
 title = "diorama dungeon"
 year = "2026"
-updated = "2026-10-18"
-made_with = ["godot 4.7.1", "python"]
+updated = "2026-10-27"
+made_with = ["godot 4.7.1", "python", "javascript"]
 lead = true
 order = 1
 blurb = ""
