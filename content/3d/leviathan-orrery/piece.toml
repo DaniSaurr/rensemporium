@@ -13,7 +13,7 @@ gallery = [
   { src = "leviathan-far.jpg", group = "leviathan" },
   { src = "leviathan-gate.jpg", group = "leviathan" },
   { src = "leviathan-end.jpg", group = "leviathan" },
-  { src = "orrery.mp4", group = "orrery" },
+  { src = "orrery.mp4", group = "orrery", full = true },
   { src = "orrery-gears.jpg", group = "orrery" },
   { src = "orrery-sun.jpg", group = "orrery" },
   { src = "orrery-planets.jpg", group = "orrery" },

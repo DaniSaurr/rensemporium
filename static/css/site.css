@@ -218,6 +218,8 @@ img, video { max-width: 100%; height: auto; display: block; }
 
 .hero { margin: 0 auto; border-radius: 10px; overflow: hidden; background: #1d1f33; box-shadow: 0 6px 24px rgba(47, 53, 82, 0.18); }
 .hero img, .hero video, .hero iframe { width: 100%; display: block; border: 0; }
+.hero-extra { margin-top: 20px; }
+.hero img { max-height: 80vh; object-fit: contain; }  /* portrait heroes stay on screen */  /* a gallery item shown at full width, like the hero */
 .hero iframe { aspect-ratio: 16 / 10; }
 .hero iframe.yt, .strip iframe.yt { aspect-ratio: 16 / 9; }
 .strip iframe.yt { width: 100%; border: 0; border-radius: 8px; background: #1d1f33; }
@@ -263,7 +265,7 @@ img, video { max-width: 100%; height: auto; display: block; }
 .strip figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 /* natural: images keep their own shape at a shared row height, for portrait renders */
 .strip.natural { display: flex; flex-wrap: wrap; justify-content: center; }
-.strip.natural img { width: auto; height: 340px; max-width: 100%; aspect-ratio: auto; object-fit: contain; background: none; }
+.strip.natural img { width: auto; height: 280px; max-width: 100%; aspect-ratio: auto; object-fit: contain; background: none; }
 @media (max-width: 700px) { .strip.natural img { height: 200px; } }
 
 .made-with {

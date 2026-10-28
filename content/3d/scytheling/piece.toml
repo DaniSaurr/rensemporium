@@ -1,0 +1,17 @@
+title = "scytheling"
+year = "2026"
+updated = "2026-10-27"
+made_with = ["blender 5.1", "python"]
+lead = false
+order = 4
+natural = true
+blurb = ""
+caption = "a biomechanical creature built from lofted parts, from the same project as the painted lattice."
+thumb = "scytheling-3q.jpg"
+hero = { type = "image", src = "scytheling-3q.jpg", alt = "a glossy purple biomechanical creature on four legs with a curled scythe tail" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "scytheling-front.jpg" },
+  { src = "scytheling-head.jpg" },
+  { src = "scytheling-arm.jpg" },
+]

@@ -61,7 +61,10 @@
 
   {% for grp in p.gallery_groups %}
   {% if grp.title %}<h3 class="group">{{ grp.title }}</h3>{% endif %}
-  {{ strip(grp.pics) }}
+  {% for g in grp.pics if g.full %}
+  <div class="hero hero-extra">{% if g.src.endswith((".mp4", ".webm")) %}<video src="{{ g.src }}" autoplay muted loop playsinline></video>{% else %}<img src="{{ g.src }}" alt="{{ g.caption or '' }}">{% endif %}</div>
+  {% endfor %}
+  {{ strip(grp.pics | rejectattr("full") | list) }}
   {% endfor %}
 
   {% if p.dev %}
