@@ -14,6 +14,7 @@ gallery = [
   { src = "scytheling-stalk.jpg", group = "poses" },
   { src = "scytheling-strike.jpg", group = "poses" },
   { src = "scytheling-glance.jpg", group = "poses" },
+  { src = "scytheling-v3-head.jpg", group = "poses" },
   { src = "scytheling-3q.jpg", group = "rest" },
   { src = "scytheling-front.jpg", group = "rest" },
   { src = "scytheling-head.jpg", group = "rest" },

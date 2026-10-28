@@ -1,0 +1,22 @@
+<h2>where it came from</h2>
+<p>The Scytheling started as a test for the painted lattice idea. A model sheet and a side view were laid behind the scene as reference planes, and the creature was built to match them. Image generators and an image-to-3D model were tried first for the parts. The results were soft and lumpy, so they were dropped and every part was built from code instead.</p>
+
+<h2>built from parts</h2>
+<p>Each armour plate is a loft, a cross-section swept along a path, with a profile that swells and tapers along its length. Plates get seams, bolts, a dark underside and a little wear on the edges. Joints are stacked cylinders and collars, the arms and legs carry hydraulic pistons, and the tail is a chain of capsules ending in a curved blade.</p>
+<p>Under all of it is a rig. The claws and feet have IK, so moving a target moves the whole limb. The spine, neck and tail are chains of bones, and each part is parented to the bone it sits on.</p>
+
+<h2>poses</h2>
+<p>Because it's rigged, each pose is a short script that turns the spine and neck, moves the claw targets and bends the tail a few degrees per segment. Stalk, rear, strike and glance are four of those scripts, rendered in Cycles from the same file.</p>
+
+<h2>making it biomechanical</h2>
+<figure><img src="biomech-before-after.jpg" alt="the creature's head before, all clean plates, beside the torso after, with muscle bundles, tendons and ringed joints"><figcaption>before, and after the anatomy pass</figcaption></figure>
+<p>A vision model's critique kept coming back to one point. It read as a robot assembled from parts, and it should look like an organism whose biology happens to be metal. So a second script grows anatomy over the machine without touching the original build:</p>
+<ul>
+<li>muscle bundles that swell in the middle and thin at the ends, some sliding out from under the plates</li>
+<li>pale tendons that converge at the wrists and split three ways towards the fingers</li>
+<li>uneven ribs, roomy at the top and crowded near the belly, flattened instead of round, with dark membrane stretched across some gaps</li>
+<li>ringed joint capsules at the shoulders, elbows, wrists and knees</li>
+<li>a tendon sheaf for a neck, sensors sunk into ridged sockets, curled feelers with small branches, and palps under the mandibles</li>
+<li>a restrained noise in the purple paint so it reads as chitin rather than a car panel</li>
+</ul>
+<p>Everything new is bound to the same rig, so the poses still work on the new version.</p>
