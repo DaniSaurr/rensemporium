@@ -20,3 +20,9 @@ gallery = [
   { src = "scytheling-head.jpg", group = "rest" },
   { src = "scytheling-arm.jpg", group = "rest" },
 ]
+dev = [
+  { src = "dev-first-build.jpg", caption = "first build" },
+  { src = "dev-silhouettes.jpg", caption = "silhouette check" },
+  { src = "dev-pose-test.jpg", caption = "first pose test" },
+  { src = "dev-before-anatomy.jpg", caption = "before the anatomy pass" },
+]
