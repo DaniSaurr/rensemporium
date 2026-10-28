@@ -15,7 +15,7 @@ const gripEntry = key => { const [section, name] = key.split(':'); return { sect
 function currentGrip(key){
   const { section, name } = gripEntry(key);
   // an outfit of the game's with no grip yet starts from the way it is held today
-  return section === 'kinds' ? gripOfKind(name) : (gripOfStyle(name) || copyGrip(G.legacy[key]) || { grip: [0, 0, 0], rest: [0, 0, 0], aim: [180, 0, 0], plumb: false });
+  return section === 'kinds' ? gripOfKind(name) : (gripOfStyle(name) || copyGrip(G.legacy[key] || { aim: [180, 0, 0] }));
 }
 function setGrip(key, g){ const { section, name } = gripEntry(key); S.grips[section][name] = copyGrip(g); G.dirty = true; renderGripNav(); }
 // the witch who holds things here: a plain one for the items made here, the outfit itself for the game's own
