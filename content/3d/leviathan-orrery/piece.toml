@@ -1,0 +1,20 @@
+title = "leviathan and orrery"
+year = "2026"
+updated = "2026-10-27"
+made_with = ["blender 5.1", "python"]
+lead = false
+order = 3
+blurb = ""
+caption = "two short camera flights, both generated from scripts. the leviathan is a flight through the ribs of something huge lying in the dunes. the orrery is a brass solar system with every gear meshing."
+thumb = "leviathan-ribs.jpg"
+hero = { type = "video", src = "leviathan.mp4", poster = "leviathan-ribs.jpg" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "leviathan-far.jpg", group = "leviathan" },
+  { src = "leviathan-gate.jpg", group = "leviathan" },
+  { src = "leviathan-end.jpg", group = "leviathan" },
+  { src = "orrery.mp4", group = "orrery" },
+  { src = "orrery-gears.jpg", group = "orrery" },
+  { src = "orrery-sun.jpg", group = "orrery" },
+  { src = "orrery-planets.jpg", group = "orrery" },
+]

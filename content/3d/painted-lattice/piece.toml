@@ -1,0 +1,22 @@
+title = "painted lattice"
+year = "2026"
+updated = "2026-10-27"
+made_with = ["blender 5.1", "python"]
+lead = true
+order = 2
+blurb = ""
+caption = "it started with a 1998 bryce tutorial where half an object is painted as a greyscale heightmap and mirrored into a solid. the shore scene has a geometry nodes tool that does that mirroring, so any grey png becomes an object. the scytheling is a creature built from lofted parts in the same project folder."
+thumb = "shore-hero.jpg"
+hero = { type = "image", src = "shore-hero.jpg", alt = "a chrome arch and a glowing ammonite on a misty lake at sunset, with a checkerboard causeway" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "shore-ammonite.jpg", group = "shore" },
+  { src = "shore-high.jpg", group = "shore" },
+  { src = "map-ammonite.png", group = "heightmaps", contain = true },
+  { src = "map-arch.png", group = "heightmaps", contain = true },
+  { src = "map-totem.png", group = "heightmaps", contain = true },
+  { src = "scytheling-3q.jpg", group = "scytheling", contain = true },
+  { src = "scytheling-front.jpg", group = "scytheling", contain = true },
+  { src = "scytheling-head.jpg", group = "scytheling", contain = true },
+  { src = "scytheling-arm.jpg", group = "scytheling", contain = true },
+]
