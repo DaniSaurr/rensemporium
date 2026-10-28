@@ -3,6 +3,7 @@ year = "2026"
 updated = "2026-10-27"
 made_with = ["blender 5.1", "python"]
 lead = true
+natural = true
 order = 1
 blurb = ""
 caption = "figures built from python scripts in blender, with no hand sculpting. the low-poly ones are the newest. the earlier ones are smooth and glossy."

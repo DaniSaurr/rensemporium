@@ -2,7 +2,7 @@
 {% block title %}{{ p.title }} · ren's emporium{% endblock %}
 {% block description %}{{ p.blurb }}{% endblock %}
 {% macro strip(items) %}
-  <div class="strip">
+  <div class="strip{% if p.natural %} natural{% endif %}">
     {% for g in items %}
     <figure>{% if g.youtube %}<iframe class="yt" src="https://www.youtube-nocookie.com/embed/{{ g.youtube }}?rel=0" title="{{ g.caption or p.title }}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
       {% elif g.src.endswith((".mp4", ".webm")) %}<video src="{{ g.src }}" muted loop playsinline autoplay preload="metadata"></video>
