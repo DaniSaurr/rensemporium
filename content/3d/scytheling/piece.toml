@@ -6,12 +6,16 @@ lead = false
 order = 4
 natural = true
 blurb = ""
-caption = "a biomechanical creature built from lofted parts, from the same project as the painted lattice."
-thumb = "scytheling-3q.jpg"
-hero = { type = "image", src = "scytheling-3q.jpg", alt = "a glossy purple biomechanical creature on four legs with a curled scythe tail" }
+caption = "a biomechanical creature built from lofted parts and rigged, from the same project as the painted lattice."
+thumb = "scytheling-rear.jpg"
+hero = { type = "image", src = "scytheling-rear.jpg", alt = "a glossy purple biomechanical creature rearing up with its claws raised" }
 ai = [ { tool = "claude", models = ["opus 5.5"] } ]
 gallery = [
-  { src = "scytheling-front.jpg" },
-  { src = "scytheling-head.jpg" },
-  { src = "scytheling-arm.jpg" },
+  { src = "scytheling-stalk.jpg", group = "poses" },
+  { src = "scytheling-strike.jpg", group = "poses" },
+  { src = "scytheling-glance.jpg", group = "poses" },
+  { src = "scytheling-3q.jpg", group = "rest" },
+  { src = "scytheling-front.jpg", group = "rest" },
+  { src = "scytheling-head.jpg", group = "rest" },
+  { src = "scytheling-arm.jpg", group = "rest" },
 ]
