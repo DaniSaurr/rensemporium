@@ -265,8 +265,8 @@ img, video { max-width: 100%; height: auto; display: block; }
 .strip figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 /* natural: images keep their own shape at a shared row height, for portrait renders */
 .strip.natural { display: flex; flex-wrap: wrap; justify-content: center; }
-.strip.natural img { width: auto; height: 280px; max-width: 100%; aspect-ratio: auto; object-fit: contain; background: none; }
-@media (max-width: 700px) { .strip.natural img { height: 200px; } }
+.strip.natural img, .strip.natural video { width: auto; height: 280px; max-width: 100%; aspect-ratio: auto; object-fit: contain; background: none; }
+@media (max-width: 700px) { .strip.natural img, .strip.natural video { height: 200px; } }
 
 .made-with {
   max-width: var(--measure);

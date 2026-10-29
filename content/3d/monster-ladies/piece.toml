@@ -11,9 +11,13 @@ thumb = "mirage-neota.jpg"
 hero = { type = "image", src = "mirage-neota.jpg", alt = "a scorpion belly dancer on peach and an axolotl ballerina on pale blue, both low-poly" }
 ai = [ { tool = "claude", models = ["opus 5.5"] } ]
 gallery = [
-  { src = "mirage-front.jpg", group = "mirage", contain = true },
-  { src = "mirage-back.jpg", group = "mirage", contain = true },
-  { src = "mirage-face.jpg", group = "mirage", contain = true },
+  { src = "mirage-front.jpg", group = "claude blockout", contain = true },
+  { src = "mirage-back.jpg", group = "claude blockout", contain = true },
+  { src = "mirage-face.jpg", group = "claude blockout", contain = true },
+  { src = "mirage-refined-front.jpg", group = "dani refinement", contain = true },
+  { src = "mirage-refined-back.jpg", group = "dani refinement", contain = true },
+  { src = "mirage-refined-face.jpg", group = "dani refinement", contain = true },
+  { src = "mirage-refined-dance.mp4", group = " " },
   { src = "neota-front.jpg", group = "neota", contain = true },
   { src = "neota-back.jpg", group = "neota", contain = true },
   { src = "neota-face.jpg", group = "neota", contain = true },
