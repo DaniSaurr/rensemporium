@@ -1,0 +1,1052 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>monster ladies · ren's emporium</title>
+<meta name="description" content="">
+
+<link rel="icon" href="../../static/img/icon.png">
+<link rel="stylesheet" href="../../static/css/site.css?v=23124988">
+</head>
+<body class="">
+
+
+<a class="back" href="../../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<article class="piece">
+  <header class="piece-head">
+    <h1 data-bouffont>monster ladies</h1>
+    <p class="facts"><span>2026</span></p>
+    
+    
+  </header>
+
+  
+  <div class="hero">
+    <img src="mirage-neota.jpg" alt="a scorpion belly dancer on peach and an axolotl ballerina on pale blue, both low-poly">
+  </div>
+  
+
+  
+
+  
+
+  
+  <div class="prose">
+    <p>figures built from python scripts in blender, with no hand sculpting. the low-poly ones are the newest. the earlier ones are smooth and glossy.</p>
+    <h2>the idea</h2>
+<p>Monster girls built entirely from Python scripts run inside Blender, with no sculpting and no hand-placed vertices. Each one is a script that lays out a skeleton, lofts the body around it, dresses it and renders three views. Each figure mixes an animal with a costume and a pose, like a scorpion belly dancer, an axolotl ballerina or a hedgehog hugging her knees.</p>
+
+<h2>smooth first</h2>
+<figure><img src="siren-full.jpg" alt="a porcelain gynoid with gold-rimmed shell plates"><figcaption>siren, from the smooth set</figcaption></figure>
+<p>The first figures were smooth and glossy: Serpentine, the Naga Queen, Siren, Vespera, Abyssa and the Doll Angel. They were built from lofted tubes fused together with a voxel remesh, then rendered in Cycles. Siren, a porcelain gynoid with gold-rimmed plates, was the one that worked best. Faces were the hard part. They were sculpted from stacked rings and painted with masks, and they looked stiff.</p>
+
+<h2>going low-poly</h2>
+<figure><img src="mirage-front.jpg" alt="a low-poly scorpion belly dancer with a tail curled over her head"><figcaption>mirage, the first figure on the kit</figcaption></figure>
+<p>A low-poly, flat-shaded style suits building by script. The facets all show, so a rough loft reads as a deliberate facet rather than a mistake. The Beetle Jester was the first test. After that the useful parts went into one shared kit:</p>
+<ul>
+<li>a body lofted along a bent four-point spine, so a pose is just where the hips and neck sit</li>
+<li>legs, arms and five-fingered hands from a few joint positions</li>
+<li>shells laid over parts of the torso for clothes, belts and bands</li>
+<li>a stage with three lights and three cameras, and a contact sheet at the end</li>
+</ul>
+<p>Mirage, a scorpion belly dancer, and Neota, an axolotl ballerina, were the first two built on it, and they set the bar for the rest.</p>
+
+<h2>faces</h2>
+<figure><img src="neota-face.jpg" alt="close-up of a pink axolotl girl with big plum eyes and coral gills"><figcaption>neota's face: eyes, lids and lashes laid onto a faceted head</figcaption></figure>
+<p>The head is a plain faceted shape. The eyes, lids, lashes, brows and mouth are flat shapes drawn in two dimensions, then fired at the head from the front and laid onto whatever surface they hit. That keeps them crisp at any angle the head turns. The heavy upper lid is a band cut across the eye, so lowering it makes a sleepy look without touching the eyeball.</p>
+
+<h2>poses</h2>
+<p>Most figures stand, but lying down, floating and hanging upside down needed a trick. The joints are placed where they should be in the scene, worked back into an upright body, built there, then the whole figure is turned into place. Somna the sloth lies on her side this way, Lutra the otter floats on her back, and Rousette the fruit bat hangs from a branch.</p>
+
+<h2>faces and bodies</h2>
+<figure><img src="lineup-faces.png" alt="eight low-poly heads with different face shapes, eyes, brows and mouths"><figcaption>the face lineup</figcaption></figure>
+<p>Thirty-nine figures in, they all had the same face and the same body under different costumes. So the kit grew controls for jaw, cheeks, chin, eye tilt, lashes, brows, nose and mouth, and the lineup above came out of it. Cherub and goofy got cut. Doll, vixen, strong, wistful, severe and abyssal stayed.</p>
+<figure><img src="lineup-bodies.png" alt="seven low-poly figures from petite to plus-size to lanky"><figcaption>the body lineup</figcaption></figure>
+<p>Bodies got the same treatment: leg and torso length, hips, waist, bust, belly, depth, limb thickness and head size. Petite, willowy, hourglass, plus, athletic, stocky and lanky all stayed. From Dasya the armadillo on, each new figure picks a face and a body from these.</p>
+
+<h2>what kept going wrong</h2>
+<p>Colour, mostly. Pale skin turns grey under blue water light, white fur vanishes against snow, and clothes close to the skin tone read as bare. A tail pointing straight back disappears from the front and has to curve out to the side. Glowing props like lanterns and pearls carry a real light inside them, and the bulb has to be told not to block its own lamp.</p>
+
+  </div>
+  
+
+  
+  <h3 class="group">claude blockout</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="mirage-front.jpg"><img src="mirage-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mirage-back.jpg"><img src="mirage-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mirage-face.jpg"><img src="mirage-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">dani refinement</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="mirage-refined-front.jpg"><img src="mirage-refined-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mirage-refined-back.jpg"><img src="mirage-refined-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mirage-refined-face.jpg"><img src="mirage-refined-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  
+  
+  
+  <div class="strip natural">
+    
+    <figure><video src="mirage-refined-dance.mp4" muted loop playsinline autoplay preload="metadata"></video>
+      </figure>
+    
+  </div>
+
+  
+  <h3 class="group">neota</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="neota-front.jpg"><img src="neota-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="neota-back.jpg"><img src="neota-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="neota-face.jpg"><img src="neota-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">caprice</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="caprice-front.jpg"><img src="caprice-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="caprice-three-quarter.jpg"><img src="caprice-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="caprice-face.jpg"><img src="caprice-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">tyto</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="tyto-front.jpg"><img src="tyto-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="tyto-back.jpg"><img src="tyto-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="tyto-face.jpg"><img src="tyto-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">veila</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="veila-front.jpg"><img src="veila-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="veila-back.jpg"><img src="veila-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="veila-face.jpg"><img src="veila-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">pavona</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="pavona-front.jpg"><img src="pavona-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="pavona-back.jpg"><img src="pavona-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="pavona-face.jpg"><img src="pavona-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">verda</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="verda-front.jpg"><img src="verda-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="verda-three-quarter.jpg"><img src="verda-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="verda-face.jpg"><img src="verda-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">dendra</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="dendra-front.jpg"><img src="dendra-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="dendra-three-quarter.jpg"><img src="dendra-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="dendra-face.jpg"><img src="dendra-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">helix</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="helix-front.jpg"><img src="helix-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="helix-back.jpg"><img src="helix-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="helix-face.jpg"><img src="helix-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">mella</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="mella-front.jpg"><img src="mella-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mella-back.jpg"><img src="mella-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mella-face.jpg"><img src="mella-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">rousette</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="rousette-front.jpg"><img src="rousette-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="rousette-three-quarter.jpg"><img src="rousette-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="rousette-face.jpg"><img src="rousette-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">somna</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="somna-front.jpg"><img src="somna-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="somna-high.jpg"><img src="somna-high.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="somna-face.jpg"><img src="somna-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">oranda</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="oranda-front.jpg"><img src="oranda-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="oranda-back.jpg"><img src="oranda-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="oranda-face.jpg"><img src="oranda-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">manis</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="manis-over-shoulder.jpg"><img src="manis-over-shoulder.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="manis-back.jpg"><img src="manis-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="manis-face.jpg"><img src="manis-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">anax</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="anax-front.jpg"><img src="anax-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="anax-back.jpg"><img src="anax-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="anax-face.jpg"><img src="anax-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">rosea</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="rosea-front.jpg"><img src="rosea-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="rosea-back.jpg"><img src="rosea-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="rosea-face.jpg"><img src="rosea-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">ailura</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="ailura-front.jpg"><img src="ailura-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="ailura-side.jpg"><img src="ailura-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="ailura-face.jpg"><img src="ailura-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">aurelia</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="aurelia-front.jpg"><img src="aurelia-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="aurelia-back.jpg"><img src="aurelia-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="aurelia-face.jpg"><img src="aurelia-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">fenna</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="fenna-front.jpg"><img src="fenna-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="fenna-back.jpg"><img src="fenna-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="fenna-face.jpg"><img src="fenna-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">corvina</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="corvina-front.jpg"><img src="corvina-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="corvina-back.jpg"><img src="corvina-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="corvina-face.jpg"><img src="corvina-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">volita</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="volita-front.jpg"><img src="volita-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="volita-back.jpg"><img src="volita-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="volita-face.jpg"><img src="volita-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">coccina</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="coccina-front.jpg"><img src="coccina-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="coccina-back.jpg"><img src="coccina-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="coccina-face.jpg"><img src="coccina-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">lanterna</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="lanterna-front.jpg"><img src="lanterna-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lanterna-three-quarter.jpg"><img src="lanterna-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lanterna-face.jpg"><img src="lanterna-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">lutra</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="lutra-side.jpg"><img src="lutra-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lutra-above.jpg"><img src="lutra-above.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lutra-face.jpg"><img src="lutra-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">erina</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="erina-front.jpg"><img src="erina-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="erina-back.jpg"><img src="erina-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="erina-face.jpg"><img src="erina-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">morpha</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="morpha-front.jpg"><img src="morpha-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="morpha-back.jpg"><img src="morpha-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="morpha-face.jpg"><img src="morpha-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">mako</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="mako-three-quarter.jpg"><img src="mako-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mako-side.jpg"><img src="mako-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mako-face.jpg"><img src="mako-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">luciola</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="luciola-front.jpg"><img src="luciola-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="luciola-back.jpg"><img src="luciola-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="luciola-face.jpg"><img src="luciola-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">orchida</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="orchida-front.jpg"><img src="orchida-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="orchida-back.jpg"><img src="orchida-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="orchida-face.jpg"><img src="orchida-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">amba</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="amba-front.jpg"><img src="amba-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="amba-three-quarter.jpg"><img src="amba-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="amba-face.jpg"><img src="amba-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">glauca</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="glauca-side.jpg"><img src="glauca-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="glauca-below.jpg"><img src="glauca-below.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="glauca-face.jpg"><img src="glauca-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">pagura</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="pagura-front.jpg"><img src="pagura-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="pagura-three-quarter.jpg"><img src="pagura-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="pagura-face.jpg"><img src="pagura-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">lupa</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="lupa-front.jpg"><img src="lupa-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lupa-side.jpg"><img src="lupa-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lupa-face.jpg"><img src="lupa-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">lepora</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="lepora-front.jpg"><img src="lepora-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lepora-side.jpg"><img src="lepora-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="lepora-face.jpg"><img src="lepora-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">grylla</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="grylla-front.jpg"><img src="grylla-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="grylla-back.jpg"><img src="grylla-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="grylla-face.jpg"><img src="grylla-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">mau</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="mau-front.jpg"><img src="mau-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mau-high.jpg"><img src="mau-high.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mau-face.jpg"><img src="mau-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">leopa</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="leopa-over-shoulder.jpg"><img src="leopa-over-shoulder.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="leopa-wide.jpg"><img src="leopa-wide.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="leopa-face.jpg"><img src="leopa-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">cerva</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="cerva-front.jpg"><img src="cerva-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="cerva-three-quarter.jpg"><img src="cerva-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="cerva-face.jpg"><img src="cerva-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">octavia</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="octavia-front.jpg"><img src="octavia-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="octavia-over-shoulder.jpg"><img src="octavia-over-shoulder.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="octavia-face.jpg"><img src="octavia-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">dasya</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="dasya-front.jpg"><img src="dasya-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="dasya-back.jpg"><img src="dasya-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="dasya-face.jpg"><img src="dasya-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">sepia</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="sepia-front.jpg"><img src="sepia-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="sepia-back.jpg"><img src="sepia-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="sepia-face.jpg"><img src="sepia-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">ardea</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="ardea-front.jpg"><img src="ardea-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="ardea-side.jpg"><img src="ardea-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="ardea-face.jpg"><img src="ardea-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">vulpina</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="vulpina-front.jpg"><img src="vulpina-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="vulpina-three-quarter.jpg"><img src="vulpina-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="vulpina-face.jpg"><img src="vulpina-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">cygna</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="cygna-front.jpg"><img src="cygna-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="cygna-three-quarter.jpg"><img src="cygna-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="cygna-face.jpg"><img src="cygna-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">macra</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="macra-front.jpg"><img src="macra-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="macra-side.jpg"><img src="macra-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="macra-face.jpg"><img src="macra-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">colibra</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="colibra-front.jpg"><img src="colibra-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="colibra-back.jpg"><img src="colibra-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="colibra-face.jpg"><img src="colibra-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">testuda</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="testuda-front.jpg"><img src="testuda-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="testuda-back.jpg"><img src="testuda-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="testuda-face.jpg"><img src="testuda-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">stoma</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="stoma-front.jpg"><img src="stoma-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="stoma-side.jpg"><img src="stoma-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="stoma-face.jpg"><img src="stoma-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">naja</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="naja-front.jpg"><img src="naja-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="naja-back.jpg"><img src="naja-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="naja-face.jpg"><img src="naja-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">hydra</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="hydra-front.jpg"><img src="hydra-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="hydra-three-quarter.jpg"><img src="hydra-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="hydra-face.jpg"><img src="hydra-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">luna</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="luna-front.jpg"><img src="luna-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="luna-back.jpg"><img src="luna-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="luna-face.jpg"><img src="luna-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">mellivora</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="mellivora-front.jpg"><img src="mellivora-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mellivora-back.jpg"><img src="mellivora-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="mellivora-face.jpg"><img src="mellivora-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">hippa</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="hippa-front.jpg"><img src="hippa-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="hippa-side.jpg"><img src="hippa-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="hippa-face.jpg"><img src="hippa-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">talla</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="talla-front.jpg"><img src="talla-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="talla-three-quarter.jpg"><img src="talla-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="talla-face.jpg"><img src="talla-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">frilla</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="frilla-front.jpg"><img src="frilla-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="frilla-side.jpg"><img src="frilla-side.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="frilla-face.jpg"><img src="frilla-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">narva</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="narva-front.jpg"><img src="narva-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="narva-back.jpg"><img src="narva-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="narva-face.jpg"><img src="narva-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">zebrina</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="zebrina-front.jpg"><img src="zebrina-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="zebrina-back.jpg"><img src="zebrina-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="zebrina-face.jpg"><img src="zebrina-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">ursa</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="ursa-three-quarter.jpg"><img src="ursa-three-quarter.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="ursa-front.jpg"><img src="ursa-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="ursa-face.jpg"><img src="ursa-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">puffa</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="puffa-front.jpg"><img src="puffa-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="puffa-back.jpg"><img src="puffa-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="puffa-face.jpg"><img src="puffa-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">beetle jester</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="jester-front.jpg"><img src="jester-front.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="jester-back.jpg"><img src="jester-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="jester-low.jpg"><img src="jester-low.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">siren</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="siren-full.jpg"><img src="siren-full.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="siren-back.jpg"><img src="siren-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="siren-face.jpg"><img src="siren-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">vespera</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="vespera-full.jpg"><img src="vespera-full.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="vespera-back.jpg"><img src="vespera-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="vespera-face.jpg"><img src="vespera-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">abyssa</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="abyssa-full.jpg"><img src="abyssa-full.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="abyssa-back.jpg"><img src="abyssa-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="abyssa-face.jpg"><img src="abyssa-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">naga queen</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="naga-full.jpg"><img src="naga-full.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="naga-coils.jpg"><img src="naga-coils.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="naga-face.jpg"><img src="naga-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">serpentine</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="serpentine-full.jpg"><img src="serpentine-full.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="serpentine-back.jpg"><img src="serpentine-back.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="serpentine-face.jpg"><img src="serpentine-face.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+  <h3 class="group">doll angel</h3>
+  
+  
+  <div class="strip natural">
+    
+    <figure><a href="doll-full.jpg"><img src="doll-full.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="doll-portrait.jpg"><img src="doll-portrait.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+    <figure><a href="doll-reach.jpg"><img src="doll-reach.jpg" alt="" loading="lazy" class="contain"></a></figure>
+    
+  </div>
+
+  
+
+  
+
+  
+  <section class="made-with" aria-label="made with">
+    <span class="mw-label">made with</span>
+    <ul><li title="blender: 5.1"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.51 13.214c.046-.8.438-1.506 1.03-2.006a3.424 3.424 0 0 1 2.212-.79c.85 0 1.631.3 2.211.79.592.5.983 1.206 1.028 2.005.045.823-.285 1.586-.865 2.153a3.389 3.389 0 0 1-2.374.938 3.393 3.393 0 0 1-2.376-.938c-.58-.567-.91-1.33-.865-2.152M7.35 14.831c.006.314.106.922.256 1.398a7.372 7.372 0 0 0 1.593 2.757 8.227 8.227 0 0 0 2.787 2.001 8.947 8.947 0 0 0 3.66.76 8.964 8.964 0 0 0 3.657-.772 8.285 8.285 0 0 0 2.785-2.01 7.428 7.428 0 0 0 1.592-2.762 6.964 6.964 0 0 0 .25-3.074 7.123 7.123 0 0 0-1.016-2.779 7.764 7.764 0 0 0-1.852-2.043h.002L13.566 2.55l-.02-.015c-.492-.378-1.319-.376-1.86.002-.547.382-.609 1.015-.123 1.415l-.001.001 3.126 2.543-9.53.01h-.013c-.788.001-1.545.518-1.695 1.172-.154.665.38 1.217 1.2 1.22V8.9l4.83-.01-8.62 6.617-.034.025c-.813.622-1.075 1.658-.563 2.313.52.667 1.625.668 2.447.004L7.414 14s-.069.52-.063.831zm12.09 1.741c-.97.988-2.326 1.548-3.795 1.55-1.47.004-2.827-.552-3.797-1.538a4.51 4.51 0 0 1-1.036-1.622 4.282 4.282 0 0 1 .282-3.519 4.702 4.702 0 0 1 1.153-1.371c.942-.768 2.141-1.183 3.396-1.185 1.256-.002 2.455.41 3.398 1.175.48.391.87.854 1.152 1.367a4.28 4.28 0 0 1 .522 1.706 4.236 4.236 0 0 1-.239 1.811 4.54 4.54 0 0 1-1.035 1.626"/></svg><span>blender</span></li><li title="python"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></svg><span>python</span></li><li title="claude: opus 5.5"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span>claude</span></li></ul>
+  </section>
+  
+
+  
+</article>
+<script src="../../static/js/lightbox.js" defer></script>
+
+</main>
+<footer class="footer">
+  <p><a href="../">back to 3d</a></p>
+  <p><a href="../../about/">about</a> · <a href="../../gazetteer/">gazetteer</a></p>
+</footer>
+<script type="module" src="../../static/js/bouffont-title.js"></script>
+</body>
+</html>

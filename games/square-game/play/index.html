@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>square game!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+    <script>
+
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    var clickNum = 0;
+    var hp = 3;
+    var posX = 0;
+    var posY = 0;
+    var squareSize = 90;
+    var possibleToScore = true;
+    var scoreValue = 1;
+
+    setInterval(render, 1000);
+
+    canvas.addEventListener('click', handleClick);
+    render();
+    function handleClick(event){
+      var clickPosX = event.offsetX;
+      var clickPosY = event.offsetY;
+
+      ctx.beginPath();
+
+      ctx.rect(posX, posY, squareSize, squareSize);
+      if (ctx.isPointInPath(clickPosX, clickPosY) && possibleToScore == true) {
+          scoreValue = 91 - squareSize
+          clickNum += scoreValue;
+          squareSize--;
+          ctx.clearRect(posX,posY, squareSize+2,squareSize+2);
+          scoreFeedback(scoreValue, clickPosX, clickPosY);
+          possibleToScore = false;
+      }
+      else if(hp >= 0){
+        hp--;
+        clickNum--;
+        failFeedback(clickPosX, clickPosY);
+      }
+    }
+    function failFeedback(failPosX, failPosY){
+      ctx.fillStyle = "red";
+      ctx.fillText("miss!", failPosX, failPosY);
+    }
+    function scoreFeedback(scoreValue, scorePosX, scorePosY){
+      ctx.fillStyle = "green";
+      ctx.fillText("+"+scoreValue, scorePosX, scorePosY);
+    }
+
+    function drawRandomSquare(){
+      posX = randomRange(0,1100)
+      posY = randomRange(0, 700)
+      ctx.fillStyle = randomColour();
+      ctx.fillRect(posX,posY,squareSize,squareSize);
+    }
+
+    function drawUI(){
+      ctx.font = "50px Comic Sans MS";
+      ctx.fillStyle = "black";
+      ctx.fillText("score = " + clickNum, 100,100);
+      ctx.fillText("HP = " + hp, 100,150);
+    }
+    function showEndScreen(){
+      ctx.clearRect(0,0, canvas.width, canvas.height);
+      ctx.fillStyle = "black";
+      ctx.font = "75px Comic Sans MS";
+      ctx.fillText("your final score is " + clickNum,270,300);
+      ctx.fillText("refresh the page to retry :)", 270, 600);
+
+    }
+    function render(){
+      if(hp >= 0){
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        drawUI();
+        drawRandomSquare();
+        possibleToScore = true;
+      }
+      else {
+        showEndScreen();
+      }
+
+
+    }
+    function randomRange(min, max)
+    {
+      return Math.floor(Math.random()*(max-min+1))+min;
+    }
+    function randomColour()
+    {
+      let num = Math.floor(Math.random()*(16777215-1+1))+1;
+      return '#'+num.toString(16);
+    }
+
+
+    </script>
+  </body>
+</html>

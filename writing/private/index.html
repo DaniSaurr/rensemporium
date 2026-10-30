@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>private · ren's emporium</title>
+<meta name="description" content="games, 3d and drawings by dani deetvleet">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="../../static/img/icon.png">
+<link rel="stylesheet" href="../../static/css/site.css?v=23124988">
+</head>
+<body class="">
+
+
+<a class="back" href="../../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<header class="room-head">
+  <h1 data-bouffont>private</h1>
+  <p id="lock-note">locked.</p>
+</header>
+
+<form class="lock" id="lock" autocomplete="off">
+  <label for="pw">password</label>
+  <input id="pw" type="password" autocomplete="off" spellcheck="false">
+  <button class="button" type="submit">open</button>
+  <p class="hint">hint: placeholder: the first word of the site name</p>
+  <p class="wrong" id="wrong" hidden>that's not it.</p>
+</form>
+
+<div id="inside" hidden>
+  <ol class="private-list" id="list"></ol>
+  <article class="prose" id="piece" hidden></article>
+</div>
+
+<script>
+// the lock is meant to be easy to pick: see tools/lock.py
+(function () {
+  const enc = new TextEncoder();
+  async function keystream(pw, n) {
+    const out = new Uint8Array(n);
+    for (let i = 0, off = 0; off < n; i++) {
+      const h = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(pw + ":" + i)));
+      out.set(h.subarray(0, Math.min(32, n - off)), off);
+      off += 32;
+    }
+    return out;
+  }
+  async function open(pw, sealed) {
+    const raw = Uint8Array.from(atob(sealed.blob), c => c.charCodeAt(0));
+    const ks = await keystream(pw, raw.length);
+    for (let i = 0; i < raw.length; i++) raw[i] ^= ks[i];
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw)).pieces;
+  }
+  function show(pieces) {
+    document.getElementById("lock").hidden = true;
+    document.getElementById("lock-note").textContent = pieces.length ? "" : "nothing in here yet.";
+    const list = document.getElementById("list"), view = document.getElementById("piece");
+    document.getElementById("inside").hidden = false;
+    pieces.forEach(p => {
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = "#" + p.slug;
+      a.textContent = p.title;
+      li.appendChild(a);
+      if (p.year) { const y = document.createElement("span"); y.textContent = p.year; li.appendChild(y); }
+      list.appendChild(li);
+    });
+    function route() {
+      const p = pieces.find(x => "#" + x.slug === location.hash);
+      list.hidden = !!p;
+      view.hidden = !p;
+      if (p) { view.innerHTML = "<h2>" + p.title + "</h2>" + p.body + '<p><a href="#">back to the list</a></p>'; window.scrollTo(0, 0); }
+    }
+    window.addEventListener("hashchange", route);
+    route();
+  }
+  fetch("sealed.json").then(r => r.json()).then(sealed => {
+    if (!sealed.blob) { document.getElementById("lock-note").textContent = "locked. nothing in here yet."; }
+    let saved = null;
+    try { saved = sessionStorage.getItem("ren-private"); } catch (e) {}
+    if (saved) open(saved, sealed).then(show).catch(() => {});
+    document.getElementById("lock").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const pw = document.getElementById("pw").value;
+      try {
+        const pieces = await open(pw, sealed);
+        try { sessionStorage.setItem("ren-private", pw); } catch (e) {}
+        show(pieces);
+      } catch (e) {
+        document.getElementById("wrong").hidden = false;
+      }
+    });
+  });
+})();
+</script>
+
+</main>
+<footer class="footer">
+  
+  <p><a href="../../about/">about</a> · <a href="../../gazetteer/">gazetteer</a></p>
+</footer>
+<script type="module" src="../../static/js/bouffont-title.js"></script>
+</body>
+</html>

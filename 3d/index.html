@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3d · ren's emporium</title>
+<meta name="description" content="">
+
+<link rel="icon" href="../static/img/icon.png">
+<link rel="stylesheet" href="../static/css/site.css?v=23124988">
+</head>
+<body class="">
+
+<button class="ai-toggle" id="ai-toggle" type="button" aria-pressed="false">ai assisted: <span>shown</span></button>
+<script>
+(function () {
+  const btn = document.getElementById("ai-toggle"), root = document.documentElement;
+  function paint() { const hid = root.classList.contains("hide-ai"); btn.querySelector("span").textContent = hid ? "hidden" : "shown"; btn.setAttribute("aria-pressed", hid); }
+  btn.addEventListener("click", function () {
+    root.classList.toggle("hide-ai");
+    try { localStorage.setItem("ren-hide-ai", root.classList.contains("hide-ai") ? "1" : "0"); } catch (e) {}
+    paint();
+  });
+  paint();
+})();
+</script>
+
+
+<a class="back" href="../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<header class="room-head">
+  <h1 data-bouffont>3d</h1>
+  
+  
+</header>
+
+
+
+<section class="year">
+<h2 class="year-head">2026</h2>
+<div class="leads timeline">
+
+  <a class="card" href="scytheling/" data-ai="1">
+    <div class="thumb"><img src="scytheling/scytheling-rear.jpg" alt=""></div>
+    <div class="meta">
+      <h2>scytheling</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="painted-lattice/" data-ai="1">
+    <div class="thumb"><img src="painted-lattice/shore-hero.jpg" alt=""></div>
+    <div class="meta">
+      <h2>painted lattice</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="monster-ladies/" data-ai="1">
+    <div class="thumb"><img src="monster-ladies/mirage-neota.jpg" alt=""></div>
+    <div class="meta">
+      <h2>monster ladies</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="leviathan-orrery/" data-ai="1">
+    <div class="thumb"><img src="leviathan-orrery/leviathan-ribs.jpg" alt=""></div>
+    <div class="meta">
+      <h2>leviathan and orrery</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="irish-level/">
+    <div class="thumb"><img src="irish-level/level11-left.jpg" alt=""></div>
+    <div class="meta">
+      <h2>irish level progression</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="setanta/">
+    <div class="thumb"><img src="setanta/irish-myth-setanta-left34.jpg" alt=""></div>
+    <div class="meta">
+      <h2>setanta</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="hollowgate/" data-ai="1">
+    <div class="thumb"><img src="hollowgate/loop-overview.jpg" alt=""></div>
+    <div class="meta">
+      <h2>hollowgate</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="blackwood/" data-ai="1">
+    <div class="thumb"><img src="blackwood/level.jpg" alt=""></div>
+    <div class="meta">
+      <h2>blackwood</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="biomech-quadruped/" data-ai="1">
+    <div class="thumb"><img src="biomech-quadruped/left34.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>biomechanical quadruped</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="cathedral-facade/" data-ai="1">
+    <div class="thumb"><img src="cathedral-facade/v10.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>cathedral facade</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="reliquary-engine/" data-ai="1">
+    <div class="thumb"><img src="reliquary-engine/poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>reliquary engine</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="robot-builds/" data-ai="1">
+    <div class="thumb"><img src="robot-builds/poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>robot builds</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="bot-project/" data-ai="1">
+    <div class="thumb"><img src="bot-project/poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>bot project</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="july-2026/">
+    <div class="thumb"><img src="july-2026/pool-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>pool room</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="godot-3d-models/">
+    <div class="thumb"><img src="godot-3d-models/kit.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>godot 3d models</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="inspired-by-bryce/">
+    <div class="thumb"><img src="inspired-by-bryce/bryce-2.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>inspired by bryce</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="radial-sculpture/">
+    <div class="thumb"><img src="radial-sculpture/radial-c.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>radial sculpture</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="texture-doodle/">
+    <div class="thumb"><img src="texture-doodle/cat-and-crow.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>cat and crow</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="misc-sketches/">
+    <div class="thumb"><img src="misc-sketches/cool-shapes-left.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>misc</h2>
+      <div class="when">2023 to 2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="face-medals/">
+    <div class="thumb"><img src="face-medals/faces-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>face medals</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="pillar/">
+    <div class="thumb"><img src="pillar/pillar2-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>pillar</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="shapes-zoom/">
+    <div class="thumb"><img src="shapes-zoom/shapes-left.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>shapes zoom</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="superposition/">
+    <div class="thumb"><img src="superposition/poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>superposition</h2>
+      <div class="when">2026</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2025</h2>
+<div class="leads timeline">
+
+  <a class="card" href="gothic-church-2025/">
+    <div class="thumb"><img src="gothic-church-2025/turntable-poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>gothic church</h2>
+      <div class="when">2025</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2024</h2>
+<div class="leads timeline">
+
+  <a class="card" href="diver/">
+    <div class="thumb"><img src="diver/copper-front.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>diver</h2>
+      <div class="when">2024</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="airplane-bots/">
+    <div class="thumb"><img src="airplane-bots/poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>airplane bots</h2>
+      <div class="when">2024</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2023</h2>
+<div class="leads timeline">
+
+  <a class="card" href="biomech-heads/">
+    <div class="thumb"><img src="biomech-heads/sohead3-d.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>biomech heads</h2>
+      <div class="when">2023</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="low-poly-2023/">
+    <div class="thumb"><img src="low-poly-2023/silly-dog.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>low poly 2023</h2>
+      <div class="when">2023</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="bull-guy/">
+    <div class="thumb"><img src="bull-guy/bull-glow.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>bull guy</h2>
+      <div class="when">2023</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="boofer/">
+    <div class="thumb"><img src="boofer/boofer-front.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>boofer</h2>
+      <div class="when">2023</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2022</h2>
+<div class="leads timeline">
+
+  <a class="card" href="hffc-hotel/">
+    <div class="thumb"><img src="hffc-hotel/hotel-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>hffc hotel</h2>
+      <div class="when">2022</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="jester-clown/">
+    <div class="thumb"><img src="jester-clown/clown-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>jester clown</h2>
+      <div class="when">2022</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="node-textured-plane/">
+    <div class="thumb"><img src="node-textured-plane/plane8-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>node based textured plane</h2>
+      <div class="when">2022</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="church-diorama/">
+    <div class="thumb"><img src="church-diorama/video-thumb.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>desolate churchyard</h2>
+      <div class="when">2022</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2021</h2>
+<div class="leads timeline">
+
+  <a class="card" href="character-blockouts/">
+    <div class="thumb"><img src="character-blockouts/lineup.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>character blockouts</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="beetle/">
+    <div class="thumb"><img src="beetle/beetle-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>beetle</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="kalabu/">
+    <div class="thumb"><img src="kalabu/kalabu-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>kalabu</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="tophat-timmy/">
+    <div class="thumb"><img src="tophat-timmy/timmy-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>tophat timmy</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="mecha-study/">
+    <div class="thumb"><img src="mecha-study/mecha-9color.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>mecha study</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="ship-parts-2021/">
+    <div class="thumb"><img src="ship-parts-2021/parts.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>ship parts</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="street-corner/">
+    <div class="thumb"><img src="street-corner/blockout7-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>street corner</h2>
+      <div class="when">2020</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="heightmap-fun/">
+    <div class="thumb"><img src="heightmap-fun/heightmap-1.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>heightmap fun</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="robots/">
+    <div class="thumb"><img src="robots/mecha.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>robots</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="nephilim/">
+    <div class="thumb"><img src="nephilim/nephilim-red.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>nephilim</h2>
+      <div class="when">2021</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="modular-walls/">
+    <div class="thumb"><img src="modular-walls/uvdemo-left.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>modular walls</h2>
+      <div class="when">2020 to 2021</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2020</h2>
+<div class="leads timeline">
+
+  <a class="card" href="walsh-building/">
+    <div class="thumb"><img src="walsh-building/walsh5-file.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>walsh building</h2>
+      <div class="when">2020</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="hellhound/">
+    <div class="thumb"><img src="hellhound/heavenhound.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>hellhound</h2>
+      <div class="when">2020</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="spooktober-2020/">
+    <div class="thumb"><img src="spooktober-2020/necromancer.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>spooktober 2020</h2>
+      <div class="when">2020</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="maya-2019/">
+    <div class="thumb"><img src="maya-2019/cute-castle-left.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>maya 2019</h2>
+      <div class="when">2019 to 2020</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2019</h2>
+<div class="leads timeline">
+
+  <a class="card" href="cosmic-crash-models/">
+    <div class="thumb"><img src="cosmic-crash-models/health-pickup.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>cosmic crash models</h2>
+      <div class="when">2019</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="sculpts-2019/">
+    <div class="thumb"><img src="sculpts-2019/2019-dinosaur-left34.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>sculpts</h2>
+      <div class="when">2019</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="robot-head-sculpt/">
+    <div class="thumb"><img src="robot-head-sculpt/turntable-poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>robot head sculpt</h2>
+      <div class="when">2019</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="cursed-emoji/">
+    <div class="thumb"><img src="cursed-emoji/turntable-poster.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>cursed emoji</h2>
+      <div class="when">2019</div>
+      
+    </div>
+  </a>
+
+  <a class="card" href="dinosaur-stages/">
+    <div class="thumb"><img src="dinosaur-stages/retopo-left.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>dinosaur stages</h2>
+      <div class="when">2019</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+<section class="year">
+<h2 class="year-head">2018</h2>
+<div class="leads timeline">
+
+  <a class="card" href="july-2018/">
+    <div class="thumb"><img src="july-2018/little-scene.jpg" alt="" loading="lazy"></div>
+    <div class="meta">
+      <h2>july 2018</h2>
+      <div class="when">2018</div>
+      
+    </div>
+  </a>
+
+</div>
+</section>
+
+
+
+</main>
+<footer class="footer">
+  
+  <p><a href="../about/">about</a> · <a href="../gazetteer/">gazetteer</a></p>
+</footer>
+<script type="module" src="../static/js/bouffont-title.js"></script>
+</body>
+</html>
