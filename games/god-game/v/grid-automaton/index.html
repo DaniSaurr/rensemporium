@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Babylon City Generator</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; flex-direction: column; font-family: system-ui, sans-serif; background: #e8dcc0; }
+  #toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 6px 10px; background: #d8c9a5; border-bottom: 2px solid #b8a67e; font-size: 14px;
+  }
+  #toolbar label { display: flex; align-items: center; gap: 4px; }
+  #toolbar input[type=number] { width: 80px; }
+  #toolbar .sep { width: 1px; height: 22px; background: #b8a67e; }
+  #gen { min-width: 70px; opacity: .75; }
+  #canvas-wrap { flex: 1; position: relative; min-height: 0; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <label>Seed <input type="number" id="seed" value="1"></label>
+  <button id="prev">&#9664;</button>
+  <button id="next">&#9654;</button>
+  <button id="random">random</button>
+  <label>Density <input type="range" id="density" min="0.05" max="0.8" step="0.05" value="0.4"></label>
+  <label>Preset
+    <select id="preset">
+      <option value="B3/S12345" selected>Old Quarter</option>
+      <option value="B3/S23">Villages</option>
+      <option value="B3/S1234">Planned Quarter</option>
+      <option value="B3/S45678">Coral</option>
+      <option value="B3678/S34678">Day &amp; Night</option>
+    </select>
+  </label>
+  <span class="sep"></span>
+  <button id="step">step</button>
+  <button id="play">play</button>
+  <label>Speed <input type="range" id="speed" min="0.5" max="10" step="0.5" value="2"></label>
+  <span id="gen">gen 0</span>
+  <button id="reset">reset</button>
+</div>
+<div id="canvas-wrap"></div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============================================================================
+/* == GENERATOR (from building-lab.html) == */
+/* ============================================================================
+   BUILDING GENERATOR — pure functions, no Three.js.
+   Emits a list of primitive placement instructions:
+     { shape: 'box'|'cylinder'|'cone'|'sphere'|'arch',
+       pos: [x,y,z], rot: [x,y,z], scale: [x,y,z], mat: <material key> }
+   Tile-local coords: tile spans x/z in [-0.5, 0.5], y up from 0.
+   Unit shapes (box 1x1x1, cylinder r=0.5 h=1, cone r=0.5 h=1, sphere r=0.5,
+   arch = half-torus, outer r=0.5, tube r=0.1).
+   ------------------------------------------------------------------------- */
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(globalSeed, x, y, birthGen) {
+  let h = globalSeed >>> 0;
+  h = Math.imul(h ^ x, 0x85EBCA6B);
+  h = Math.imul(h ^ y, 0xC2B2AE35);
+  h = Math.imul(h ^ birthGen, 0x27D4EB2F);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+// material keys: sand/sandLight/sandDark (mudbrick ramp), window (dark inset),
+// wood, cloth (awning), lapis/gold (sacred, neighbour 7-8 + ziggurat top only), palm.
+
+function I(shape, mat, pos, scale, rot = [0, 0, 0]) {
+  return { shape, mat, pos, scale, rot };
+}
+
+const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+const range = (rng, a, b) => a + rng() * (b - a);
+
+function palmTree(rng, out, cx = 0, cz = 0, heightScale = 1) {
+  const h = range(rng, 0.5, 0.75) * heightScale;
+  const lean = range(rng, -0.08, 0.08);
+  out.push(I('cone', 'wood', [cx + lean * 0.5, h / 2, cz], [0.1, h, 0.1], [0, 0, lean]));
+  // fronds radiate from the crown: base anchored at the trunk top, tip arching outward
+  const crownX = cx + lean, crownY = h, crownZ = cz;
+  const fronds = 6 + Math.floor(rng() * 3);
+  for (let i = 0; i < fronds; i++) {
+    const ang = (i / fronds) * Math.PI * 2 + rng() * 0.3;
+    const tilt = range(rng, 0.05, 0.4);                 // arch up-and-out from horizontal
+    const len = range(rng, 0.3, 0.42) * heightScale;
+    const ct = Math.cos(tilt);
+    const ax = ct * Math.cos(ang), ay = Math.sin(tilt), az = ct * Math.sin(ang);
+    out.push(I('cone', 'palm',
+      [crownX + ax * len / 2, crownY + ay * len / 2, crownZ + az * len / 2],
+      [0.09, len, 0.02], [0, -ang, -(Math.PI / 2 - tilt)]));
+  }
+}
+
+// Rows of dark inset window boxes flush against each wall face of a storey box.
+function windows(rng, out, box, perFace, rows) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const wS = 0.055, wH = 0.08, d = 0.012;
+  for (let r = 0; r < rows; r++) {
+    const wy = by - sy / 2 + sy * ((r + 0.6) / (rows + 0.4));
+    for (const [nx, nz, faceW] of [[0, 1, sx], [0, -1, sx], [1, 0, sz], [-1, 0, sz]]) {
+      const n = Math.max(1, Math.min(perFace, Math.floor(faceW / 0.16)));
+      for (let i = 0; i < n; i++) {
+        const t = (i + 1) / (n + 1) - 0.5;
+        const px = bx + (nz !== 0 ? t * faceW : nx * (sx / 2 + d));
+        const pz = bz + (nx !== 0 ? t * faceW : nz * (sz / 2 + d));
+        out.push(I('box', 'window', [px, wy, pz],
+          nx !== 0 ? [d * 2, wH, wS] : [wS, wH, d * 2]));
+      }
+    }
+  }
+}
+
+// Roofline trim of a storey box.
+//   beaded=true  -> protruding round roof-beam ends (viga look): short horizontal
+//                   cylinders poking out of each wall face just under the top edge.
+//   beaded=false -> crenellation teeth (boxes) around the roofline perimeter.
+// skip: optional [nx,nz] face direction to leave clear (e.g. the ziggurat stair face).
+function cornice(rng, out, box, mat, beaded, skip) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  if (beaded) {
+    const y = by + sy / 2 - 0.06;
+    const L = 0.17, r = 0.03, step = 0.115;
+    for (const [nx, nz, faceW] of [[0, 1, sx], [0, -1, sx], [1, 0, sz], [-1, 0, sz]]) {
+      if (skip && nx === skip[0] && nz === skip[1]) continue;   // leave stair face clear
+      const n = Math.max(2, Math.round(faceW / step));
+      for (let i = 0; i < n; i++) {
+        const t = (i + 0.5) / n - 0.5;               // spaced inside, skips corners
+        const px = bx + (nz !== 0 ? t * faceW : nx * (sx / 2 + L * 0.42));
+        const pz = bz + (nx !== 0 ? t * faceW : nz * (sz / 2 + L * 0.42));
+        out.push(I('cylinder', mat, [px, y, pz], [r * 2, L, r * 2],
+          nz !== 0 ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]));  // lie flat, point outward
+      }
+    }
+    return;
+  }
+  const y = by + sy / 2 + 0.03;
+  const step = 0.11;
+  const emit = (px, pz) => out.push(I('box', mat, [px, y, pz], [0.05, 0.06, 0.05]));
+  const nx = Math.max(2, Math.round(sx / step)), nz = Math.max(2, Math.round(sz / step));
+  const skipPZ = skip && skip[0] === 0 ? skip[1] : 0;   // +1 clears +z edge, -1 clears -z
+  const skipPX = skip && skip[1] === 0 ? skip[0] : 0;
+  for (let i = 0; i <= nx; i++) {
+    const px = bx - sx / 2 + (i / nx) * sx;
+    if (skipPZ !== -1) emit(px, bz - sz / 2);
+    if (skipPZ !== 1) emit(px, bz + sz / 2);
+  }
+  for (let i = 1; i < nz; i++) {
+    const pz = bz - sz / 2 + (i / nz) * sz;
+    if (skipPX !== -1) emit(bx - sx / 2, pz);
+    if (skipPX !== 1) emit(bx + sx / 2, pz);
+  }
+}
+
+// Slightly-protruding tall thin boxes along wall faces (mudbrick facade rhythm).
+function buttresses(rng, out, box) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  for (const [nx, nz, faceW] of [[0, 1, sx], [0, -1, sx], [1, 0, sz], [-1, 0, sz]]) {
+    const n = 2 + Math.floor(rng() * 2);
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n - 0.5;
+      const px = bx + (nz !== 0 ? t * faceW : nx * (sx / 2 + 0.02));
+      const pz = bz + (nx !== 0 ? t * faceW : nz * (sz / 2 + 0.02));
+      out.push(I('box', 'sandDark', [px, by, pz],
+        nx !== 0 ? [0.05, sy * 0.96, 0.09] : [0.09, sy * 0.96, 0.05]));
+    }
+  }
+}
+
+// Doorway with optional arch (half-torus) over it, on the ground storey.
+function doorway(rng, out, box, arched, archMat) {
+  const [bx, by, bz] = box.pos, [sx, , sz] = box.scale;
+  const side = pick(rng, [[0, 1], [0, -1], [1, 0], [-1, 0]]);
+  const [nx, nz] = side;
+  const dw = 0.13, dh = 0.22, d = 0.014;
+  const px = bx + nx * (sx / 2 + d), pz = bz + nz * (sz / 2 + d);
+  out.push(I('box', 'window', [px, dh / 2, pz],
+    nx !== 0 ? [d * 2, dh, dw] : [dw, dh, d * 2]));
+  if (arched) {
+    out.push(I('arch', archMat, [px, dh, pz], [dw * 1.5, dw * 1.5, dw * 1.5],
+      nx !== 0 ? [0, Math.PI / 2, 0] : [0, 0, 0]));
+  }
+  return side;
+}
+
+// Rooftop awning: thin roof plane + 4 skinny posts.
+function awning(rng, out, topBox) {
+  const [bx, by, bz] = topBox.pos, [sx, sy, sz] = topBox.scale;
+  const aw = Math.min(sx, sz) * range(rng, 0.45, 0.6);
+  const ax = bx + range(rng, -1, 1) * (sx / 2 - aw / 2) * 0.8;
+  const az = bz + range(rng, -1, 1) * (sz / 2 - aw / 2) * 0.8;
+  const roofY = by + sy / 2, ah = 0.16;
+  for (const [ox, oz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+    out.push(I('cylinder', 'wood',
+      [ax + ox * aw * 0.45, roofY + ah / 2, az + oz * aw * 0.45], [0.02, ah, 0.02]));
+  }
+  out.push(I('box', 'cloth', [ax, roofY + ah, az], [aw, 0.018, aw]));
+}
+
+// Projecting lean-to shade over a wall opening: a roof resting across the vigas,
+// sloping down and out, held up by two posts to the ground. Fabric on fancy houses,
+// wooden slats on plain ones. side = optional [nx,nz] face to attach to (e.g. the door).
+function shadeCanopy(rng, out, box, fabric, side) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const [nx, nz] = side || pick(rng, [[0, 1], [0, -1], [1, 0], [-1, 0]]);
+  const proj = 0.28, width = 0.34, tilt = 0.18;
+  const topY = by + sy / 2 - 0.09;            // rests just under the viga line
+  const midY = topY - 0.03;
+  const wallX = bx + nx * (sx / 2), wallZ = bz + nz * (sz / 2);
+  const cX = wallX + nx * proj / 2, cZ = wallZ + nz * proj / 2;
+  const rot = nx !== 0 ? [0, 0, -nx * tilt] : [nz * tilt, 0, 0];  // slope outer edge down
+  if (fabric) {
+    const mat = pick(rng, ['clothRed', 'clothPlum', 'clothOchre']);
+    // thin draped sheet
+    out.push(I('box', mat, [cX, midY, cZ],
+      nx !== 0 ? [proj, 0.008, width] : [width, 0.008, proj], rot));
+    // valance hanging down at the outer edge — the cue that reads as cloth, not slab
+    const vX = wallX + nx * proj, vZ = wallZ + nz * proj;
+    out.push(I('box', mat, [vX, midY - 0.055, vZ],
+      nx !== 0 ? [0.008, 0.08, width] : [width, 0.08, 0.008]));
+  } else {
+    const slats = 4;
+    for (let s = 0; s < slats; s++) {
+      const f = (s + 0.5) / slats - 0.5;
+      const ox = nx !== 0 ? 0 : f * width, oz = nz !== 0 ? 0 : f * width;
+      out.push(I('box', 'wood', [cX + ox, midY, cZ + oz],
+        nx !== 0 ? [proj, 0.015, width / slats * 0.8] : [width / slats * 0.8, 0.015, proj], rot));
+    }
+  }
+  const outX = wallX + nx * proj, outZ = wallZ + nz * proj, postH = midY - 0.02;
+  for (const e of [-1, 1]) {
+    const ex = outX + (nx !== 0 ? 0 : e * width / 2);
+    const ez = outZ + (nz !== 0 ? 0 : e * width / 2);
+    out.push(I('cylinder', 'wood', [ex, postH / 2, ez], [0.018, postH, 0.018]));
+  }
+  return [nx, nz];
+}
+
+// Solid external staircase sitting fully outside one wall, climbing to its roof.
+// avoidList = [[nx,nz],...] faces to keep clear. Returns the face it used, or null.
+function exteriorStairs(rng, out, box, avoidList) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const faces = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    .filter(f => !avoidList.some(a => a[0] === f[0] && a[1] === f[1]));
+  if (!faces.length) return null;
+  const [nx, nz] = pick(rng, faces);
+  const groundY = by - sy / 2, rise = sy;
+  const wallW = nx !== 0 ? sz : sx, halfWall = nx !== 0 ? sx / 2 : sz / 2;
+  const run = Math.min(0.72, wallW * 0.82), steps = 6, stepW = run / steps, proj = 0.13;
+  const dir = rng() < 0.5 ? 1 : -1;
+  for (let i = 0; i < steps; i++) {
+    const along = dir * ((i + 0.5) / steps - 0.5) * run;
+    const cx = bx + nx * (halfWall + proj / 2) + nz * along;
+    const cz = bz + nz * (halfWall + proj / 2) + (-nx) * along;
+    const hgt = ((i + 0.5) / steps) * rise;      // solid riser down to the ground
+    out.push(I('box', 'sandLight', [cx, groundY + hgt / 2, cz],
+      [nx !== 0 ? proj : stepW, hgt, nz !== 0 ? proj : stepW]));
+  }
+  return [nx, nz];
+}
+
+// Ladder leaning against a wall, reaching the roof. totalH = full building height,
+// avoid = optional [nx,nz] face to keep clear (the canopy/door face).
+function ladder(rng, out, box, totalH, avoidList) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const groundY = by - sy / 2;
+  const faces = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    .filter(f => !avoidList.some(a => a[0] === f[0] && a[1] === f[1]));
+  if (!faces.length) return;
+  const [nx, nz] = pick(rng, faces);
+  const h = totalH * 1.02 + 0.06;               // reaches just past the roofline
+  const lean = 0.2, s = Math.sin(lean), c = Math.cos(lean);
+  const baseOut = 0.12;                          // stand off the wall onto the viga tips
+  const rot = nx !== 0 ? [0, 0, nx * lean] : [-nz * lean, 0, 0];  // top rests on the wall
+  const railOff = 0.055;
+  for (const o of [-railOff, railOff]) {
+    const px = bx + (nx !== 0 ? nx * (sx / 2 + baseOut + s * h / 2) : o);
+    const pz = bz + (nz !== 0 ? nz * (sz / 2 + baseOut + s * h / 2) : o);
+    out.push(I('cylinder', 'wood', [px, groundY + c * h / 2, pz], [0.016, h, 0.016], rot));
+  }
+  const rungs = Math.max(3, Math.round(h / 0.12));
+  for (let i = 1; i < rungs; i++) {
+    const t = i / rungs, off = s * h * (1 - t);
+    const px = bx + (nx !== 0 ? nx * (sx / 2 + baseOut + off) : 0);
+    const pz = bz + (nz !== 0 ? nz * (sz / 2 + baseOut + off) : 0);
+    out.push(I('cylinder', 'wood', [px, groundY + c * h * t, pz],
+      [0.012, railOff * 2, 0.012], nx !== 0 ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]));
+  }
+}
+
+function rubble(rng, out, cx, cz, n) {
+  for (let i = 0; i < n; i++) {
+    const s = range(rng, 0.05, 0.13);
+    out.push(I('box', pick(rng, ['sandDark', 'sand']),
+      [cx + range(rng, -0.42, 0.42), s / 2, cz + range(rng, -0.42, 0.42)],
+      [s, s, s], [0, rng() * Math.PI, 0]));
+  }
+}
+
+// neighbours: 0-8 Moore count at birth. variant: 'normal' | 'ruin' | 'scaffold'
+function generateBuilding(neighbours, seed, variant = 'normal') {
+  if (variant === 'scaffold') return generateScaffold(seed);
+  const rng = mulberry32(seed);
+  const out = [];
+  const ruined = variant === 'ruin';
+
+  if (neighbours === 0) {
+    if (ruined) { rubble(rng, out, 0, 0, 3); return out; }
+    if (rng() < 0.15) {                             // occasional lone lion statue instead
+      lionStatue(rng, out, range(rng, -0.12, 0.12), range(rng, -0.12, 0.12));
+      return out;
+    }
+    palmTree(rng, out, range(rng, -0.15, 0.15), range(rng, -0.15, 0.15));
+    if (rng() < 0.4) palmTree(rng, out, range(rng, -0.3, 0.3), range(rng, -0.3, 0.3), 0.7);
+    return out;
+  }
+
+  const storeyCounts = [0, 1, 1, 2, 3, 3, 3, 3, 3];
+  let storeys = storeyCounts[neighbours];
+  const deco = Math.max(0, neighbours - 4);
+
+  if (ruined && storeys > 1) storeys -= 1;
+
+  const boxes = [];
+  let y = 0, w = 1.0, d = 1.0, cx = 0, cz = 0;
+  for (let s = 0; s < storeys; s++) {
+    let h = range(rng, 0.3, 0.38);
+    if (s > 0) {
+      const nw = w * range(rng, 0.55, 0.8), nd = d * range(rng, 0.55, 0.8);
+      cx += range(rng, -1, 1) * (w - nw) / 2;
+      cz += range(rng, -1, 1) * (d - nd) / 2;
+      w = nw; d = nd;
+    }
+    if (ruined && s === storeys - 1) h *= range(rng, 0.4, 0.7);
+    const box = I('box', s === 0 ? 'sand' : pick(rng, ['sand', 'sandLight']),
+      [cx, y + h / 2, cz], [w, h, d]);
+    boxes.push(box);
+    out.push(box);
+    y += h;
+  }
+
+  const ground = boxes[0], top = boxes[boxes.length - 1];
+
+  windows(rng, out, ground, 2 + deco, 1);
+  for (let s = 1; s < boxes.length; s++) windows(rng, out, boxes[s], 1 + Math.ceil(deco / 2), 1);
+
+  const doorSide = doorway(rng, out, ground, deco >= 4, deco >= 4 ? 'gold' : 'sandDark');
+
+  if (!ruined) {
+    const beaded = deco < 2;
+    const trimMat = deco >= 3 ? (rng() < 0.5 ? 'lapis' : 'gold') : 'sandDark';
+    cornice(rng, out, top, beaded ? 'wood' : trimMat, beaded);
+    if (deco >= 1) for (let s = 0; s < boxes.length - 1; s++)
+      cornice(rng, out, boxes[s], 'wood', true);
+  }
+
+  if (deco >= 2) buttresses(rng, out, ground);
+
+  if (deco >= 3 && !ruined) {
+    out.push(I('box', 'lapis',
+      [top.pos[0], top.pos[1] + top.scale[1] * 0.32, top.pos[2]],
+      [top.scale[0] + 0.02, 0.045, top.scale[2] + 0.02]));
+    if (deco >= 4) out.push(I('box', 'gold',
+      [top.pos[0], top.pos[1] + top.scale[1] * 0.32 + 0.045, top.pos[2]],
+      [top.scale[0] + 0.01, 0.02, top.scale[2] + 0.01]));
+  }
+
+  if (!ruined) {
+    const fancy = deco >= 1;                     // neighbour 5+ get fabric, others planks
+    const used = [doorSide];                      // faces already occupied by add-ons
+    if (rng() < (fancy ? 0.75 : 0.5)) shadeCanopy(rng, out, ground, fancy, doorSide);
+    if (fancy && rng() < 0.4) used.push(shadeCanopy(rng, out, ground, true));  // over a window
+    if (storeys >= 2 && rng() < 0.45) {
+      const f = exteriorStairs(rng, out, ground, used);
+      if (f) used.push(f);
+    }
+    if (rng() < 0.35) awning(rng, out, top);
+  } else {
+    rubble(rng, out, 0, 0, 4 + Math.floor(rng() * 3));
+  }
+
+  return out;
+}
+
+function generateScaffold(seed) {
+  const rng = mulberry32(seed);
+  const out = [];
+  const h = range(rng, 0.5, 0.8);
+  const half = 0.38;
+  for (const [x, z] of [[-half, -half], [-half, half], [half, -half], [half, half],
+                        [0, -half], [0, half], [-half, 0], [half, 0]]) {
+    out.push(I('cylinder', 'wood', [x, h / 2, z], [0.02, h, 0.02]));
+  }
+  for (const ly of [h * 0.45, h * 0.95]) {
+    out.push(I('cylinder', 'wood', [0, ly, -half], [0.015, half * 2, 0.015], [0, 0, Math.PI / 2]));
+    out.push(I('cylinder', 'wood', [0, ly, half], [0.015, half * 2, 0.015], [0, 0, Math.PI / 2]));
+    out.push(I('cylinder', 'wood', [-half, ly, 0], [0.015, half * 2, 0.015], [Math.PI / 2, 0, 0]));
+    out.push(I('cylinder', 'wood', [half, ly, 0], [0.015, half * 2, 0.015], [Math.PI / 2, 0, 0]));
+  }
+  // plank platform deck at the lower lashing level — parallel slats spanning the frame
+  {
+    const ly = h * 0.45, slats = 5, slatW = (half * 2) / slats;
+    for (let i = 0; i < slats; i++) {
+      const sx = -half + (i + 0.5) * slatW;
+      out.push(I('box', 'wood', [sx, ly + 0.015, 0], [slatW * 0.85, 0.02, half * 2 - 0.03]));
+    }
+  }
+  out.push(I('box', 'sandLight', [range(rng, -0.25, 0.25), 0.05, range(rng, -0.25, 0.25)], [0.18, 0.1, 0.14]));
+  // upright ladder standing flush against the scaffold frame — construction-in-progress cue
+  {
+    const lx = half, lz = range(rng, -half * 0.5, half * 0.5), railOff = 0.05;
+    for (const o of [-railOff, railOff]) {
+      out.push(I('cylinder', 'wood', [lx, h / 2, lz + o], [0.014, h, 0.014]));
+    }
+    const rungs = Math.max(3, Math.round(h / 0.12));
+    for (let i = 1; i < rungs; i++) {
+      out.push(I('cylinder', 'wood', [lx, (i / rungs) * h, lz],
+        [0.011, railOff * 2, 0.011], [Math.PI / 2, 0, 0]));
+    }
+  }
+  return out;
+}
+
+// Little seated lion, facing (fx,fz) (axis-aligned), base sitting at baseY.
+function goldGuardian(out, cx, baseY, cz, fx, fz, mat = 'gold') {
+  const g = mat;
+  const P = (fwd, side, up) => [cx + fx * fwd - fz * side, baseY + up, cz + fz * fwd + fx * side];
+  const S = (len, wid, h) => fx !== 0 ? [len, h, wid] : [wid, h, len];
+  out.push(I('box', g, P(-0.05, 0, 0.06), S(0.12, 0.14, 0.12)));   // haunches (rear, low)
+  out.push(I('box', g, P(0.05, 0, 0.10), S(0.10, 0.12, 0.17)));    // upright chest
+  out.push(I('cylinder', g, P(0.10, 0.045, 0.045), [0.03, 0.09, 0.03]));   // front legs
+  out.push(I('cylinder', g, P(0.10, -0.045, 0.045), [0.03, 0.09, 0.03]));
+  out.push(I('box', g, P(0.11, 0, 0.21), S(0.09, 0.09, 0.09)));    // head
+  out.push(I('box', g, P(0.17, 0, 0.19), S(0.05, 0.06, 0.05)));    // snout
+  for (let i = 0; i < 7; i++) {                                    // mane ring around the face
+    const a = (i / 7) * Math.PI * 2;
+    out.push(I('sphere', g, P(0.08 + Math.cos(a) * 0.02, Math.sin(a) * 0.07, 0.21 + Math.sin(a) * 0.055),
+      [0.03, 0.03, 0.03]));
+  }
+  out.push(I('sphere', g, P(0.09, 0.045, 0.26), [0.022, 0.022, 0.022]));   // ears
+  out.push(I('sphere', g, P(0.09, -0.045, 0.26), [0.022, 0.022, 0.022]));
+  out.push(I('cylinder', g, P(-0.10, 0.05, 0.11), [0.018, 0.12, 0.018], [0.5, 0, 0]));  // tail
+}
+
+// Free-standing stone lion statue on a low plinth — desert filler, like the palms.
+function lionStatue(rng, out, cx = 0, cz = 0) {
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const [fx, fz] = pick(rng, dirs);
+  const plinthY = 0.09;
+  out.push(I('box', 'sandDark', [cx, plinthY / 2, cz], [0.26, plinthY, 0.26]));
+  goldGuardian(out, cx, plinthY, cz, fx, fz, pick(rng, ['sand', 'sandDark']));
+}
+
+// size: footprint NxN tiles (>=3), footprint spans [-size/2, size/2]. variant: 'normal' | 'ruin'
+function generateZiggurat(size, seed, variant = 'normal') {
+  const rng = mulberry32(seed);
+  const out = [];
+  const tiers = Math.min(size, 6);
+  const ruined = variant === 'ruin';
+  const shownTiers = ruined ? Math.max(1, tiers - 2) : tiers;
+  const baseW = size * 0.98;
+  const tierH = 0.55;
+  const stairFace = pick(rng, [0, 1, 2, 3]);
+  const ang = stairFace * Math.PI / 2;
+  const dirX = Math.sin(ang), dirZ = Math.cos(ang);
+  const skipDir = [Math.round(dirX), Math.round(dirZ)];  // face the ramp-stair climbs
+
+  let y = 0;
+  const tierWidths = [];
+  for (let t = 0; t < tiers; t++) tierWidths.push(baseW * (1 - t / tiers) * 0.98 + baseW * 0.02);
+
+  for (let t = 0; t < shownTiers; t++) {
+    let w = tierWidths[t];
+    let h = tierH;
+    if (ruined && t === shownTiers - 1) h *= 0.5;
+    const isTop = !ruined && t === tiers - 1;
+    out.push(I('box', isTop ? 'lapis' : (t % 2 ? 'sandLight' : 'sand'), [0, y + h / 2, 0], [w, h, w]));
+    if (!ruined || t < shownTiers - 1) {
+      cornice(rng, out, { pos: [0, y + h / 2, 0], scale: [w, h, w] },
+        isTop ? 'gold' : 'sandDark', t >= tiers - 2, skipDir);
+    }
+    if (t < 2) buttresses(rng, out, { pos: [0, y + h / 2, 0], scale: [w, h, w] });
+    y += h;
+  }
+
+  if (!ruined) {
+    const shrineW = tierWidths[tiers - 1] * 0.4;
+    out.push(I('box', 'gold', [0, y + shrineW * 0.35, 0], [shrineW, shrineW * 0.7, shrineW]));
+    out.push(I('arch', 'gold', [0, y + shrineW * 0.5, shrineW / 2 + 0.01],
+      [shrineW * 0.5, shrineW * 0.5, shrineW * 0.5]));
+  } else {
+    rubble(rng, out, 0, 0, 10);
+    for (let i = 0; i < 6; i++) {
+      const s = range(rng, 0.08, 0.2);
+      out.push(I('box', 'sandDark',
+        [range(rng, -1, 1) * tierWidths[shownTiers - 1] * 0.35, y + s / 2,
+         range(rng, -1, 1) * tierWidths[shownTiers - 1] * 0.35], [s, s, s],
+        [0, rng() * Math.PI, 0]));
+    }
+  }
+
+  const totalH = y;
+  const steps = Math.round(totalH / 0.055);
+  const stairW = Math.max(0.5, size * 0.18);
+  const runStart = baseW / 2 + totalH * 0.9;
+  for (let i = 0; i < steps; i++) {
+    const t = (i + 0.5) / steps;
+    const dist = runStart * (1 - t) + (tierWidths[Math.min(shownTiers, tiers) - 1] / 2) * t * 0.9;
+    out.push(I('box', 'sandLight',
+      [dirX * dist, t * totalH, dirZ * dist],
+      [Math.abs(dirZ) * stairW + Math.abs(dirX) * 0.16,
+       0.035,
+       Math.abs(dirX) * stairW + Math.abs(dirZ) * 0.16]));
+  }
+  for (const side of [-1, 1]) {
+    const px = dirX * runStart + dirZ * side * stairW * 0.7;
+    const pz = dirZ * runStart + dirX * side * stairW * 0.7;
+    out.push(I('box', 'sandDark', [px, 0.15, pz], [0.18, 0.3, 0.18]));
+    if (!ruined) goldGuardian(out, px, 0.3, pz, Math.round(dirX), Math.round(dirZ));  // gold lion (dropped in ruins)
+  }
+  return out;
+}
+
+/* ============================================================================
+   GRID / AUTOMATON LAYER — no rendering knowledge.
+   ------------------------------------------------------------------------- */
+
+const N = 32;                       // grid size (v1 per spec)
+
+// hash a lattice/tile coordinate to [0,1) deterministically from the global seed
+function hash01(globalSeed, x, y, salt) {
+  return mulberry32(hashSeed(globalSeed, x, y, salt))();
+}
+
+function seedGrid(globalSeed, density) {
+  const g = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    g[y * N + x] = hash01(globalSeed, x, y, 0xBEEF) < density ? 1 : 0;
+  }
+  return g;
+}
+
+// Moore neighbour count, dead edges (no wraparound)
+function neighbourCount(g, x, y) {
+  let c = 0;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dy) continue;
+    const nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < N && ny >= 0 && ny < N) c += g[ny * N + nx];
+  }
+  return c;
+}
+
+// One Life step under B/S rule sets (arrays of counts)
+function stepGrid(g, B, S) {
+  const out = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const n = neighbourCount(g, x, y);
+    out[y * N + x] = g[y * N + x] ? (S.includes(n) ? 1 : 0) : (B.includes(n) ? 1 : 0);
+  }
+  return out;
+}
+
+function parseRule(str) {           // "B3/S12345" -> { B:[3], S:[1,2,3,4,5] }
+  const m = str.match(/B(\d*)\/S(\d*)/i);
+  return { B: [...m[1]].map(Number), S: [...m[2]].map(Number) };
+}
+
+/* ============================================================================
+   JITTERED LATTICE — shared (N+1)x(N+1) vertex grid, each point offset once,
+   so adjacent tiles agree on their shared edge. Offsets are seeded from the
+   global seed: same seed -> same city, jitter included.
+   ------------------------------------------------------------------------- */
+
+const JITTER = 0.1;                 // max offset, fraction of cell width
+
+let lattice = null;                 // [j][i] -> {x, z}
+function buildLattice(globalSeed) {
+  lattice = [];
+  for (let j = 0; j <= N; j++) {
+    const row = [];
+    for (let i = 0; i <= N; i++) {
+      row.push({
+        x: i - N / 2 + (hash01(globalSeed, i, j, 0xA11CE) * 2 - 1) * JITTER,
+        z: j - N / 2 + (hash01(globalSeed, i, j, 0xB0B) * 2 - 1) * JITTER,
+      });
+    }
+    lattice.push(row);
+  }
+}
+
+// Per-tile affine placement from its 4 jittered corners: centroid + mean yaw +
+// mean edge lengths. Buildings stay rigid (instancing-friendly), just nudged.
+function tileTransform(x, y) {
+  const p00 = lattice[y][x], p10 = lattice[y][x + 1],
+        p01 = lattice[y + 1][x], p11 = lattice[y + 1][x + 1];
+  const cx = (p00.x + p10.x + p01.x + p11.x) / 4;
+  const cz = (p00.z + p10.z + p01.z + p11.z) / 4;
+  const yawBottom = Math.atan2(p10.z - p00.z, p10.x - p00.x);
+  const yawTop = Math.atan2(p11.z - p01.z, p11.x - p01.x);
+  const yaw = (yawBottom + yawTop) / 2;
+  const len = (a, b) => Math.hypot(b.x - a.x, b.z - a.z);
+  const sx = (len(p00, p10) + len(p01, p11)) / 2;
+  const sz = (len(p00, p01) + len(p10, p11)) / 2;
+  return { cx, cz, yaw: -yaw, sx, sz };
+}
+
+/* ============================================================================
+   RENDER LAYER — Three.js, render-on-demand (no continuous loop).
+   ------------------------------------------------------------------------- */
+
+const MATS = {
+  sand:       new THREE.MeshStandardMaterial({ color: 0xd9c197, roughness: 0.95 }),
+  sandLight:  new THREE.MeshStandardMaterial({ color: 0xe9d8b0, roughness: 0.95 }),
+  sandDark:   new THREE.MeshStandardMaterial({ color: 0xb99e6f, roughness: 0.95 }),
+  window:     new THREE.MeshStandardMaterial({ color: 0x3a2e20, roughness: 1.0 }),
+  wood:       new THREE.MeshStandardMaterial({ color: 0x7a5a38, roughness: 0.9 }),
+  cloth:      new THREE.MeshStandardMaterial({ color: 0x6b4a3a, roughness: 1.0, side: THREE.DoubleSide }),
+  clothRed:   new THREE.MeshStandardMaterial({ color: 0xbe4a35, roughness: 1.0, side: THREE.DoubleSide }),
+  clothPlum:  new THREE.MeshStandardMaterial({ color: 0x99506e, roughness: 1.0, side: THREE.DoubleSide }),
+  clothOchre: new THREE.MeshStandardMaterial({ color: 0xcf9a44, roughness: 1.0, side: THREE.DoubleSide }),
+  lapis:      new THREE.MeshStandardMaterial({ color: 0x1f4e9c, roughness: 0.35, metalness: 0.15 }),
+  gold:       new THREE.MeshStandardMaterial({ color: 0xd4a437, roughness: 0.3, metalness: 0.6 }),
+  palm:       new THREE.MeshStandardMaterial({ color: 0x4e7a34, roughness: 0.9 }),
+};
+
+const GEOS = {
+  box:      new THREE.BoxGeometry(1, 1, 1),
+  cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
+  cone:     new THREE.CylinderGeometry(0.06, 0.5, 1, 7),
+  sphere:   new THREE.SphereGeometry(0.5, 8, 6),
+  arch:     new THREE.TorusGeometry(0.5, 0.1, 8, 12, Math.PI),
+};
+
+function buildGroup(instructions) {
+  const g = new THREE.Group();
+  for (const ins of instructions) {
+    const mesh = new THREE.Mesh(GEOS[ins.shape], MATS[ins.mat] || MATS.sand);
+    mesh.position.set(...ins.pos);
+    mesh.rotation.set(...ins.rot);
+    mesh.scale.set(...ins.scale);
+    mesh.castShadow = mesh.receiveShadow = true;
+    g.add(mesh);
+  }
+  return g;
+}
+
+const wrap = document.getElementById('canvas-wrap');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xead9b8);
+scene.fog = new THREE.Fog(0xead9b8, 60, 140);
+
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
+camera.position.set(0, 30, 34);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.addEventListener('change', render);
+
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.4);
+sun.position.set(24, 36, 16);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = sun.shadow.camera.bottom = -30;
+sun.shadow.camera.right = sun.shadow.camera.top = 30;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xcfe0ff, 0xc7a86e, 0.9));
+
+// desert far beyond the grid
+const outerGround = new THREE.Mesh(
+  new THREE.PlaneGeometry(400, 400),
+  new THREE.MeshStandardMaterial({ color: 0xdcc396, roughness: 1 }));
+outerGround.rotation.x = -Math.PI / 2;
+outerGround.position.y = -0.02;
+outerGround.receiveShadow = true;
+scene.add(outerGround);
+
+// grid ground: a real warped mesh whose vertices follow the jittered lattice
+let gridGround = null;
+function buildGroundMesh() {
+  if (gridGround) { scene.remove(gridGround); gridGround.geometry.dispose(); }
+  const geo = new THREE.PlaneGeometry(N, N, N, N);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const v = j * (N + 1) + i;
+    pos.setX(v, lattice[j][i].x);
+    pos.setZ(v, lattice[j][i].z);
+  }
+  geo.computeVertexNormals();
+  gridGround = new THREE.Mesh(geo,
+    new THREE.MeshStandardMaterial({ color: 0xd7bd90, roughness: 1 }));
+  gridGround.receiveShadow = true;
+  scene.add(gridGround);
+}
+
+/* ============================================================================
+   CITY STATE — automaton + per-tile birth records + two-frame lookahead.
+   ------------------------------------------------------------------------- */
+
+let globalSeed = 1;
+let rule = parseRule('B3/S12345');
+let grid = null;                    // current committed generation
+let generation = 0;
+let records = null;                 // per tile: {seed, n} fixed at birth, or null
+
+function recordBirths(newGrid, oldRecords, gen) {
+  const recs = new Array(N * N).fill(null);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    if (!newGrid[i]) continue;
+    if (oldRecords && oldRecords[i]) {
+      recs[i] = oldRecords[i];      // survivor: form fixed at birth, never re-rolls
+    } else {
+      recs[i] = { seed: hashSeed(globalSeed, x, y, gen), n: neighbourCount(newGrid, x, y) };
+    }
+  }
+  return recs;
+}
+
+function resetCity() {
+  generation = 0;
+  buildLattice(globalSeed);
+  buildGroundMesh();
+  grid = seedGrid(globalSeed, parseFloat(densityEl.value));
+  records = recordBirths(grid, null, 0);
+  refreshTiles(true);
+  updateGenLabel();
+  render();
+}
+
+function stepCity() {
+  const next = stepGrid(grid, rule.B, rule.S);
+  generation++;
+  grid = next;
+  records = recordBirths(grid, records, generation);
+  refreshTiles(false);
+  updateGenLabel();
+  render();
+}
+
+/* ============================================================================
+   TILE RENDERING — four cases from the two-frame lookahead:
+   stable building / stable sand / scaffold (about to be born) / ruin (about to die).
+   Groups are cached per tile and only rebuilt when their case/identity changes.
+   ------------------------------------------------------------------------- */
+
+const tileCache = new Array(N * N).fill(null);   // {key, group} | null
+
+function refreshTiles(force) {
+  const next = stepGrid(grid, rule.B, rule.S);   // lookahead, not committed
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    const cur = grid[i], fut = next[i];
+    let key, instructions = null;
+    if (cur && fut) {               // stable building
+      const r = records[i];
+      key = `b:${r.seed}:${r.n}`;
+    } else if (cur && !fut) {       // about to be demolished: its own ruin
+      const r = records[i];
+      key = `r:${r.seed}:${r.n}`;
+    } else if (!cur && fut) {       // about to be built: scaffold with the future seed
+      key = `s:${hashSeed(globalSeed, x, y, generation + 1)}`;
+    } else {
+      key = 'sand';
+    }
+
+    const cached = tileCache[i];
+    if (!force && cached && cached.key === key) continue;
+    if (cached) { scene.remove(cached.group); tileCache[i] = null; }
+    if (key === 'sand') continue;
+
+    if (key[0] === 'b') {
+      const r = records[i];
+      instructions = generateBuilding(r.n, r.seed, 'normal');
+    } else if (key[0] === 'r') {
+      const r = records[i];
+      instructions = generateBuilding(r.n, r.seed, 'ruin');
+    } else {
+      instructions = generateScaffold(hashSeed(globalSeed, x, y, generation + 1));
+    }
+
+    const group = buildGroup(instructions);
+    const t = tileTransform(x, y);
+    group.position.set(t.cx, 0, t.cz);
+    group.rotation.y = t.yaw;
+    group.scale.set(t.sx, 1, t.sz);
+    scene.add(group);
+    tileCache[i] = { key, group };
+  }
+}
+
+/* ============================================================================
+   UI
+   ------------------------------------------------------------------------- */
+
+const seedEl = document.getElementById('seed');
+const densityEl = document.getElementById('density');
+const genEl = document.getElementById('gen');
+const playBtn = document.getElementById('play');
+
+function updateGenLabel() { genEl.textContent = 'gen ' + generation; }
+
+function setSeed(s) {
+  globalSeed = s | 0;
+  seedEl.value = globalSeed;
+  clearAllTiles();
+  resetCity();
+}
+function clearAllTiles() {
+  for (let i = 0; i < tileCache.length; i++) {
+    if (tileCache[i]) { scene.remove(tileCache[i].group); tileCache[i] = null; }
+  }
+}
+
+document.getElementById('prev').onclick = () => setSeed((seedEl.valueAsNumber | 0) - 1);
+document.getElementById('next').onclick = () => setSeed((seedEl.valueAsNumber | 0) + 1);
+document.getElementById('random').onclick = () => setSeed(Math.floor(Math.random() * 1e6));
+seedEl.onchange = () => setSeed(seedEl.valueAsNumber | 0);
+densityEl.onchange = () => { clearAllTiles(); resetCity(); };
+document.getElementById('preset').onchange = e => {
+  rule = parseRule(e.target.value);            // preset switch resets (per spec)
+  clearAllTiles();
+  resetCity();
+};
+document.getElementById('step').onclick = stepCity;
+document.getElementById('reset').onclick = () => { clearAllTiles(); resetCity(); };
+
+let playTimer = null;
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.textContent = 'play'; }
+}
+function startPlay() {
+  stopPlay();
+  playTimer = setInterval(stepCity, 1000 / parseFloat(speedEl.value));
+  playBtn.textContent = 'pause';
+}
+playBtn.onclick = () => (playTimer ? stopPlay() : startPlay());
+const speedEl = document.getElementById('speed');
+speedEl.onchange = () => { if (playTimer) startPlay(); };
+
+function render() { renderer.render(scene, camera); }
+function resize() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  render();
+}
+addEventListener('resize', resize);
+
+globalSeed = seedEl.valueAsNumber | 0;
+resetCity();
+resize();
+</script>
+</body>
+</html>

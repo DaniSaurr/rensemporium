@@ -1,0 +1,3699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BABYLON — a desert god game</title>
+<meta name="description" content="Paint a city into a blank desert. Your greatest building sets your reach; time bleaches, strips and crumbles what you make. A tiny god game in one HTML file.">
+<meta property="og:title" content="BABYLON — a desert god game">
+<meta property="og:description" content="Paint a city into a blank desert. Your greatest building sets your reach; time bleaches, strips and crumbles what you make.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2216%22 fill=%22%23e8dcc0%22/><rect x=%2218%22 y=%2266%22 width=%2264%22 height=%2216%22 fill=%22%23b99e6f%22/><rect x=%2228%22 y=%2248%22 width=%2244%22 height=%2216%22 fill=%22%23d9c197%22/><rect x=%2238%22 y=%2230%22 width=%2224%22 height=%2216%22 fill=%22%23e9d8b0%22/><rect x=%2244%22 y=%2218%22 width=%2212%22 height=%2210%22 fill=%22%23d4a437%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Cuneiforme (title face) is hosted at the Neocities site root: /fonts/Cuneiforme.ttf */
+  @font-face {
+    font-family: 'Cuneiforme';
+    src: url('/fonts/Cuneiforme.ttf') format('truetype');
+    font-display: swap;
+  }
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; flex-direction: column; font-family: 'Cinzel', system-ui, sans-serif; background: #e8dcc0;
+         -webkit-tap-highlight-color: transparent; }
+  /* HUD: a strip of clay tablet across the top. Incised borders, stamped
+     buttons, wedge-mark separators — the god's controls pressed into clay. */
+  #hud {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 9px 14px;
+    background: linear-gradient(170deg, #c39c68, #ab814b);
+    border-bottom: 3px solid #77532a;
+    box-shadow: inset 0 -6px 14px rgba(70, 45, 15, 0.25), inset 0 3px 8px rgba(255, 235, 200, 0.25);
+    font-size: 15px; color: #3d2c15;
+  }
+  #hud .group { display: flex; align-items: center; gap: 7px; }
+  #hud button {
+    font-size: 15px; padding: 8px 14px; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(#c9a570, #b68c53); color: #3d2c15;
+    border: 1.5px solid #77532a;
+    box-shadow: inset 0 1px 0 rgba(255, 235, 200, 0.45), 0 2px 0 #77532a;
+    text-shadow: 0 1px 0 rgba(255, 235, 200, 0.3);
+  }
+  #hud button:hover { background: linear-gradient(#d4b17c, #c0965d); }
+  #hud button:active { transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(70, 45, 15, 0.5); }
+  #hud .vbtn.active {
+    background: linear-gradient(#96702f, #b08737); color: #f7e8c8; font-weight: 700;
+    box-shadow: inset 0 2px 6px rgba(50, 32, 8, 0.6);   /* pressed INTO the clay */
+  }
+  #hud .vbtn:disabled { opacity: 0.55; cursor: not-allowed; }
+  #hud select {
+    font-size: 15px; padding: 7px 8px; border-radius: 4px;
+    background: #c9a570; color: #3d2c15; border: 1.5px solid #77532a;
+  }
+  #hud .glabel { font-weight: 700; letter-spacing: 0.04em; }
+  #hud .bignum { font-size: 18px; font-weight: 700; min-width: 64px; }
+  #hud .bignum small { font-weight: 400; opacity: 0.65; font-size: 13px; }
+  #hud input[type=range] { accent-color: #6e4d20; }
+  #hud .toggle { gap: 6px; cursor: pointer; font-weight: 700; }
+  #hud .toggle input { width: 18px; height: 18px; accent-color: #6e4d20; cursor: pointer; }
+  #gen { opacity: .85; min-width: 70px; font-variant-numeric: tabular-nums; font-weight: 700; }
+  #hud .spacer { flex: 1; }
+  /* deferred controls: play (auto-advance, design in flux) and mid-game world
+     fiddling are hidden — the world is chosen at the tablet, then locked in */
+  #play, #worldBtn { display: none; }
+  /* World panel: seeds, terrain and sim plumbing — out of sight until asked */
+  #worldPanel {
+    display: none; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 8px 12px; background: #cabb96; border-bottom: 2px solid #a8946a;
+    font-size: 13px; color: #4a3a22;
+  }
+  #worldPanel.open { display: flex; }
+  #worldPanel label { display: flex; align-items: center; gap: 5px; }
+  #worldPanel input[type=number] { width: 76px; }
+  #worldPanel button { padding: 4px 12px; border-radius: 6px; border: 1px solid #a8946a;
+    background: #e6d8b4; cursor: pointer; }
+  #canvas-wrap { flex: 1; position: relative; min-height: 0; }
+  canvas { display: block; }
+  /* landing: a clay tablet standing in the desert. World settings are chosen
+     here and LOCKED IN by Begin — no mid-game fiddling. Anew returns here. */
+  #landing {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(200,175,130,0.45) 0%, rgba(140,110,70,0.8) 100%);
+    padding: 18px; cursor: default; overflow: auto;
+    transition: opacity 0.7s ease;
+  }
+  #landing.gone { opacity: 0; pointer-events: none; }
+  #tablet {
+    background: linear-gradient(165deg, #c8a06a 0%, #b98f57 55%, #a87e48 100%);
+    border: 3px solid #77532a;
+    border-radius: 22px 26px 18px 24px;          /* irregular — formed by hand */
+    box-shadow: inset 0 0 46px rgba(80, 52, 20, 0.4), inset 0 2px 6px rgba(255, 232, 190, 0.35),
+                0 14px 40px rgba(50, 32, 10, 0.5);
+    padding: 26px 38px 30px; max-width: 500px; width: 100%;
+    text-align: center; color: #3d2c15;
+  }
+  #tablet h1 {
+    margin: 0; font-size: clamp(44px, 9vw, 84px); letter-spacing: 0.12em;
+    color: #3d2c15; text-shadow: 0 1px 0 rgba(255, 232, 190, 0.4), 0 -1px 2px rgba(60, 38, 12, 0.5);
+    font-family: 'Cuneiforme', 'Cinzel', serif; font-weight: 400;
+  }
+  #tablet p.tag { margin: 4px 0 18px; font-size: clamp(14px, 2.2vw, 18px); color: #58421f; letter-spacing: 0.14em; }
+  /* incised register line, like a tablet's ruled rows */
+  #tablet hr {
+    border: none; height: 3px; margin: 14px 0;
+    background: linear-gradient(rgba(60, 38, 12, 0.45), rgba(255, 232, 190, 0.35));
+    border-radius: 2px;
+  }
+  #tablet .setup {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px;
+    text-align: left; font-size: 15px; margin-bottom: 6px;
+  }
+  #tablet .setup label { display: flex; align-items: center; gap: 7px; }
+  #tablet .setup .wide { grid-column: 1 / -1; }
+  #tablet .setup input[type=number], #tablet .setup select {
+    font-size: 15px; padding: 5px 7px; border-radius: 4px;
+    background: #d8b57f; color: #3d2c15; border: 1.5px solid #77532a; min-width: 0;
+  }
+  #tablet .setup input[type=number] { width: 90px; }
+  #tablet .setup input[type=checkbox], #tablet .setup input[type=radio] {
+    width: 17px; height: 17px; accent-color: #6e4d20;
+  }
+  #tablet .setup .modes { display: flex; gap: 14px; justify-content: center; }
+  #tablet .setup .modes label {
+    padding: 8px 14px; border: 1.5px solid #77532a; border-radius: 4px; cursor: pointer;
+    background: rgba(255, 232, 190, 0.12);
+  }
+  #tablet .setup .modes label small { opacity: 0.75; font-weight: 400; }
+  #tablet .setup .modes label:has(input:checked) {
+    background: linear-gradient(#96702f, #b08737); color: #f7e8c8; font-weight: 700;
+    box-shadow: inset 0 2px 6px rgba(50, 32, 8, 0.6);
+  }
+  #tablet .setup button {
+    padding: 5px 10px; border-radius: 4px; border: 1.5px solid #77532a;
+    background: #c9a570; cursor: pointer; color: #3d2c15;
+  }
+  #tablet #begin {
+    font-size: clamp(16px, 2.6vw, 20px); padding: 12px 46px; letter-spacing: 0.2em; margin-top: 12px;
+    background: linear-gradient(#96702f, #b08737); color: #f7e8c8;
+    border: 2px solid #6e4d20; border-radius: 5px; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 232, 190, 0.3), 0 3px 0 #6e4d20;
+  }
+  #tablet #begin:hover { filter: brightness(1.1); }
+  #tablet #begin:active { transform: translateY(2px); box-shadow: inset 0 2px 6px rgba(50, 32, 8, 0.6); }
+  /* touch devices or narrow screens: bigger targets, 16px inputs (stops iOS focus-zoom) */
+  @media (pointer: coarse), (max-width: 700px) {
+    #hud { font-size: 16px; gap: 8px 10px; padding: 8px; }
+    #hud button { min-height: 44px; min-width: 44px; font-size: 16px; }
+    #hud input, #hud select { font-size: 16px; min-height: 38px; }
+    #hud input[type=range] { width: 92px; }
+    #worldPanel { font-size: 15px; }
+    #worldPanel input[type=number] { width: 64px; }
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="group">
+    <button id="verbPaint" class="vbtn active" title="Click to place buildings">&#129521; Build</button>
+    <button id="verbSculpt" class="vbtn" disabled title="Locked: requires a great ziggurat">&#9968;&#65039; Sculpt &#128274;</button>
+  </div>
+  <div class="group">
+    <span class="glabel">Brush</span>
+    <input type="range" id="brush" min="1" max="1" step="1" value="1">
+    <span class="bignum"><span id="brushLabel">1</span><small>&thinsp;/&thinsp;<span id="brushMax">1</span></small></span>
+  </div>
+  <label class="group toggle" title="Buildings age and the city grows on its own">
+    <input type="checkbox" id="timeToggle"> &#8987; Time</label>
+  <label class="group" title="Growth pattern for buildings placed by the simulation">People
+    <select id="culture"></select></label>
+  <div class="group">
+    <button id="wait" title="Advance time by this many years">&#8987; Wait</button>
+    <input type="number" id="waitYears" value="10" min="1" max="500" title="Number of years" style="width:58px">
+    <button id="play" title="Advance time automatically">&#9654;</button>
+    <span id="gen">year 0</span>
+  </div>
+  <span class="spacer"></span>
+  <button id="worldBtn" title="World settings">&#127758; World</button>
+  <button id="reset" title="Reset and choose a new world">&#8634; Anew</button>
+</div>
+<div id="worldPanel">
+  <label>Seed <input type="number" id="seed" value="1"></label>
+  <button id="prev">&#9664;</button>
+  <button id="next">&#9654;</button>
+  <button id="random">random</button>
+  <label>Grid <input type="number" id="gridSize" min="16" max="256" step="8" value="64"></label>
+  <label>Detail cap <input type="number" id="buildingCap" min="100" max="20000" step="100" value="2500"></label>
+  <label><input type="checkbox" id="canalToggle" checked> River</label>
+  <label>Width <input type="range" id="riverWidth" min="1" max="6" step="1" value="1"></label>
+  <label>Flow <select id="riverFlow"></select></label>
+  <label><input type="checkbox" id="oceanToggle"> Ocean</label>
+  <label><input type="checkbox" id="circularToggle"> Island</label>
+  <button id="step">step 1 turn</button>
+  <label>Play speed <input type="range" id="speed" min="0.5" max="10" step="0.5" value="2"></label>
+</div>
+<div id="canvas-wrap">
+  <div id="landing">
+    <div id="tablet">
+      <h1>BABYLON</h1>
+      <p class="tag">a desert god game</p>
+      <hr>
+      <div class="setup">
+        <div class="modes wide">
+          <label><input type="radio" name="mode" value="god" checked> God Game</label>
+          <label><input type="radio" name="mode" value="creative"> Creative</label>
+        </div>
+        <label class="wide">World seed
+          <input type="number" id="setupSeed" value="1">
+          <button id="setupRandom" type="button" title="Random seed">&#127922;</button>
+        </label>
+        <label>Land size
+          <select id="setupSize">
+            <option value="48">Small</option>
+            <option value="64" selected>Medium</option>
+            <option value="96">Large</option>
+            <option value="128">Huge</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="setupRiver" checked> River</label>
+        <label>River flow <select id="setupFlow"></select></label>
+        <label><input type="checkbox" id="setupOcean"> Sea</label>
+        <label><input type="checkbox" id="setupIsland"> Island</label>
+      </div>
+      <hr>
+      <button id="begin">BEGIN</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
+import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
+
+/* ============================================================================
+/* == GENERATOR (from building-lab.html) == */
+/* ============================================================================
+   BUILDING GENERATOR — pure functions, no Three.js.
+   Emits a list of primitive placement instructions:
+     { shape: 'box'|'cylinder'|'cone'|'sphere'|'arch',
+       pos: [x,y,z], rot: [x,y,z], scale: [x,y,z], mat: <material key> }
+   Tile-local coords: tile spans x/z in [-0.5, 0.5], y up from 0.
+   Unit shapes (box 1x1x1, cylinder r=0.5 h=1, cone r=0.5 h=1, sphere r=0.5,
+   arch = half-torus, outer r=0.5, tube r=0.1).
+   ------------------------------------------------------------------------- */
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(globalSeed, x, y, birthGen) {
+  let h = globalSeed >>> 0;
+  h = Math.imul(h ^ x, 0x85EBCA6B);
+  h = Math.imul(h ^ y, 0xC2B2AE35);
+  h = Math.imul(h ^ birthGen, 0x27D4EB2F);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+// material keys: sand/sandLight/sandDark (mudbrick ramp), window (dark inset),
+// wood, cloth (awning), lapis/gold (sacred, neighbour 7-8 + ziggurat top only), palm.
+
+function I(shape, mat, pos, scale, rot = [0, 0, 0]) {
+  return { shape, mat, pos, scale, rot };
+}
+
+const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+const range = (rng, a, b) => a + rng() * (b - a);
+
+function palmTree(rng, out, cx = 0, cz = 0, heightScale = 1) {
+  const h = range(rng, 0.5, 0.75) * heightScale;
+  const lean = range(rng, -0.08, 0.08);
+  out.push(I('cone', 'wood', [cx + lean * 0.5, h / 2, cz], [0.1, h, 0.1], [0, 0, lean]));
+  // fronds radiate from the crown: base anchored at the trunk top, tip arching outward
+  const crownX = cx + lean, crownY = h, crownZ = cz;
+  const fronds = 6 + Math.floor(rng() * 3);
+  for (let i = 0; i < fronds; i++) {
+    const ang = (i / fronds) * Math.PI * 2 + rng() * 0.3;
+    const tilt = range(rng, 0.05, 0.4);                 // arch up-and-out from horizontal
+    const len = range(rng, 0.3, 0.42) * heightScale;
+    const ct = Math.cos(tilt);
+    const ax = ct * Math.cos(ang), ay = Math.sin(tilt), az = ct * Math.sin(ang);
+    out.push(I('cone', 'palm',
+      [crownX + ax * len / 2, crownY + ay * len / 2, crownZ + az * len / 2],
+      [0.09, len, 0.02], [0, -ang, -(Math.PI / 2 - tilt)]));
+  }
+}
+
+// Rows of dark inset window boxes flush against each wall face of a storey box.
+function windows(rng, out, box, perFace, rows) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const wS = 0.055, wH = 0.08, d = 0.012;
+  for (let r = 0; r < rows; r++) {
+    const wy = by - sy / 2 + sy * ((r + 0.6) / (rows + 0.4));
+    for (const [nx, nz, faceW] of [[0, 1, sx], [0, -1, sx], [1, 0, sz], [-1, 0, sz]]) {
+      const n = Math.max(1, Math.min(perFace, Math.floor(faceW / 0.16)));
+      for (let i = 0; i < n; i++) {
+        const t = (i + 1) / (n + 1) - 0.5;
+        const px = bx + (nz !== 0 ? t * faceW : nx * (sx / 2 + d));
+        const pz = bz + (nx !== 0 ? t * faceW : nz * (sz / 2 + d));
+        out.push(I('box', 'window', [px, wy, pz],
+          nx !== 0 ? [d * 2, wH, wS] : [wS, wH, d * 2]));
+      }
+    }
+  }
+}
+
+// Roofline trim of a storey box.
+//   beaded=true  -> protruding round roof-beam ends (viga look): short horizontal
+//                   cylinders poking out of each wall face just under the top edge.
+//   beaded=false -> crenellation teeth (boxes) around the roofline perimeter.
+// skip: optional [nx,nz] face direction to leave clear (e.g. the ziggurat stair face).
+function cornice(rng, out, box, mat, beaded, skip) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  if (beaded) {
+    const y = by + sy / 2 - 0.06;
+    const L = 0.17, r = 0.03, step = 0.115;
+    for (const [nx, nz, faceW] of [[0, 1, sx], [0, -1, sx], [1, 0, sz], [-1, 0, sz]]) {
+      if (skip && nx === skip[0] && nz === skip[1]) continue;   // leave stair face clear
+      const n = Math.max(2, Math.round(faceW / step));
+      for (let i = 0; i < n; i++) {
+        const t = (i + 0.5) / n - 0.5;               // spaced inside, skips corners
+        const px = bx + (nz !== 0 ? t * faceW : nx * (sx / 2 + L * 0.42));
+        const pz = bz + (nx !== 0 ? t * faceW : nz * (sz / 2 + L * 0.42));
+        out.push(I('cylinder', mat, [px, y, pz], [r * 2, L, r * 2],
+          nz !== 0 ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]));  // lie flat, point outward
+      }
+    }
+    return;
+  }
+  const y = by + sy / 2 + 0.03;
+  const step = 0.11;
+  const emit = (px, pz) => out.push(I('box', mat, [px, y, pz], [0.05, 0.06, 0.05]));
+  const nx = Math.max(2, Math.round(sx / step)), nz = Math.max(2, Math.round(sz / step));
+  const skipPZ = skip && skip[0] === 0 ? skip[1] : 0;   // +1 clears +z edge, -1 clears -z
+  const skipPX = skip && skip[1] === 0 ? skip[0] : 0;
+  for (let i = 0; i <= nx; i++) {
+    const px = bx - sx / 2 + (i / nx) * sx;
+    if (skipPZ !== -1) emit(px, bz - sz / 2);
+    if (skipPZ !== 1) emit(px, bz + sz / 2);
+  }
+  for (let i = 1; i < nz; i++) {
+    const pz = bz - sz / 2 + (i / nz) * sz;
+    if (skipPX !== -1) emit(bx - sx / 2, pz);
+    if (skipPX !== 1) emit(bx + sx / 2, pz);
+  }
+}
+
+// Slightly-protruding tall thin boxes along wall faces (mudbrick facade rhythm).
+// skip: optional [nx,nz] face direction to leave clear (e.g. the stair face).
+function buttresses(rng, out, box, skip) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  for (const [nx, nz, faceW] of [[0, 1, sx], [0, -1, sx], [1, 0, sz], [-1, 0, sz]]) {
+    if (skip && nx === skip[0] && nz === skip[1]) continue;   // leave the stair face clear
+    const n = 2 + Math.floor(rng() * 2);
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n - 0.5;
+      const px = bx + (nz !== 0 ? t * faceW : nx * (sx / 2 + 0.02));
+      const pz = bz + (nx !== 0 ? t * faceW : nz * (sz / 2 + 0.02));
+      out.push(I('box', 'sandDark', [px, by, pz],
+        nx !== 0 ? [0.05, sy * 0.96, 0.09] : [0.09, sy * 0.96, 0.05]));
+    }
+  }
+}
+
+// Doorway with optional faceted round arch over it, on the ground storey.
+function doorway(rng, out, box, arched, archMat) {
+  const [bx, by, bz] = box.pos, [sx, , sz] = box.scale;
+  const side = pick(rng, [[0, 1], [0, -1], [1, 0], [-1, 0]]);
+  const [nx, nz] = side;
+  const dw = 0.13, dh = 0.22, d = 0.014;
+  const px = bx + nx * (sx / 2 + d), pz = bz + nz * (sz / 2 + d);
+  out.push(I('box', 'window', [px, dh / 2, pz],
+    nx !== 0 ? [d * 2, dh, dw] : [dw, dh, d * 2]));
+  if (arched) {
+    archHead(out, px, dh, pz, dw * 1.3, dw * 0.65, 0.035, d * 2.4,
+      nx !== 0 ? 'z' : 'x', archMat);
+  }
+  return side;
+}
+
+// Rooftop awning: thin roof plane + 4 skinny posts.
+function awning(rng, out, topBox) {
+  const [bx, by, bz] = topBox.pos, [sx, sy, sz] = topBox.scale;
+  const aw = Math.min(sx, sz) * range(rng, 0.45, 0.6);
+  const ax = bx + range(rng, -1, 1) * (sx / 2 - aw / 2) * 0.8;
+  const az = bz + range(rng, -1, 1) * (sz / 2 - aw / 2) * 0.8;
+  const roofY = by + sy / 2, ah = 0.16;
+  for (const [ox, oz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+    out.push(I('cylinder', 'wood',
+      [ax + ox * aw * 0.45, roofY + ah / 2, az + oz * aw * 0.45], [0.02, ah, 0.02]));
+  }
+  out.push(I('box', 'cloth', [ax, roofY + ah, az], [aw, 0.018, aw]));
+}
+
+// Projecting lean-to shade over a wall opening: a roof resting across the vigas,
+// sloping down and out, held up by two posts to the ground. Fabric on fancy houses,
+// wooden slats on plain ones. side = optional [nx,nz] face to attach to (e.g. the door).
+function shadeCanopy(rng, out, box, fabric, side) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const [nx, nz] = side || pick(rng, [[0, 1], [0, -1], [1, 0], [-1, 0]]);
+  const proj = 0.28, width = 0.34, tilt = 0.18;
+  const topY = by + sy / 2 - 0.09;            // rests just under the viga line
+  const midY = topY - 0.03;
+  const wallX = bx + nx * (sx / 2), wallZ = bz + nz * (sz / 2);
+  const cX = wallX + nx * proj / 2, cZ = wallZ + nz * proj / 2;
+  const rot = nx !== 0 ? [0, 0, -nx * tilt] : [nz * tilt, 0, 0];  // slope outer edge down
+  if (fabric) {
+    const mat = pick(rng, ['clothRed', 'clothPlum', 'clothOchre']);
+    // thin draped sheet
+    out.push(I('box', mat, [cX, midY, cZ],
+      nx !== 0 ? [proj, 0.008, width] : [width, 0.008, proj], rot));
+    // valance hanging down at the outer edge — the cue that reads as cloth, not slab
+    const vX = wallX + nx * proj, vZ = wallZ + nz * proj;
+    out.push(I('box', mat, [vX, midY - 0.055, vZ],
+      nx !== 0 ? [0.008, 0.08, width] : [width, 0.08, 0.008]));
+  } else {
+    const slats = 4;
+    for (let s = 0; s < slats; s++) {
+      const f = (s + 0.5) / slats - 0.5;
+      const ox = nx !== 0 ? 0 : f * width, oz = nz !== 0 ? 0 : f * width;
+      out.push(I('box', 'wood', [cX + ox, midY, cZ + oz],
+        nx !== 0 ? [proj, 0.015, width / slats * 0.8] : [width / slats * 0.8, 0.015, proj], rot));
+    }
+  }
+  const outX = wallX + nx * proj, outZ = wallZ + nz * proj, postH = midY - 0.02;
+  for (const e of [-1, 1]) {
+    const ex = outX + (nx !== 0 ? 0 : e * width / 2);
+    const ez = outZ + (nz !== 0 ? 0 : e * width / 2);
+    out.push(I('cylinder', 'wood', [ex, postH / 2, ez], [0.018, postH, 0.018]));
+  }
+  return [nx, nz];
+}
+
+// Solid external staircase sitting fully outside one wall, climbing to its roof.
+// avoidList = [[nx,nz],...] faces to keep clear. Returns the face it used, or null.
+function exteriorStairs(rng, out, box, avoidList) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const faces = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    .filter(f => !avoidList.some(a => a[0] === f[0] && a[1] === f[1]));
+  if (!faces.length) return null;
+  const [nx, nz] = pick(rng, faces);
+  const groundY = by - sy / 2, rise = sy;
+  const wallW = nx !== 0 ? sz : sx, halfWall = nx !== 0 ? sx / 2 : sz / 2;
+  const run = Math.min(0.72, wallW * 0.82), steps = 6, stepW = run / steps, proj = 0.13;
+  const dir = rng() < 0.5 ? 1 : -1;
+  for (let i = 0; i < steps; i++) {
+    const along = dir * ((i + 0.5) / steps - 0.5) * run;
+    const cx = bx + nx * (halfWall + proj / 2) + nz * along;
+    const cz = bz + nz * (halfWall + proj / 2) + (-nx) * along;
+    const hgt = ((i + 0.5) / steps) * rise;      // solid riser down to the ground
+    out.push(I('box', 'sandLight', [cx, groundY + hgt / 2, cz],
+      [nx !== 0 ? proj : stepW, hgt, nz !== 0 ? proj : stepW]));
+  }
+  return [nx, nz];
+}
+
+// Ladder leaning against a wall, reaching the roof. totalH = full building height,
+// avoid = optional [nx,nz] face to keep clear (the canopy/door face).
+function ladder(rng, out, box, totalH, avoidList) {
+  const [bx, by, bz] = box.pos, [sx, sy, sz] = box.scale;
+  const groundY = by - sy / 2;
+  const faces = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    .filter(f => !avoidList.some(a => a[0] === f[0] && a[1] === f[1]));
+  if (!faces.length) return;
+  const [nx, nz] = pick(rng, faces);
+  const h = totalH * 1.02 + 0.06;               // reaches just past the roofline
+  const lean = 0.2, s = Math.sin(lean), c = Math.cos(lean);
+  const baseOut = 0.12;                          // stand off the wall onto the viga tips
+  const rot = nx !== 0 ? [0, 0, nx * lean] : [-nz * lean, 0, 0];  // top rests on the wall
+  const railOff = 0.055;
+  for (const o of [-railOff, railOff]) {
+    const px = bx + (nx !== 0 ? nx * (sx / 2 + baseOut + s * h / 2) : o);
+    const pz = bz + (nz !== 0 ? nz * (sz / 2 + baseOut + s * h / 2) : o);
+    out.push(I('cylinder', 'wood', [px, groundY + c * h / 2, pz], [0.016, h, 0.016], rot));
+  }
+  const rungs = Math.max(3, Math.round(h / 0.12));
+  for (let i = 1; i < rungs; i++) {
+    const t = i / rungs, off = s * h * (1 - t);
+    const px = bx + (nx !== 0 ? nx * (sx / 2 + baseOut + off) : 0);
+    const pz = bz + (nz !== 0 ? nz * (sz / 2 + baseOut + off) : 0);
+    out.push(I('cylinder', 'wood', [px, groundY + c * h * t, pz],
+      [0.012, railOff * 2, 0.012], nx !== 0 ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]));
+  }
+}
+
+function rubble(rng, out, cx, cz, n) {
+  for (let i = 0; i < n; i++) {
+    const s = range(rng, 0.05, 0.13);
+    out.push(I('box', pick(rng, ['sandDark', 'sand']),
+      [cx + range(rng, -0.42, 0.42), s / 2, cz + range(rng, -0.42, 0.42)],
+      [s, s, s], [0, rng() * Math.PI, 0]));
+  }
+}
+
+// Age-based weathering. Buildings that survive many generations visibly
+// mature: repair patches (age 6+), a roof access hatch (10+), damp-stained
+// base course + prop timber (15+). Runs on its own rng stream, so the base
+// form never changes as age ticks up — features only accumulate at thresholds.
+function agePatina(seed, out, ground, top, age) {
+  if (age < 6) return;
+  const rng = mulberry32((seed ^ 0xA6EDA7E) >>> 0);
+  const [gx, gy, gz] = ground.pos, [gw, gh, gd] = ground.scale;
+
+  if (age >= 10) {                              // roof access: hatch + coaming + stub ladder
+    // own rng stream so the hatch stays put as later thresholds add features
+    const r2 = mulberry32((seed ^ 0x40FFA7) >>> 0);
+    const [tx, ty, tz] = top.pos, [tw, th, td] = top.scale;
+    const roofY = ty + th / 2;
+    const hw = 0.11;
+    const yaw = range(r2, 0, Math.PI / 2);                          // random orientation (square repeats every 90°)
+    const halfDiag = (hw + 0.05) / 2 * Math.SQRT2;                  // rotated coaming reaches its corners
+    const marginX = Math.max(0, tw / 2 - halfDiag - 0.01);
+    const marginZ = Math.max(0, td / 2 - halfDiag - 0.01);
+    const hx = tx + range(r2, -1, 1) * marginX * 0.55;             // bias toward the roof centre
+    const hz = tz + range(r2, -1, 1) * marginZ * 0.55;
+    out.push(I('box', 'sandDark', [hx, roofY + 0.012, hz], [hw + 0.05, 0.024, hw + 0.05], [0, yaw, 0]));  // raised coaming rim
+    out.push(I('box', 'window',   [hx, roofY + 0.022, hz], [hw, 0.03, hw], [0, yaw, 0]));                 // dark opening
+  }
+  const patches = 1 + Math.floor(rng() * 2) + (age >= 15 ? 1 : 0);
+  for (let i = 0; i < patches; i++) {           // fresh-mud repair rectangles
+    const [nx, nz] = pick(rng, [[0, 1], [0, -1], [1, 0], [-1, 0]]);
+    const t = range(rng, -0.3, 0.3);
+    const pw = range(rng, 0.1, 0.2), ph = range(rng, 0.08, 0.16);
+    const py = gy + range(rng, -0.25, 0.25) * gh;
+    const px = gx + (nx !== 0 ? nx * (gw / 2 + 0.008) : t * gw);
+    const pz = gz + (nz !== 0 ? nz * (gd / 2 + 0.008) : t * gd);
+    out.push(I('box', pick(rng, ['sandLight', 'sandDark']), [px, py, pz],
+      nx !== 0 ? [0.016, ph, pw] : [pw, ph, 0.016]));
+  }
+  if (age >= 15) {
+    // damp-stained skirt at the wall foot
+    out.push(I('box', 'sandDark', [gx, 0.035, gz], [gw + 0.015, 0.07, gd + 0.015]));
+    // prop timber leaning against one wall (same lean convention as ladder)
+    const [nx, nz] = pick(rng, [[0, 1], [0, -1], [1, 0], [-1, 0]]);
+    const L = gh * 1.1, lean = 0.35, s = Math.sin(lean), c = Math.cos(lean);
+    const px = gx + (nx !== 0 ? nx * (gw / 2 + s * L / 2) : range(rng, -0.3, 0.3) * gw);
+    const pz = gz + (nz !== 0 ? nz * (gd / 2 + s * L / 2) : range(rng, -0.3, 0.3) * gd);
+    out.push(I('cylinder', 'wood', [px, c * L / 2, pz], [0.03, L, 0.03],
+      nx !== 0 ? [0, 0, nx * lean] : [-nz * lean, 0, 0]));
+  }
+}
+
+// neighbours: 0-8 Moore count at birth. variant: 'normal' | 'ruin' | 'scaffold'
+// age: generations survived since birth (drives agePatina weathering).
+// senes: GOD MODE senescence, fraction of lifetime lived (0..1) or null.
+//   Overrides the age-based tone ramp: fresh dark -> mature mid -> bleached
+//   pale (60%+). From 85% the building is STRIPPED: decor removed in reverse
+//   order of value (gold/lapis salvaged, cloth taken, wood beams pulled),
+//   leaving a bare bleached shell — the visible telegraph before ruin.
+function generateBuilding(neighbours, seed, variant = 'normal', age = 0, senes = null) {
+  if (variant === 'scaffold') return generateScaffold(seed);
+  const rng = mulberry32(seed);
+  const out = [];
+  const ruined = variant === 'ruin';
+  const stripped = !ruined && senes !== null && senes >= 0.85;
+
+  if (neighbours === 0) {
+    if (ruined) { rubble(rng, out, 0, 0, 3); return out; }
+    if (rng() < 0.15) {                             // occasional lone lion statue instead
+      lionStatue(rng, out, range(rng, -0.12, 0.12), range(rng, -0.12, 0.12));
+      return out;
+    }
+    palmTree(rng, out, range(rng, -0.15, 0.15), range(rng, -0.15, 0.15));
+    if (rng() < 0.4) palmTree(rng, out, range(rng, -0.3, 0.3), range(rng, -0.3, 0.3), 0.7);
+    return out;
+  }
+
+  const storeyCounts = [0, 1, 1, 2, 3, 3, 3, 3, 3];
+  let storeys = storeyCounts[neighbours];
+  const deco = Math.max(0, neighbours - 4);
+
+  if (ruined && storeys > 1) storeys -= 1;
+
+  // Mudbrick tone ramps up with age: freshly-built walls read dark and damp,
+  // then sun-bleach paler over the generations. Ruins keep the mid tone.
+  const ramp = ['sandDark', 'sand', 'sandLight'];
+  const tone = ruined ? 1
+    : senes !== null ? (senes >= 0.6 ? 2 : senes >= 0.15 ? 1 : 0)   // lifetime-fraction ramp
+    : (age >= 15 ? 2 : age >= 6 ? 1 : 0);
+
+  const boxes = [];
+  let y = 0, w = 1.0, d = 1.0, cx = 0, cz = 0;
+  for (let s = 0; s < storeys; s++) {
+    let h = range(rng, 0.3, 0.38);
+    if (s > 0) {
+      const nw = w * range(rng, 0.55, 0.8), nd = d * range(rng, 0.55, 0.8);
+      cx += range(rng, -1, 1) * (w - nw) / 2;
+      cz += range(rng, -1, 1) * (d - nd) / 2;
+      w = nw; d = nd;
+    }
+    if (ruined && s === storeys - 1) h *= range(rng, 0.4, 0.7);
+    const box = I('box', s === 0 ? ramp[tone] : pick(rng, [ramp[tone], ramp[Math.min(tone + 1, 2)]]),
+      [cx, y + h / 2, cz], [w, h, d]);
+    boxes.push(box);
+    out.push(box);
+    y += h;
+  }
+
+  const ground = boxes[0], top = boxes[boxes.length - 1];
+
+  windows(rng, out, ground, 2 + deco, 1);
+  for (let s = 1; s < boxes.length; s++) windows(rng, out, boxes[s], 1 + Math.ceil(deco / 2), 1);
+
+  const doorSide = doorway(rng, out, ground, deco >= 4, deco >= 4 ? 'gold' : 'sandDark');
+
+  if (!ruined && !stripped) {                    // stripped: wood cornices pulled for salvage
+    const beaded = deco < 2;
+    const trimMat = deco >= 3 ? (rng() < 0.5 ? 'lapis' : 'gold') : 'sandDark';
+    cornice(rng, out, top, beaded ? 'wood' : trimMat, beaded);
+    if (deco >= 1) for (let s = 0; s < boxes.length - 1; s++)
+      cornice(rng, out, boxes[s], 'wood', true);
+  }
+
+  if (deco >= 2) buttresses(rng, out, ground);   // structural: survives stripping
+
+  if (deco >= 3 && !ruined && !stripped) {       // stripped: gold/lapis salvaged first
+    out.push(I('box', 'lapis',
+      [top.pos[0], top.pos[1] + top.scale[1] * 0.32, top.pos[2]],
+      [top.scale[0] + 0.02, 0.045, top.scale[2] + 0.02]));
+    if (deco >= 4) out.push(I('box', 'gold',
+      [top.pos[0], top.pos[1] + top.scale[1] * 0.32 + 0.045, top.pos[2]],
+      [top.scale[0] + 0.01, 0.02, top.scale[2] + 0.01]));
+  }
+
+  if (!ruined && !stripped) {
+    const fancy = deco >= 1;                     // neighbour 5+ get fabric, others planks
+    const used = [doorSide];                      // faces already occupied by add-ons
+    if (rng() < (fancy ? 0.75 : 0.5)) shadeCanopy(rng, out, ground, fancy, doorSide);
+    if (fancy && rng() < 0.4) used.push(shadeCanopy(rng, out, ground, true));  // over a window
+    if (storeys >= 2 && rng() < 0.45) {
+      const f = exteriorStairs(rng, out, ground, used);
+      if (f) used.push(f);
+    }
+    if (rng() < 0.35) awning(rng, out, top);
+    agePatina(seed, out, ground, top, age);
+  } else if (ruined) {
+    rubble(rng, out, 0, 0, 4 + Math.floor(rng() * 3));
+  }
+  // stripped shells get neither add-ons nor rubble: bare bleached walls
+
+  return out;
+}
+
+function generateScaffold(seed) {
+  const rng = mulberry32(seed);
+  const out = [];
+  const h = range(rng, 0.5, 0.8);
+  const half = 0.38;
+  for (const [x, z] of [[-half, -half], [-half, half], [half, -half], [half, half],
+                        [0, -half], [0, half], [-half, 0], [half, 0]]) {
+    out.push(I('cylinder', 'wood', [x, h / 2, z], [0.02, h, 0.02]));
+  }
+  for (const ly of [h * 0.45, h * 0.95]) {
+    out.push(I('cylinder', 'wood', [0, ly, -half], [0.015, half * 2, 0.015], [0, 0, Math.PI / 2]));
+    out.push(I('cylinder', 'wood', [0, ly, half], [0.015, half * 2, 0.015], [0, 0, Math.PI / 2]));
+    out.push(I('cylinder', 'wood', [-half, ly, 0], [0.015, half * 2, 0.015], [Math.PI / 2, 0, 0]));
+    out.push(I('cylinder', 'wood', [half, ly, 0], [0.015, half * 2, 0.015], [Math.PI / 2, 0, 0]));
+  }
+  // plank platform deck at the lower lashing level — parallel slats spanning the frame
+  {
+    const ly = h * 0.45, slats = 5, slatW = (half * 2) / slats;
+    for (let i = 0; i < slats; i++) {
+      const sx = -half + (i + 0.5) * slatW;
+      out.push(I('box', 'wood', [sx, ly + 0.015, 0], [slatW * 0.85, 0.02, half * 2 - 0.03]));
+    }
+  }
+  out.push(I('box', 'sandLight', [range(rng, -0.25, 0.25), 0.05, range(rng, -0.25, 0.25)], [0.18, 0.1, 0.14]));
+  // upright ladder standing flush against the scaffold frame — construction-in-progress cue
+  {
+    const lx = half, lz = range(rng, -half * 0.5, half * 0.5), railOff = 0.05;
+    for (const o of [-railOff, railOff]) {
+      out.push(I('cylinder', 'wood', [lx, h / 2, lz + o], [0.014, h, 0.014]));
+    }
+    const rungs = Math.max(3, Math.round(h / 0.12));
+    for (let i = 1; i < rungs; i++) {
+      out.push(I('cylinder', 'wood', [lx, (i / rungs) * h, lz],
+        [0.011, railOff * 2, 0.011], [Math.PI / 2, 0, 0]));
+    }
+  }
+  return out;
+}
+
+// Riverbank dock, built from the scaffold's vocabulary (poles, lashings, plank
+// deck). Sits where a building would on a tile touching water; (wx,wz) points at
+// the water, and a pier finger + mooring post reach out over it.
+function generateDock(seed, wx, wz) {
+  const rng = mulberry32(seed);
+  const out = [];
+  const half = 0.44, deckY = 0.2, poleH = deckY + 0.55;   // poles drop into the water
+  const pole = (px, pz, r = 0.028) => out.push(I('cylinder', 'wood', [px, deckY - poleH / 2 + 0.05, pz], [r, poleH, r]));
+  for (const [px, pz] of [[-half, -half], [-half, half], [half, -half], [half, half], [0, 0]]) pole(px, pz);
+  // horizontal lashings around the frame, just under the deck (scaffold look)
+  for (const s of [-1, 1]) {
+    out.push(I('cylinder', 'wood', [0, deckY - 0.05, s * half], [0.016, half * 2, 0.016], [0, 0, Math.PI / 2]));
+    out.push(I('cylinder', 'wood', [s * half, deckY - 0.05, 0], [0.016, half * 2, 0.016], [Math.PI / 2, 0, 0]));
+  }
+  // plank deck over the tile
+  const slats = 6, sw = (half * 2) / slats;
+  for (let s = 0; s < slats; s++) out.push(I('box', 'wood', [-half + (s + 0.5) * sw, deckY, 0], [sw * 0.82, 0.03, half * 2]));
+  // pier finger reaching out over the water
+  if (wx || wz) {
+    const steps = 3, seg = 0.42 / steps;
+    for (let k = 1; k <= steps; k++) {
+      const d = half + (k - 0.5) * seg * 2;
+      const cx = wx * d, cz = wz * d;
+      for (const s of [-1, 1]) pole(cx + (wx ? 0 : s * 0.15), cz + (wz ? 0 : s * 0.15), 0.022);
+      out.push(I('box', 'wood', [cx, deckY, cz], wx ? [seg * 2 * 0.9, 0.03, 0.32] : [0.32, 0.03, seg * 2 * 0.9]));
+    }
+    const ex = wx * (half + 0.42), ez = wz * (half + 0.42);
+    out.push(I('cylinder', 'wood', [ex, deckY + 0.12, ez], [0.035, 0.4, 0.035]));   // mooring post
+  }
+  // a few cargo crates and jars on the deck
+  const crates = Math.floor(rng() * 3);
+  for (let c = 0; c < crates; c++) {
+    const s = range(rng, 0.11, 0.16);
+    out.push(I('box', pick(rng, ['sand', 'sandDark']),
+      [range(rng, -0.28, 0.28), deckY + s / 2 + 0.02, range(rng, -0.28, 0.28)], [s, s, s], [0, rng() * 1.5, 0]));
+  }
+  return out;
+}
+
+// Little seated lion, facing (fx,fz) (axis-aligned), base sitting at baseY.
+function goldGuardian(out, cx, baseY, cz, fx, fz, mat = 'gold') {
+  const g = mat;
+  const P = (fwd, side, up) => [cx + fx * fwd - fz * side, baseY + up, cz + fz * fwd + fx * side];
+  const S = (len, wid, h) => fx !== 0 ? [len, h, wid] : [wid, h, len];
+  out.push(I('box', g, P(-0.05, 0, 0.06), S(0.12, 0.14, 0.12)));   // haunches (rear, low)
+  out.push(I('box', g, P(0.05, 0, 0.10), S(0.10, 0.12, 0.17)));    // upright chest
+  out.push(I('cylinder', g, P(0.10, 0.045, 0.045), [0.03, 0.09, 0.03]));   // front legs
+  out.push(I('cylinder', g, P(0.10, -0.045, 0.045), [0.03, 0.09, 0.03]));
+  out.push(I('box', g, P(0.11, 0, 0.21), S(0.09, 0.09, 0.09)));    // head
+  out.push(I('box', g, P(0.17, 0, 0.19), S(0.05, 0.06, 0.05)));    // snout
+  for (let i = 0; i < 7; i++) {                                    // mane ring around the face
+    const a = (i / 7) * Math.PI * 2;
+    out.push(I('sphere', g, P(0.08 + Math.cos(a) * 0.02, Math.sin(a) * 0.07, 0.21 + Math.sin(a) * 0.055),
+      [0.03, 0.03, 0.03]));
+  }
+  out.push(I('sphere', g, P(0.09, 0.045, 0.26), [0.022, 0.022, 0.022]));   // ears
+  out.push(I('sphere', g, P(0.09, -0.045, 0.26), [0.022, 0.022, 0.022]));
+  out.push(I('cylinder', g, P(-0.10, 0.05, 0.11), [0.018, 0.12, 0.018], [0.5, 0, 0]));  // tail
+}
+
+// Free-standing stone lion statue on a low plinth — desert filler, like the palms.
+function lionStatue(rng, out, cx = 0, cz = 0) {
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const [fx, fz] = pick(rng, dirs);
+  const plinthY = 0.09;
+  out.push(I('box', 'sandDark', [cx, plinthY / 2, cz], [0.26, plinthY, 0.26]));
+  goldGuardian(out, cx, plinthY, cz, fx, fz, pick(rng, ['sand', 'sandDark']));
+}
+
+/* ----------------------------------------------------------------------------
+   VERTEX FURNITURE — small structures placed where four tiles meet, read off
+   the alive/dead pattern of those four cells (the "lines and vertices" layer).
+   All centred at the local origin; the vertex pass positions them.
+   ------------------------------------------------------------------------- */
+
+// Neighbourhood well: stone rim + water + a leaning shaduf pole. Courtyard corner.
+function well(rng, out) {
+  out.push(I('cylinder', 'sandDark', [0, 0.09, 0], [0.26, 0.18, 0.26]));    // rim
+  out.push(I('cylinder', 'lapis', [0, 0.17, 0], [0.19, 0.03, 0.19]));       // water
+  const a = 0.4 + rng() * 0.2;
+  out.push(I('cylinder', 'wood', [0.14, 0.26, 0], [0.028, 0.55, 0.028], [0, 0, a]));  // shaduf pole
+}
+
+// Fire brazier: pillar + gold bowl + ember dome. City-edge frontage light.
+function brazier(rng, out) {
+  out.push(I('cylinder', 'sandDark', [0, 0.14, 0], [0.08, 0.28, 0.08]));    // pillar
+  out.push(I('cylinder', 'gold', [0, 0.29, 0], [0.18, 0.05, 0.18]));        // bowl
+  out.push(I('sphere', 'gold', [0, 0.34, 0], [0.13, 0.1, 0.13]));           // embers
+}
+
+// Standing stone with a gilded pyramidion. Outer corner marker.
+function obelisk(rng, out) {
+  const h = 0.5 + rng() * 0.35;
+  out.push(I('box', 'sandLight', [0, h / 2, 0], [0.13, h, 0.13]));
+  out.push(I('cone', 'gold', [0, h + 0.06, 0], [0.15, 0.13, 0.15]));
+}
+
+const CLOTHS = ['clothRed', 'clothPlum', 'clothOchre'];   // awning fabric palette
+
+// Market stall set against a built neighbour's wall, projecting into a sand
+// tile. (dx,dy) points at the built neighbour; the awning slopes down away from
+// it. Tile-local coords: tile spans [-0.5, 0.5]. This is the "edge" layer —
+// street frontage read off the built|sand boundary.
+function marketStall(out, dx, dy, mat) {
+  const proj = 0.34, roofY = 0.24, tilt = 0.22;
+  const ex = dx * 0.5, ez = dy * 0.5;               // shared edge (the neighbour's wall)
+  const cx = ex - dx * proj * 0.5, cz = ez - dy * proj * 0.5;
+  const rot = dx !== 0 ? [0, 0, dx * tilt] : [-dy * tilt, 0, 0];   // slope out from the wall
+  out.push(I('box', mat, [cx, roofY, cz],
+    dx !== 0 ? [proj, 0.012, 0.32] : [0.32, 0.012, proj], rot));   // cloth roof
+  const ox = ex - dx * proj, oz = ez - dy * proj;
+  for (const s of [-1, 1]) {                                       // outer posts
+    const px = ox + (dx !== 0 ? 0 : s * 0.15), pz = oz + (dy !== 0 ? 0 : s * 0.15);
+    out.push(I('cylinder', 'wood', [px, roofY / 2, pz], [0.016, roofY, 0.016]));
+  }
+  out.push(I('box', 'wood', [cx, 0.09, cz], dx !== 0 ? [0.14, 0.02, 0.26] : [0.26, 0.02, 0.14]));  // goods table
+}
+
+// Reed/wood river barge: hull with upturned ends + a mast or cargo. Floats on
+// the canal; long axis along x (the canal runs in rows).
+function boat(rng, out) {
+  const L = 0.5 + rng() * 0.22;
+  out.push(I('box', 'wood', [0, 0.04, 0], [L, 0.07, 0.17]));                    // hull
+  for (const s of [-1, 1]) out.push(I('box', 'wood', [s * L / 2, 0.08, 0],      // upturned prow/stern
+    [0.1, 0.07, 0.15], [0, 0, s * 0.5]));
+  if (rng() < 0.5) out.push(I('cylinder', 'wood', [0, 0.22, 0], [0.02, 0.34, 0.02]));  // mast
+  else out.push(I('box', pick(rng, ['sand', 'sandDark']), [0, 0.13, 0], [0.16, 0.11, 0.13]));  // cargo
+}
+
+// Irrigated crop plot: a low soil bed with parallel rows of green crop. Sits on
+// the floodplain near the canal.
+function cropField(rng, out) {
+  const rows = 5 + Math.floor(rng() * 3);
+  const along = rng() < 0.5;
+  out.push(I('box', 'sandDark', [0, 0.02, 0], [0.9, 0.04, 0.9]));               // tilled soil bed
+  for (let r = 0; r < rows; r++) {
+    const t = -0.4 + ((r + 0.5) / rows) * 0.8, w = (0.8 / rows) * 0.6;
+    out.push(I('box', 'palm', along ? [t, 0.06, 0] : [0, 0.06, t],
+      along ? [w, 0.05, 0.82] : [0.82, 0.05, w]));
+  }
+}
+
+// Mušḫuššu ("sirrush") mosaic — pixel-art bitmap of the Ishtar Gate dragon,
+// drawn side-on facing right: single horn, serpent head with forked tongue,
+// long slim neck, scaly body, feline forelegs, taloned birdlike hind legs,
+// long tail rising behind. '#' = one gold glazed tile.
+const SIRRUSH_ART = [
+  '.....................#....',
+  '.....................#....',
+  '....................####..',
+  '....................###.##',
+  '....................###...',
+  '...................##.....',
+  '..................##......',
+  '.................##.......',
+  '#...............##........',
+  '##.............###........',
+  '.##....#.#.#.####.........',
+  '..##..############........',
+  '...##############.........',
+  '...#############..........',
+  '.....##.....##..##........',
+  '.....##.....##...##.......',
+  '....##......##....##......',
+];
+
+// Glazed-brick mosaic frieze: a lapis backing wall with sirrush figures picked
+// out in raised gold tiles, one box per tile. length = wall span along `axis`,
+// centred at cx0/cz0; outward = +1/-1 face direction. Rosette-strip borders
+// top and bottom, Ishtar Gate style.
+function sirrushFrieze(out, cx0, cz0, axis, length, baseY, outward, bgMat) {
+  const rows = SIRRUSH_ART.length, cols = SIRRUSH_ART[0].length;
+  const px = 0.026;                                   // one glazed brick
+  const figW = cols * px, figH = rows * px;
+  const border = px * 1.6;
+  const h = figH + border * 2 + px * 2;
+  const bandT = 0.04;
+  // backing wall
+  if (axis === 'x') out.push(I('box', bgMat, [cx0, baseY + h / 2, cz0 + outward * bandT / 2], [length, h, bandT]));
+  else out.push(I('box', bgMat, [cx0 + outward * bandT / 2, baseY + h / 2, cz0], [bandT, h, length]));
+  const faceX = axis === 'z' ? cx0 + outward * bandT : cx0;
+  const faceZ = axis === 'x' ? cz0 + outward * bandT : cz0;
+  const tile = (u, v, w = px) => {                    // one raised gold tile at (u,v) on the face
+    if (axis === 'x') out.push(I('box', 'gold', [faceX + u, baseY + v, faceZ], [w, px, px]));
+    else out.push(I('box', 'gold', [faceX, baseY + v, faceZ + u], [px, px, w]));
+  };
+  // gold border strips top and bottom
+  tile(0, border / 2, length * 0.98);
+  tile(0, h - border / 2, length * 0.98);
+  // repeat the figure along the band
+  const n = Math.max(1, Math.floor(length / (figW * 1.25)));
+  const gap = length / n;
+  for (let k = 0; k < n; k++) {
+    const u0 = -length / 2 + (k + 0.5) * gap - figW / 2;
+    for (let r = 0; r < rows; r++) {
+      const rowStr = SIRRUSH_ART[r];
+      const v = border + px + (rows - 1 - r) * px + px / 2;  // row 0 is the top
+      // emit runs of adjacent tiles as single boxes (fewer instances)
+      let run = -1;
+      for (let c = 0; c <= cols; c++) {
+        const on = c < cols && rowStr[c] === '#';
+        if (on && run < 0) run = c;
+        else if (!on && run >= 0) {
+          const w = (c - run) * px;
+          tile(u0 + run * px + w / 2, v, w);
+          run = -1;
+        }
+      }
+    }
+  }
+}
+
+// Gold/lapis guardian decor for a monument courtyard: two lions flanking one
+// entrance, a tiled sirrush relief frieze on the wall facing the opposite one.
+// cx/cz local to the platform.
+function courtyardGuardians(rng, out, topY, halfW, halfD) {
+  const lz = halfD * 0.9;
+  for (const sx of [-1, 1]) {
+    const lx = sx * halfW * 0.55;
+    out.push(I('box', 'sandDark', [lx, topY + 0.045, lz], [0.16, 0.09, 0.16]));  // plinth
+    goldGuardian(out, lx, topY + 0.09, lz, 0, -sx, 'gold');
+  }
+  const sz = -halfD * 0.94;
+  sirrushFrieze(out, 0, sz, 'x', halfW * 1.5, topY, -1, 'lapis');
+}
+
+// size: footprint NxN tiles (>=3), footprint spans [-size/2, size/2]. variant: 'normal' | 'ruin'
+// stairFaceOverride: 0..3 (0 -> +z, 1 -> +x, 2 -> -z, 3 -> -x) to aim the ramp at open ground.
+function generateZiggurat(size, seed, variant = 'normal', stairFaceOverride = null, special = false) {
+  const rng = mulberry32(seed);
+  const out = [];
+  const tiers = Math.min(size, 6);
+  const ruined = variant === 'ruin';
+  const shownTiers = ruined ? Math.max(1, tiers - 2) : tiers;
+  const baseW = size * 0.98;
+  const tierH = 0.55;
+  const stairFace = stairFaceOverride !== null ? stairFaceOverride : pick(rng, [0, 1, 2, 3]);
+  // exact integer axis components (sin/cos of n*PI/2 leave 1e-16 residues that
+  // break truthiness checks and leak into positions)
+  const dirX = [0, 1, 0, -1][stairFace], dirZ = [1, 0, -1, 0][stairFace];
+  const skipDir = [dirX, dirZ];                          // face the ramp-stair climbs
+
+  let y = 0;
+  const tierWidths = [];
+  for (let t = 0; t < tiers; t++) tierWidths.push(baseW * (1 - t / tiers) * 0.98 + baseW * 0.02);
+
+  // stair slot: constant width, sized to still fit inside the narrow top tier
+  const topW = tierWidths[Math.min(shownTiers, tiers) - 1];
+  const stairW = Math.min(baseW * 0.14, topW * 0.5);
+  const chW = stairW * 1.15;                       // channel a touch wider than the steps
+
+  for (let t = 0; t < shownTiers; t++) {
+    let w = tierWidths[t];
+    let h = tierH;
+    if (ruined && t === shownTiers - 1) h *= 0.5;
+    const isTop = !ruined && t === tiers - 1;
+    const tierMat = special
+      ? (isTop ? 'orange' : 'bitumen')                // the reference photo's palette
+      : (isTop ? 'lapis' : (t % 2 ? 'sandLight' : 'sand'));
+    const cy = y + h / 2;
+    // Each tier is a solid box, except a stair slot is cut through the front
+    // (the stair face): a solid back block + two front flank blocks leave a gap
+    // of width chW down the middle for the steps. The top (shrine) tier and
+    // ruins stay whole — the stair lands on the terrace below the shrine.
+    if (ruined || isTop) {
+      out.push(I('box', tierMat, [0, cy, 0], [w, h, w]));
+    } else {
+      const flankW = (w - chW) / 2;
+      if (dirX) {
+        out.push(I('box', tierMat, [-dirX * 0.325 * w, cy, 0], [0.35 * w, h, w]));           // solid back
+        for (const s of [-1, 1])                                                             // front flanks
+          out.push(I('box', tierMat, [dirX * 0.175 * w, cy, s * (chW / 2 + flankW / 2)], [0.65 * w, h, flankW]));
+      } else {
+        out.push(I('box', tierMat, [0, cy, -dirZ * 0.325 * w], [w, h, 0.35 * w]));
+        for (const s of [-1, 1])
+          out.push(I('box', tierMat, [s * (chW / 2 + flankW / 2), cy, dirZ * 0.175 * w], [flankW, h, 0.65 * w]));
+      }
+    }
+    if (!ruined || t < shownTiers - 1) {
+      cornice(rng, out, { pos: [0, cy, 0], scale: [w, h, w] },
+        special ? (isTop ? 'skyBlue' : 'bitumen') : (isTop ? 'gold' : 'sandDark'), t >= tiers - 2, skipDir);
+    }
+    if (t < 2) buttresses(rng, out, { pos: [0, cy, 0], scale: [w, h, w] }, skipDir);
+    y += h;
+  }
+
+  if (!ruined) {
+    const shrineMat = special ? 'skyBlue' : 'gold';
+    const shrineW = tierWidths[tiers - 1] * 0.4;
+    out.push(I('box', shrineMat, [0, y + shrineW * 0.35, 0], [shrineW, shrineW * 0.7, shrineW]));
+    archHead(out, 0, y + shrineW * 0.5, shrineW / 2 + 0.01,
+      shrineW * 0.5, shrineW * 0.25, shrineW * 0.1, 0.02, 'x', shrineMat);
+  } else {
+    rubble(rng, out, 0, 0, 10);
+    for (let i = 0; i < 6; i++) {
+      const s = range(rng, 0.08, 0.2);
+      out.push(I('box', 'sandDark',
+        [range(rng, -1, 1) * tierWidths[shownTiers - 1] * 0.35, y + s / 2,
+         range(rng, -1, 1) * tierWidths[shownTiers - 1] * 0.35], [s, s, s],
+        [0, rng() * Math.PI, 0]));
+    }
+  }
+
+  const totalH = y;
+
+  // Recessed central staircase: a straight run of plain step-boxes climbing the
+  // slot cut through the tiers, from the plaza at the base front up to the top
+  // platform. Flanked by tier masonry, fully inside the footprint — no ramp
+  // slab, no parapets, just stacked boxes like the reference.
+  const stairTopY = ruined ? totalH : totalH - tierH;   // land on the terrace below the shrine
+  const aFoot = baseW / 2, aHead = topW * 0.55;         // base front edge -> just before the shrine
+  const nSteps = Math.max(5, Math.round(stairTopY / 0.06));
+  for (let i = 0; i < nSteps; i++) {
+    const t = (i + 0.5) / nSteps;
+    const a = aFoot * (1 - t) + aHead * t;
+    out.push(I('box', 'sandLight', [dirX * a, t * stairTopY, dirZ * a],
+      dirX ? [0.13, 0.035, stairW] : [stairW, 0.035, 0.13]));
+  }
+
+  // lions stand against the base face, flanking the stair's foot
+  for (const side of [-1, 1]) {
+    const px = dirX * (baseW / 2 + 0.02) + dirZ * side * stairW * 0.7;
+    const pz = dirZ * (baseW / 2 + 0.02) + dirX * side * stairW * 0.7;
+    out.push(I('box', 'sandDark', [px, 0.15, pz], [0.18, 0.3, 0.18]));
+    if (!ruined) goldGuardian(out, px, 0.3, pz, Math.round(dirX), Math.round(dirZ));  // gold lion (dropped in ruins)
+  }
+  return out;
+}
+
+/* ============================================================================
+   MONUMENTS — larger footprints (5x5+) become special structures instead of
+   ziggurats. All share monumentBase() so they read as one family: same wide
+   podium, different superstructure. size = footprint in tiles, spans
+   [-size/2, size/2], y up from 0.
+   ------------------------------------------------------------------------- */
+
+// Wide stepped podium every monument sits on. Returns the platform top height.
+function monumentBase(seed, out, size) {
+  const baseW = size * 0.98;
+  const h = Math.max(0.4, size * 0.1);
+  out.push(I('box', 'sandDark', [0, h * 0.11, 0], [baseW + 0.05, h * 0.22, baseW + 0.05]));  // plinth lip
+  out.push(I('box', 'sand', [0, h * 0.22 + h / 2, 0], [baseW, h, baseW]));                    // platform
+  return { topY: h * 0.22 + h, baseW };
+}
+
+// Tall slim cypress: short trunk + narrow green cone. h = total height.
+function cypress(rng, out, cx, cz, h, w) {
+  out.push(I('cylinder', 'wood', [cx, h * 0.08, cz], [w * 0.35, h * 0.16, w * 0.35]));
+  out.push(I('cone', 'palm', [cx, h * 0.16 + (h * 0.84) / 2, cz], [w, h * 0.84, w]));
+}
+
+// Low rounded shrub: a cluster of squashed spheres on a short stub. h = total height.
+function shrub(rng, out, cx, cz, h, w) {
+  const stub = h * 0.22;
+  out.push(I('cylinder', 'wood', [cx, stub / 2, cz], [w * 0.2, stub, w * 0.2]));
+  const lobes = 2 + Math.floor(rng() * 3);
+  for (let i = 0; i < lobes; i++) {
+    const a = rng() * Math.PI * 2, r = range(rng, 0, w * 0.28);
+    const ly = stub + range(rng, 0.3, 0.6) * (h - stub);
+    const s = range(rng, 0.75, 1) * w * 0.6;
+    out.push(I('sphere', 'palm', [cx + Math.cos(a) * r, ly, cz + Math.sin(a) * r], [s, s * 0.85, s]));
+  }
+}
+
+// Randomly picks a plant type for a garden row, matching the given envelope
+// (h = height budget, w = width budget) so mixed planting stays in scale.
+function gardenPlant(rng, out, cx, cz, h, w) {
+  const roll = rng();
+  if (roll < 0.55) cypress(rng, out, cx, cz, h, w);
+  else if (roll < 0.8) palmTree(rng, out, cx, cz, h * 1.05);
+  else shrub(rng, out, cx, cz, h * 0.55, w * 1.3);
+}
+
+// Faceted round (Roman) arch. Emits box segments tracing a semicircle up each
+// side to a rounded crown — low-poly. Springs from (cx,cz) at height springY,
+// spans `span` along the wall axis, rises `rise` (=span/2 for a true semicircle).
+// thick = radial band thickness, depth = wall thickness. axis 'x' spans world X
+// (band depth along Z); axis 'z' spans world Z (band depth along X).
+function archHead(out, cx, springY, cz, span, rise, thick, depth, axis, mat) {
+  const h = span / 2;
+  const pts = [                       // right half, springline -> crown, sampled on a quarter circle
+    [h, 0], [h * 0.924, rise * 0.383], [h * 0.707, rise * 0.707],
+    [h * 0.383, rise * 0.924], [0, rise],
+  ];
+  const emit = (a, b, mir) => {
+    const s = mir ? -1 : 1;
+    const ax = s * a[0], ay = a[1], bx = s * b[0], by = b[1];
+    const mx = (ax + bx) / 2, my = (ay + by) / 2;
+    const len = Math.hypot(bx - ax, by - ay) + thick;   // overlap joints
+    const angle = Math.atan2(by - ay, bx - ax);
+    if (axis === 'x') {
+      out.push(I('box', mat, [cx + mx, springY + my, cz], [len, thick, depth], [0, 0, angle]));
+    } else {
+      out.push(I('box', mat, [cx, springY + my, cz + mx], [depth, thick, len], [-angle, 0, 0]));
+    }
+  };
+  for (let i = 0; i < pts.length - 1; i++) { emit(pts[i], pts[i + 1], false); emit(pts[i], pts[i + 1], true); }
+}
+
+// HSL -> "#rrggbb". h,s,l in [0,1].
+function hslHex(h, s, l) {
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h * 12) % 12;
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return '#' + f(0) + f(8) + f(4);
+}
+
+// Random textile colour — a warm dyed-cloth palette (reds, ochres, plums, teal).
+function clothColor(rng) {
+  const centres = [0.01, 0.05, 0.09, 0.92, 0.86, 0.54];   // hue anchors
+  const h = (pick(rng, centres) + range(rng, -0.02, 0.02) + 1) % 1;
+  return hslHex(h, range(rng, 0.42, 0.66), range(rng, 0.4, 0.55));
+}
+
+// Vine pergola: posts carrying a lattice of girders + cross-joists, draped with
+// climbing-vine foliage and trailing tendrils. Open and green — a garden roof.
+function pergola(rng, out, cx, cz, width, depth, postH, y0) {
+  const postR = Math.min(width, depth) * 0.028;
+  const topY = y0 + postH;
+  const nz = Math.max(2, Math.round(depth / 0.8));
+  for (const sx of [-1, 1]) for (let i = 0; i <= nz; i++) {   // posts down both long edges
+    const pz = cz - depth / 2 + (i / nz) * depth;
+    out.push(I('cylinder', 'wood', [cx + sx * width / 2, y0 + postH / 2, pz], [postR * 2, postH, postR * 2]));
+  }
+  for (const sx of [-1, 1])                                    // girders along the length
+    out.push(I('box', 'wood', [cx + sx * width / 2, topY, cz], [postR * 1.6, postR * 1.5, depth]));
+  const nJ = Math.max(3, Math.round(depth / 0.3));
+  for (let i = 0; i <= nJ; i++) {                              // cross-joists
+    const pz = cz - depth / 2 + (i / nJ) * depth;
+    out.push(I('box', 'wood', [cx, topY + postR, pz], [width + postR * 3, postR, postR]));
+  }
+  const leaves = Math.round(width * depth * 5);
+  for (let i = 0; i < leaves; i++)                             // vine canopy draped over the top
+    out.push(I('sphere', 'palm',
+      [cx + range(rng, -0.5, 0.5) * width, topY + postR + range(rng, 0, 0.07), cz + range(rng, -0.5, 0.5) * depth],
+      [0.15, 0.08, 0.15]));
+  const tendrils = Math.round(leaves * 0.5);
+  for (let i = 0; i < tendrils; i++) {                         // trailing tendrils hanging down
+    const hl = range(rng, 0.12, 0.38);
+    out.push(I('box', 'palm',
+      [cx + range(rng, -0.5, 0.5) * width, topY - hl / 2, cz + range(rng, -0.5, 0.5) * depth],
+      [0.03, hl, 0.03]));
+  }
+}
+
+// Open arcade wall: piers carrying round arches, open above. No top frame —
+// the garden drapes a fabric plane over the whole wing instead.
+// axis 'x' runs along x (faces ±z); 'z' runs along z (faces ±x). x0/z0 is the
+// wall's centre line, y0 its foot, H its full height.
+// rng + keep (0..1, optional): ruin mode — each pier/arch only survives with
+// probability keep (arches a little less), leaving broken colonnade stumps.
+function arcadeWall(out, x0, z0, axis, length, y0, H, wallT, mat, rng, keep = 1) {
+  const bays = Math.max(2, Math.round(length / 0.85));
+  const bayW = length / bays;
+  const pierW = Math.min(wallT * 1.6, bayW * 0.25);
+  const openW = Math.min(bayW - pierW, H * 0.85);
+  const springH = H * 0.52;
+  const rise = Math.min(openW / 2, H - springH);
+  const capH = Math.max(0.02, wallT * 0.5);
+  for (let i = 0; i <= bays; i++) {                       // piers at each bay boundary
+    const along = -length / 2 + i * bayW;
+    const px = axis === 'x' ? x0 + along : x0;
+    const pz = axis === 'z' ? z0 + along : z0;
+    if (keep < 1 && rng() >= keep) {                      // fallen pier: stump only
+      out.push(I('box', mat, [px, y0 + springH * 0.15, pz],
+        axis === 'x' ? [pierW, springH * 0.3, wallT] : [wallT, springH * 0.3, pierW]));
+      continue;
+    }
+    out.push(I('box', mat, [px, y0 + springH / 2, pz],
+      axis === 'x' ? [pierW, springH, wallT] : [wallT, springH, pierW]));
+    out.push(I('box', mat, [px, y0 + springH + capH / 2, pz],       // cap: hides the pier/arch seam
+      axis === 'x' ? [pierW * 1.5, capH, wallT * 1.3] : [wallT * 1.3, capH, pierW * 1.5]));
+  }
+  for (let i = 0; i < bays; i++) {                        // round arch over each bay
+    if (keep < 1 && rng() >= keep * 0.7) continue;        // collapsed arch
+    const along = -length / 2 + (i + 0.5) * bayW;
+    const px = axis === 'x' ? x0 + along : x0;
+    const pz = axis === 'z' ? z0 + along : z0;
+    archHead(out, px, y0 + springH, pz, openW, rise, Math.max(0.03, openW * 0.16), wallT, axis, mat);
+  }
+}
+
+// GARDEN — two raised arcaded tree-groves under flat fabric canopies, flanking
+// a central courtyard with a vine pergola over a reflecting pool. Negative space.
+function generateGarden(size, seed, variant = 'normal') {
+  if (variant === 'scaffold') return monumentConstruction(size, seed ^ 0x9A2);
+  const rng = mulberry32(seed);
+  const out = [];
+  const ruined = variant === 'ruin';
+  const { topY, baseW } = monumentBase(seed ^ 0x51A, out, size);
+
+  const wallH = size * 0.26;
+  const wallT = baseW * 0.03;
+  const wingHalfW = baseW * 0.15;
+  const wingHalfD = baseW * 0.42;
+  const wingCxAbs = baseW / 2 - wingHalfW - baseW * 0.02;
+  const keep = ruined ? 0.5 : 1;                   // ruin: broken colonnades
+
+  for (const sx of [-1, 1]) {
+    const cx = sx * wingCxAbs;
+    arcadeWall(out, cx, wingHalfD, 'x', wingHalfW * 2, topY, wallH, wallT, 'sandLight', rng, keep);            // +z
+    arcadeWall(out, cx, -wingHalfD, 'x', wingHalfW * 2, topY, wallH, wallT, 'sandLight', rng, keep);           // -z
+    arcadeWall(out, cx + sx * wingHalfW, 0, 'z', wingHalfD * 2, topY, wallH, wallT, 'sandLight', rng, keep);   // outer
+    arcadeWall(out, cx - sx * wingHalfW, 0, 'z', wingHalfD * 2, topY, wallH, wallT, 'sandLight', rng, keep);   // inner
+    out.push(I('box', 'sandDark', [cx, topY + 0.06, 0],
+      [wingHalfW * 2 - wallT, 0.12, wingHalfD * 2 - wallT]));                                        // soil bed
+    // Fixed absolute spacing (not size-relative): a bigger garden packs in more
+    // plants at the same size, rather than the same count of bigger plants.
+    const spacing = 0.42;
+    const rows = Math.max(2, Math.round((wingHalfD * 2) / spacing));
+    const cols = Math.max(1, Math.round((wingHalfW * 2 * 0.7) / spacing));
+    for (let r = 0; r < rows; r++) {
+      const tz = -wingHalfD + ((r + 0.5) / rows) * wingHalfD * 2;
+      for (let c = 0; c < cols; c++) {
+        const tx = cols > 1 ? -wingHalfW * 0.7 + ((c + 0.5) / cols) * wingHalfW * 1.4 : 0;
+        const px = cx + tx + range(rng, -0.06, 0.06), pz = tz + range(rng, -0.06, 0.06);
+        if (ruined) {                              // the garden died with the water: stumps
+          if (rng() < 0.7) out.push(I('cylinder', 'wood', [px, topY + 0.17, pz],
+            [0.1, range(rng, 0.1, 0.35), 0.1]));
+        } else {
+          gardenPlant(rng, out, px, pz, range(rng, 1.9, 2.6), 0.4);
+        }
+      }
+    }
+  }
+
+  const courtHalfW = wingCxAbs - wingHalfW - baseW * 0.02;
+  out.push(I('box', 'sandLight', [0, topY + 0.05, 0], [courtHalfW * 2, 0.1, wingHalfD * 2 * 0.95]));  // dais
+  if (ruined) {
+    // dry cracked basin, sand-drifted courtyard
+    out.push(I('box', 'sandDark', [0, topY + 0.09, 0], [courtHalfW * 1.1, 0.04, wingHalfD * 0.95]));
+    for (let i = 0; i < 6; i++) {
+      const s = range(rng, 0.06, 0.16);
+      out.push(I('box', pick(rng, ['sand', 'sandDark']),
+        [range(rng, -0.8, 0.8) * courtHalfW, topY + 0.1 + s / 2, range(rng, -0.8, 0.8) * wingHalfD],
+        [s, s, s], [0, rng() * Math.PI, 0]));
+    }
+  } else {
+    out.push(I('box', 'gold', [0, topY + 0.088, 0], [courtHalfW * 1.1 + 0.02, 0.02, wingHalfD * 0.95 + 0.02]));  // gold rim
+    out.push(I('box', 'lapis', [0, topY + 0.09, 0], [courtHalfW * 1.1, 0.04, wingHalfD * 0.95]));     // reflecting pool
+    pergola(rng, out, 0, 0, courtHalfW * 2, wingHalfD * 2 * 0.9, wallH * 0.82, topY + 0.1);           // vine pergola over the pool
+    courtyardGuardians(rng, out, topY, courtHalfW, wingHalfD);                                        // lions + sirrush
+  }
+  return out;
+}
+
+// Shift a generated instruction list up by dy and scale it about the origin —
+// lets one monument sit on top of another (composition, not new geometry).
+function liftInstructions(instr, dy, s = 1) {
+  for (const ins of instr) {
+    ins.pos = [ins.pos[0] * s, ins.pos[1] * s + dy, ins.pos[2] * s];
+    ins.scale = [ins.scale[0] * s, ins.scale[1] * s, ins.scale[2] * s];
+  }
+  return instr;
+}
+
+// UNDER CONSTRUCTION — shared scaffold variant for every monument type: the
+// podium is laid, low unfinished wall stubs trace the future structure, and
+// wooden scaffold frames and brick piles cover the site.
+function monumentConstruction(size, seed) {
+  const rng = mulberry32(seed);
+  const out = [];
+  const { topY, baseW } = monumentBase(seed ^ 0x5CA, out, size);
+  const half = baseW * 0.35;
+  for (const [x0, z0, w, d] of [                       // unfinished wall stubs
+    [0, half, half * 2, 0.08], [0, -half, half * 2, 0.08],
+    [half, 0, 0.08, half * 2], [-half, 0, 0.08, half * 2],
+  ]) {
+    if (rng() < 0.75) {
+      const wallH = range(rng, 0.1, 0.28);
+      out.push(I('box', 'sand', [x0, topY + wallH / 2, z0],
+        [w === 0.08 ? w : w * range(rng, 0.4, 1), wallH, d === 0.08 ? d : d * range(rng, 0.4, 1)]));
+    }
+  }
+  const frames = 2 + Math.floor(rng() * 2) + Math.floor(size / 3);   // scaffold frames
+  for (let i = 0; i < frames; i++) {
+    const f = generateScaffold(hashSeed(seed, i, 0x5C, 0));
+    liftInstructions(f, topY);
+    const fx = range(rng, -0.32, 0.32) * baseW, fz = range(rng, -0.32, 0.32) * baseW;
+    for (const ins of f) { ins.pos[0] += fx; ins.pos[2] += fz; }
+    out.push(...f);
+  }
+  const piles = 3 + Math.floor(rng() * 4);             // brick piles
+  for (let i = 0; i < piles; i++) {
+    out.push(I('box', 'sandLight',
+      [range(rng, -0.4, 0.4) * baseW, topY + 0.05, range(rng, -0.4, 0.4) * baseW],
+      [range(rng, 0.15, 0.3), 0.1, range(rng, 0.12, 0.25)], [0, rng() * Math.PI, 0]));
+  }
+  return out;
+}
+
+// PODIUM BUILDING — a sprawling palace compound: box rooms of varying size
+// arranged across a shared platform, using the ordinary house vocabulary
+// (windows, cornices, doorways, awnings). Horizontal silhouette, not vertical.
+function generatePodium(size, seed, variant = 'normal') {
+  if (variant === 'scaffold') return monumentConstruction(size, seed ^ 0x90E);
+  const rng = mulberry32(seed);
+  const out = [];
+  const ruined = variant === 'ruin';
+  const { topY, baseW } = monumentBase(seed ^ 0x90D, out, size);
+
+  // grand central hall, entrance facing +z (ruin: collapsed to a low shell)
+  const hallW = baseW * 0.42, hallD = baseW * 0.34;
+  const hallH = size * 0.28 * (ruined ? range(rng, 0.35, 0.55) : 1);
+  const hall = I('box', ruined ? 'sand' : 'sandLight', [0, topY + hallH / 2, -baseW * 0.12], [hallW, hallH, hallD]);
+  out.push(hall);
+  windows(rng, out, hall, 3, 1);
+  if (!ruined) {
+    cornice(rng, out, hall, 'gold', false);            // gold crenellation on the hall
+    const dw = 0.16, dh = hallH * 0.62;
+    const doorZ = hall.pos[2] + hallD / 2 + 0.014;
+    out.push(I('box', 'window', [0, topY + dh / 2, doorZ], [dw, dh, 0.028]));
+    archHead(out, 0, topY + dh, doorZ, dw * 1.3, dw * 0.65, 0.04, 0.03, 'x', 'gold');
+  }
+
+  // annex rooms scattered around the hall, varied heights, wood-beaded cornices
+  const annexes = 3 + Math.floor(rng() * 3);
+  for (let i = 0; i < annexes; i++) {
+    const aw = baseW * range(rng, 0.14, 0.26), ad = baseW * range(rng, 0.14, 0.26);
+    const ah = hallH * range(rng, 0.45, 0.75);
+    const side = i % 2 ? 1 : -1;
+    const ax = side * range(rng, 0.24, 0.42) * baseW;
+    const az = range(rng, -0.3, 0.3) * baseW;
+    const annex = I('box', pick(rng, ['sand', 'sandLight']), [ax, topY + ah / 2, az], [aw, ah, ad]);
+    out.push(annex);
+    windows(rng, out, annex, 2, 1);
+    if (!ruined) {
+      cornice(rng, out, annex, 'wood', true);
+      if (rng() < 0.5) awning(rng, out, annex);
+    }
+  }
+
+  if (ruined) {                                        // debris across the platform
+    for (let i = 0; i < 8; i++) {
+      const s = range(rng, 0.06, 0.18);
+      out.push(I('box', pick(rng, ['sand', 'sandDark']),
+        [range(rng, -0.42, 0.42) * baseW, topY + s / 2, range(rng, -0.42, 0.42) * baseW],
+        [s, s, s], [0, rng() * Math.PI, 0]));
+    }
+  } else {
+    // forecourt in front of the hall: lions flanking the approach
+    for (const sx of [-1, 1]) {
+      const lx = sx * hallW * 0.42, lz = baseW * 0.36;
+      out.push(I('box', 'sandDark', [lx, topY + 0.045, lz], [0.16, 0.09, 0.16]));
+      goldGuardian(out, lx, topY + 0.09, lz, 0, 1, 'gold');
+    }
+  }
+  return out;
+}
+
+// GRAND ZIGGURAT — a ziggurat raised on a monumental podium: pure composition.
+// The ziggurat is generated normally, then lifted onto the platform and shrunk
+// slightly so its ramp stays within the podium footprint.
+function generateGrandZiggurat(size, seed, variant = 'normal', special = false) {
+  if (variant === 'scaffold') return monumentConstruction(size, seed ^ 0x62B);
+  const rng = mulberry32(seed);
+  const out = [];
+  const { topY, baseW } = monumentBase(seed ^ 0x62A, out, size);
+  const zig = generateZiggurat(Math.max(3, size - 2), seed ^ 0x216, variant === 'ruin' ? 'ruin' : 'normal', 0, special);
+  out.push(...liftInstructions(zig, topY, 0.9));
+  // sirrush mosaic on the podium's front face flanking the ziggurat's stair
+  for (const sx of [-1, 1]) {
+    sirrushFrieze(out, sx * baseW * 0.28, baseW / 2, 'x', baseW * 0.34, topY * 0.25, 1, 'lapis');
+  }
+  return out;
+}
+
+// PROCESSIONAL GATE — Ishtar Gate: two lapis towers flanking a grand arch,
+// gold crenellation, sirrush mosaic friezes. Built entirely from existing parts.
+function generateGate(size, seed, variant = 'normal') {
+  if (variant === 'scaffold') return monumentConstruction(size, seed ^ 0x6A7E);
+  const rng = mulberry32(seed);
+  const out = [];
+  const w = size * 0.98;
+  const towerW = w * 0.3, towerD = w * 0.34, towerH = size * 0.85;
+  const spanW = w - towerW * 2;                        // clear opening between towers
+  const archSpring = towerH * 0.42;
+  const archRise = Math.min(spanW / 2, towerH * 0.25);
+
+  const ruined = variant === 'ruin';
+  // ruin: the two towers survive to different heights, everything between fell
+  const towerHs = ruined
+    ? [towerH * range(rng, 0.35, 0.55), towerH * range(rng, 0.6, 0.85)]
+    : [towerH, towerH];
+  for (const sx of [-1, 1]) {                          // towers
+    const tx = sx * (w / 2 - towerW / 2);
+    const th = towerHs[(sx + 1) / 2];
+    const tower = I('box', ruined ? 'sand' : 'lapis', [tx, th / 2, 0], [towerW, th, towerD]);
+    out.push(tower);
+    if (!ruined) {
+      cornice(rng, out, tower, 'gold', false);         // gold crenellation
+      // mosaic friezes on the outward (+z) face, two bands
+      sirrushFrieze(out, tx, towerD / 2, 'x', towerW * 0.9, towerH * 0.12, 1, 'lapis');
+      sirrushFrieze(out, tx, towerD / 2, 'x', towerW * 0.9, towerH * 0.55, 1, 'lapis');
+    }
+  }
+
+  if (ruined) {                                        // collapsed span: rubble choking the passage
+    rubble(rng, out, 0, 0, 6);
+    for (let i = 0; i < 4; i++) {
+      const s = range(rng, 0.1, 0.22);
+      out.push(I('box', pick(rng, ['sand', 'sandDark']),
+        [range(rng, -0.5, 0.5) * spanW, s / 2, range(rng, -0.4, 0.4) * towerD],
+        [s, s, s], [0, rng() * Math.PI, 0]));
+    }
+    return out;
+  }
+
+  // wall above the arch connecting the towers, resting on the arch crown
+  const wallD = towerD * 0.85;
+  const lintelY0 = archSpring + archRise;
+  const lintel = I('box', 'lapis', [0, (lintelY0 + towerH * 0.92) / 2, 0],
+    [spanW + 0.04, towerH * 0.92 - lintelY0, wallD]);
+  out.push(lintel);
+  cornice(rng, out, lintel, 'gold', false);
+  sirrushFrieze(out, 0, wallD / 2, 'x', spanW * 0.9, lintelY0 + towerH * 0.08, 1, 'lapis');
+
+  // the passage is a real opening — you can see straight through the gate.
+  // Gold arch bands frame the void on both faces; stepped lapis spandrels fill
+  // only the corners between the curve and the lintel above.
+  const innerHalf = spanW * 0.94 / 2;
+  const spandrelRows = 3;
+  for (let i = 0; i < spandrelRows; i++) {
+    const fTop = (i + 1) / spandrelRows;
+    const wCurve = innerHalf * Math.sqrt(Math.max(0, 1 - fTop * fTop));
+    const bw = spanW / 2 - wCurve + 0.02;
+    if (bw <= 0.01) continue;
+    for (const sx of [-1, 1]) {
+      out.push(I('box', 'lapis',
+        [sx * (wCurve + bw / 2), archSpring + (i + 0.5) * (archRise / spandrelRows), 0],
+        [bw, archRise / spandrelRows + 0.01, wallD]));
+    }
+  }
+  for (const fz of [-1, 1]) {
+    archHead(out, 0, archSpring, fz * wallD / 2, spanW * 0.94, archRise, 0.09, 0.06, 'x', 'gold');
+  }
+
+  // guardian lions flanking the approach
+  for (const sx of [-1, 1]) {
+    const lx = sx * (spanW / 2 + towerW * 0.3), lz = towerD * 0.75;
+    out.push(I('box', 'sandDark', [lx, 0.06, lz], [0.2, 0.12, 0.2]));
+    goldGuardian(out, lx, 0.12, lz, 0, 1, 'gold');
+  }
+  return out;
+}
+
+// Size-band dispatch: what a detected solid square becomes as it grows.
+// 3-4 ziggurat, 5-7 garden, 8-9 podium palace, 10+ grand ziggurat-on-podium.
+function generateMonument(size, seed, variant, stairFace, special = false) {
+  if (size <= 4) return generateZiggurat(size, seed, variant, stairFace, special);
+  if (size <= 7) return generateGarden(size, seed, variant);
+  if (size <= 9) return generatePodium(size, seed, variant);
+  return generateGrandZiggurat(size, seed, variant, special);
+}
+
+
+/* ============================================================================
+   GRID / AUTOMATON LAYER — no rendering knowledge.
+   ------------------------------------------------------------------------- */
+
+let N = 64;                          // grid size, user-editable (simulation cost is trivial even large;
+                                      // it's per-tile full-detail generation that's capped, see buildingCap)
+
+// hash a lattice/tile coordinate to [0,1) deterministically from the global seed
+function hash01(globalSeed, x, y, salt) {
+  return mulberry32(hashSeed(globalSeed, x, y, salt))();
+}
+
+function seedGrid(globalSeed, density) {
+  const g = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    g[y * N + x] = hash01(globalSeed, x, y, 0xBEEF) < density ? 1 : 0;
+  }
+  return g;
+}
+
+// Moore neighbour count, dead edges (no wraparound)
+function neighbourCount(g, x, y) {
+  let c = 0;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dy) continue;
+    const nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < N && ny >= 0 && ny < N) c += g[ny * N + nx];
+  }
+  return c;
+}
+
+// One Life step under B/S rule sets (arrays of counts)
+function stepGrid(g, B, S) {
+  const out = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const n = neighbourCount(g, x, y);
+    out[y * N + x] = g[y * N + x] ? (S.includes(n) ? 1 : 0) : (B.includes(n) ? 1 : 0);
+  }
+  return out;
+}
+
+function parseRule(str) {           // "B3/S12345" -> { B:[3], S:[1,2,3,4,5] }
+  const m = str.match(/B(\d*)\/S(\d*)/i);
+  return { B: [...m[1]].map(Number), S: [...m[2]].map(Number) };
+}
+
+/* ============================================================================
+   GENERATION PRESETS — each is a pure step function (grid, gen) -> grid.
+   Life-like B/S rules plus custom automata. The custom ones use the seeded
+   hash (global seed + cell + generation), so they stay fully deterministic:
+   same seed -> same city, always.
+   ------------------------------------------------------------------------- */
+
+function bsStep(ruleStr) {
+  const { B, S } = parseRule(ruleStr);
+  return (g) => stepGrid(g, B, S);
+}
+
+// hash a cell+generation to [0,1) — the dice roll of the custom automata
+function roll(x, y, gen, salt) {
+  return hash01(globalSeed, x, y, Math.imul(gen + 1, 0x9E37) ^ salt);
+}
+
+// Caravan Sprawl: settlements spread to adjacent open ground, old quarters are
+// slowly abandoned. Growth chance scales with how much city already borders a lot.
+function sprawlStep(g, gen) {
+  const out = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x, n = neighbourCount(g, x, y);
+    if (g[i]) {
+      out[i] = (n === 0 || roll(x, y, gen, 0xA8A1) < 0.02) ? 0 : 1;   // lonely or abandoned
+    } else {
+      // god-game tune: ~4x slower spread than the toy so the player's paint
+      // stays the majority author of the city (playtest-notes.md #2)
+      out[i] = (n >= 1 && roll(x, y, gen, 0x5EED) < 0.015 * n) ? 1 : 0;
+    }
+  }
+  return out;
+}
+
+// Wandering City: quarters decay behind and rebuild ahead, so the whole city
+// slowly migrates east across the desert, leaving ruins in its wake.
+function driftStep(g, gen) {
+  const out = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x, n = neighbourCount(g, x, y);
+    if (g[i]) {
+      out[i] = (n === 0 || roll(x, y, gen, 0xDEAD) < 0.16) ? 0 : 1;   // decay
+    } else {
+      const westAlive = x > 0 && g[i - 1];
+      out[i] = (westAlive && roll(x, y, gen, 0xCAFE) < 0.5) ||
+               (n >= 5 && roll(x, y, gen, 0xF00D) < 0.3) ? 1 : 0;     // rebuild ahead / infill
+    }
+  }
+  return out;
+}
+
+// Great Flood: Conway life with a trickle of returning settlers (so the city
+// never dies out), plus a flood band sweeping across the grid on a long cycle
+// that clears everything it touches. Ruins telegraph its arrival; scaffolds
+// mark the resettlement behind the receding waters.
+function floodStep(g, gen) {
+  const out = stepGrid(g, [3], [2, 3]);
+  const period = 48, bandW = 5;
+  const t = ((gen + 1) % period) / period;                            // where the flood is
+  const bandCentre = -bandW + t * (N + bandW * 2);
+  for (let y = 0; y < N; y++) {
+    const flooded = Math.abs(y - bandCentre) <= bandW / 2;
+    for (let x = 0; x < N; x++) {
+      const i = y * N + x;
+      if (flooded) { out[i] = 0; continue; }                          // swept away
+      // settlers return as a 2x2 camp (a still life, so it survives to grow)
+      if (roll(x, y, gen, 0x5E77) < 0.003 && x < N - 1 && y < N - 1 &&
+          Math.abs(y + 1 - bandCentre) > bandW / 2) {
+        out[i] = out[i + 1] = out[i + N] = out[i + N + 1] = 1;
+      }
+    }
+  }
+  return out;
+}
+
+const PRESETS = [
+  { name: 'Old Quarter',     step: bsStep('B3/S12345'),    density: 0.40 },
+  { name: 'Villages',        step: bsStep('B3/S23'),       density: 0.40 },
+  { name: 'Planned Quarter', step: bsStep('B3/S1234'),     density: 0.40 },
+  { name: 'Coral',           step: bsStep('B3/S45678'),    density: 0.40 },
+  { name: 'Day & Night',     step: bsStep('B3678/S34678'), density: 0.50 },
+  { name: 'Eternal City',    step: bsStep('B3/S012345678'), density: 0.30 },  // Life without Death: only ever grows
+  { name: 'Temple Wards',    step: bsStep('B5678/S45678'), density: 0.50 },   // Vote: coarsens into big solid districts
+  { name: 'Shifting Sands',  step: bsStep('B4678/S35678'), density: 0.50 },   // Anneal: districts that slowly morph
+  { name: 'Nomad Camps',     step: bsStep('B2/S'),         density: 0.03 },   // Seeds: everything is perpetually temporary
+  { name: 'Walled Cities',   step: bsStep('B45678/S2345'), density: 0.20 },   // stabilises into dense towns ringed by solid walls
+  { name: 'Twin Dynasties',  step: bsStep('B36/S23'),      density: 0.40 },   // HighLife: like Villages but replicators copy districts
+  { name: 'Oasis Blooms',    step: bsStep('B35678/S5678'), density: 0.48 },   // Diamoeba: huge amoeba districts with writhing edges
+  { name: 'Old Ink',         step: bsStep('B3678/S235678'), density: 0.40 },  // Stains: growth congeals into permanent blot districts
+  { name: 'Caravan Sprawl',  step: sprawlStep,             density: 0.05 },
+  { name: 'Wandering City',  step: driftStep,              density: 0.25 },
+  { name: 'Great Flood',     step: floodStep,              density: 0.40 },
+];
+
+/* ============================================================================
+   JITTERED LATTICE — shared (N+1)x(N+1) vertex grid, each point offset once,
+   so adjacent tiles agree on their shared edge. Offsets are seeded from the
+   global seed: same seed -> same city, jitter included.
+   ------------------------------------------------------------------------- */
+
+const JITTER = 0.1;                 // max offset, fraction of cell width
+
+let lattice = null;                 // [j][i] -> {x, z}
+let circularIsland = false;         // toggle: circular island vs rectangular grid
+
+function buildLattice(globalSeed) {
+  lattice = [];
+  for (let j = 0; j <= N; j++) {
+    const row = [];
+    for (let i = 0; i <= N; i++) {
+      let x = i - N / 2 + (hash01(globalSeed, i, j, 0xA11CE) * 2 - 1) * JITTER;
+      let z = j - N / 2 + (hash01(globalSeed, i, j, 0xB0B) * 2 - 1) * JITTER;
+
+      // Circular island: elliptical grid mapping (square [-1,1]² -> unit disc).
+      // Unlike a polar grid, the interior stays near-identity (cells keep their
+      // square shape, no squish at the centre); only the corners stretch out to
+      // meet the circle's rim. That's the "square tiles arranged on a circle"
+      // read we want. https://arxiv.org/abs/1509.06344
+      if (circularIsland) {
+        const u = x / (N / 2), v = z / (N / 2);          // normalise to [-1, 1]
+        const du = u * Math.sqrt(1 - v * v / 2);
+        const dv = v * Math.sqrt(1 - u * u / 2);
+        const R = N / 2;                                 // island radius in world units
+        x = du * R;
+        z = dv * R;
+      }
+
+      row.push({ x, z });
+    }
+    lattice.push(row);
+  }
+}
+
+// Per-tile affine placement from its 4 jittered corners: centroid + mean yaw +
+// mean edge lengths. Buildings stay rigid (instancing-friendly), just nudged.
+function tileTransform(x, y) {
+  const p00 = lattice[y][x], p10 = lattice[y][x + 1],
+        p01 = lattice[y + 1][x], p11 = lattice[y + 1][x + 1];
+  const cx = (p00.x + p10.x + p01.x + p11.x) / 4;
+  const cz = (p00.z + p10.z + p01.z + p11.z) / 4;
+  const yawBottom = Math.atan2(p10.z - p00.z, p10.x - p00.x);
+  const yawTop = Math.atan2(p11.z - p01.z, p11.x - p01.x);
+  const yaw = (yawBottom + yawTop) / 2;
+  const len = (a, b) => Math.hypot(b.x - a.x, b.z - a.z);
+  const sx = (len(p00, p10) + len(p01, p11)) / 2;
+  const sz = (len(p00, p01) + len(p10, p11)) / 2;
+  // terrain: sit at the mean corner height, lean toward the terrain normal.
+  // tx/tz are the FULL tilt angles — callers scale them (dense blocks barely
+  // tilt so fused quarters stay coherent; lone huts lean into the slope).
+  const h00 = terrainHeight(x, y), h10 = terrainHeight(x + 1, y),
+        h01 = terrainHeight(x, y + 1), h11 = terrainHeight(x + 1, y + 1);
+  const cy = (h00 + h10 + h01 + h11) / 4;
+  const slopeX = ((h10 + h11) - (h00 + h01)) / 2 / sx;   // rise toward +x
+  const slopeZ = ((h01 + h11) - (h00 + h10)) / 2 / sz;   // rise toward +z
+  const tx = -Math.atan(slopeZ), tz = Math.atan(slopeX);
+  return { cx, cy, cz, yaw: -yaw, sx, sz, tx, tz };
+}
+
+/* ============================================================================
+   RENDER LAYER — Three.js, render-on-demand (no continuous loop).
+   ------------------------------------------------------------------------- */
+
+const MATS = {
+  sand:       new THREE.MeshStandardMaterial({ color: 0xd9c197, roughness: 0.95 }),
+  sandLight:  new THREE.MeshStandardMaterial({ color: 0xe9d8b0, roughness: 0.95 }),
+  sandDark:   new THREE.MeshStandardMaterial({ color: 0xb99e6f, roughness: 0.95 }),
+  window:     new THREE.MeshBasicMaterial({ color: 0x2a2018 }),   // unlit: flat constant dark, reads as a void not a lit block
+  wood:       new THREE.MeshStandardMaterial({ color: 0x7a5a38, roughness: 0.9 }),
+  cloth:      new THREE.MeshStandardMaterial({ color: 0x6b4a3a, roughness: 1.0, side: THREE.DoubleSide }),
+  clothRed:   new THREE.MeshStandardMaterial({ color: 0xbe4a35, roughness: 1.0, side: THREE.DoubleSide }),
+  clothPlum:  new THREE.MeshStandardMaterial({ color: 0x99506e, roughness: 1.0, side: THREE.DoubleSide }),
+  clothOchre: new THREE.MeshStandardMaterial({ color: 0xcf9a44, roughness: 1.0, side: THREE.DoubleSide }),
+  lapis:      new THREE.MeshStandardMaterial({ color: 0x1f4e9c, roughness: 0.35, metalness: 0.15 }),
+  gold:       new THREE.MeshStandardMaterial({ color: 0xd4a437, roughness: 0.3, metalness: 0.6 }),
+  palm:       new THREE.MeshStandardMaterial({ color: 0x4e7a34, roughness: 0.9 }),
+  // reserved for the single tallest ziggurat in the city (see rebuildInstances)
+  bitumen:    new THREE.MeshStandardMaterial({ color: 0x241a12, roughness: 0.85, metalness: 0.05 }),
+  skyBlue:    new THREE.MeshStandardMaterial({ color: 0x6bb8d6, roughness: 0.4, metalness: 0.05 }),
+  orange:     new THREE.MeshStandardMaterial({ color: 0xdb7b2e, roughness: 0.55, metalness: 0.05 }),
+};
+
+const GEOS = {
+  box:      new THREE.BoxGeometry(1, 1, 1),
+  cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 8),
+  cone:     new THREE.CylinderGeometry(0.06, 0.5, 1, 7),
+  sphere:   new THREE.SphereGeometry(0.5, 8, 6),
+  arch:     new THREE.TorusGeometry(0.5, 0.1, 8, 12, Math.PI),
+};
+
+/* ============================================================================
+   CANAL — a seeded meandering river (the Euphrates) crossing the grid west to
+   east, two tiles wide. Canal cells are forced dead in the automaton, so the
+   city grows along its banks. Tiles near the river form a green floodplain
+   with palms and reeds. Both ends are faked out to the horizon.
+   ------------------------------------------------------------------------- */
+
+let canalOn = true;
+let oceanOn = false;
+let canalMask = null;               // Uint8Array N*N, 1 = water
+let floodDist = null;               // Uint8Array N*N, Chebyshev distance to water (255 = far)
+let canalRows = null;               // per column x: upper row of the channel
+let canalWidths = null;             // per column x: channel width in cells (varies under a flow preset)
+let riverWidth = 1;                 // channel width in cells, user-controllable (baseline under a flow preset)
+
+// River flow presets — every active one is a TRAVELLING wave. Each defines a
+// waveform `wave(g)` in [0,1] over (fractional) generation g, and `travel`, the
+// number of generations the wave takes to cross the river. buildCanal() samples
+// it per column at a time lag of x/N * travel, so the waveform sweeps DOWN the
+// channel (west -> east) instead of the whole river pulsing in unison — the
+// "traveling crest" read, generalised. At any instant width varies smoothly
+// along X; over generations the pattern drifts downstream.
+//
+// riverWidth is the MINIMUM (the wave only ever adds width on top, up to
+// FLOW_AMP); buildCanal() also floors at riverWidth and caps at 6, so the floor
+// is a hard guarantee. Manual disables modulation entirely (wave: null).
+const FLOW_AMP = 3;
+const wrapPhase = (g, period) => (((g % period) + period) % period) / period;   // 0..1, safe for negative g
+const RIVER_FLOWS = [
+  { name: 'Manual', wave: null, travel: 0 },
+  { name: 'Seasonal', travel: 113, wave: g =>              // a gentle swell drifting downstream (~one wavelength spans the river)
+      0.5 + 0.5 * Math.sin(g / 18) },
+  { name: 'Annual flood', travel: 60, wave: g => {         // slow rise, sharp crest, long recede — the flood sweeps down the valley
+      const period = 60, riseLen = period * 0.4;
+      const t = ((g % period) + period) % period;
+      const s = t < riseLen ? t / riseLen : 1 - (t - riseLen) / (period - riseLen);
+      return Math.pow(Math.max(0, s), 2.2);
+    } },
+  { name: 'Traveling crest', travel: 80, wave: g => {      // a narrow flood pulse sweeping downstream (~5-cell crest)
+      const p = wrapPhase(g, 80);
+      return Math.exp(-((p - 0.5) ** 2) / (2 * 0.08 ** 2));
+    } },
+  { name: 'Drought / steady', travel: 0, wave: () => 0 },  // flat at the minimum, for contrast
+];
+let riverFlow = RIVER_FLOWS[0];
+
+function buildCanal() {
+  canalMask = new Uint8Array(N * N);
+  floodDist = new Uint8Array(N * N).fill(255);
+  canalRows = new Int16Array(N);
+  canalWidths = new Int16Array(N);
+  if (!canalOn) return;
+  // per-column width: sample the travelling waveform at this column's time lag
+  // so the swell sweeps downstream rather than the whole river changing at once.
+  const widthAt = riverFlow.wave
+    ? (x) => riverWidth + riverFlow.wave(generation - (x / N) * riverFlow.travel) * FLOW_AMP
+    : () => riverWidth;
+  let c = Math.round(N / 2 + (hash01(globalSeed, 0, 0, 0x41C4E) - 0.5) * N * 0.3);   // centre line (width-independent)
+  for (let x = 0; x < N; x++) {
+    const w = Math.max(riverWidth, Math.min(6, Math.round(widthAt(x))));   // riverWidth is the floor, never subtracted below
+    const half = Math.floor(w / 2);                 // channel grows symmetrically around the centre
+    const drift = Math.floor(hash01(globalSeed, x, 1, 0x717E5) * 3) - 1;
+    c = Math.max(1 + half, Math.min(N - 1 - w + half, c + drift));
+    const top = c - half;                         // channel occupies rows [top, top + w - 1]
+    canalRows[x] = top;
+    canalWidths[x] = w;
+    for (let k = 0; k < w; k++) canalMask[(top + k) * N + x] = 1;
+  }
+  // floodplain distance: stamp a radius-2 neighbourhood around every water cell
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (!canalMask[y * N + x]) continue;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
+      const d = Math.max(Math.abs(dx), Math.abs(dy));
+      const i = ny * N + nx;
+      if (d < floodDist[i]) floodDist[i] = d;
+    }
+  }
+}
+
+// The river is older than the city: its cells are always dead. Applied after
+// seeding and after every automaton step (including the lookahead, so the
+// telegraphing stays consistent).
+function applyCanal(g) {
+  if (!canalOn) return g;
+  for (let i = 0; i < g.length; i++) if (canalMask[i]) g[i] = 0;
+  return g;
+}
+
+// GOD MODE step. Time OFF: frozen diorama — the grid only changes through
+// player input and the river; stepping just re-applies the canal.
+// Time ON: the vernacular takes its turn under the selected culture (preset
+// rule), but CONSECRATED tiles (player paint) can't be killed by the rule —
+// they stand until their lifetime expires, then crumble to open ground the
+// rule (or the brush) can reclaim. Pure in (g, gen): safe for the lookahead,
+// so expiry telegraphs as a ruin one turn ahead like any other death.
+function stepSim(g, gen) {
+  if (!timeOn) return applyCanal(g.slice());
+  const next = preset.step(g, gen);
+  for (let i = 0; i < g.length; i++) {
+    const r = records && records[i];
+    if (g[i] && r && r.c) next[i] = (gen + 1 - r.g >= r.L) ? 0 : 1;
+  }
+  return applyCanal(next);
+}
+
+/* ============================================================================
+   TERRAIN — a third procedural layer alongside the automaton and the
+   architecture (see terrain-plan.md). Three buffers over the (N+1)^2 lattice:
+
+   - heightField: immutable, seeded value-noise (hills + undulation +
+     roughness), gentle amplitude so the RTS diorama read survives. The canal
+     is carved down into it below WATER_LEVEL, so the river sits in a real
+     valley and fertility = "low ground near water" for free.
+   - tellDelta: persistent and monotonically increasing. Only ziggurats stamp
+     it (flatten their footprint up to the local high point, with a terraced
+     skirt). Because it never decreases, a ziggurat's platform outlives the
+     ziggurat itself — the city slowly grows mounds where monuments stood,
+     like real Mesopotamian tells.
+   - erosionDelta: persistent and monotonically increasing, subtracted rather
+     than added. The riverbank loses a little sediment each generation, the
+     same "only ever accumulates" persistence as tellDelta, just the other
+     direction. Floored at CHANNEL_BED — the river's own carved bed — so a
+     bank can settle down to meet the water but never erode past it.
+
+   Rendered terrain = heightField + tellDelta - erosionDelta, floored at CHANNEL_BED.
+   ------------------------------------------------------------------------- */
+
+let heightField = null;             // Float32Array (N+1)^2 — immutable base elevation
+let tellDelta = null;               // Float32Array (N+1)^2 — persistent monument mounds
+let erosionDelta = null;            // Float32Array (N+1)^2 — persistent bank sediment loss
+let churnDelta = null;              // Float32Array (N+1)^2 — GOD MODE: sediment accreted by building churn; the sculpt verb carves it back down
+const WATER_LEVEL = -0.18;          // one flat water plane; land is generally >= 0
+const CHANNEL_BED = WATER_LEVEL - 0.12;   // the canal's own carved depth; erosion never digs past it
+
+const HV = (i, j) => j * (N + 1) + i;
+const terrainHeight = (i, j) =>
+  Math.max(CHANNEL_BED, heightField[HV(i, j)] + tellDelta[HV(i, j)] + (churnDelta ? churnDelta[HV(i, j)] : 0) - erosionDelta[HV(i, j)]);
+
+// GOD MODE churn sediment: every generation an occupied tile deposits a little
+// height on its 4 corner vertices — the slow layer under the fast building
+// layer. Long-lived dense districts literally become high ground.
+const CHURN_RATE = 0.008;           // per occupied tile, per generation, per vertex
+const CHURN_MAX = 2.2;              // cap so ancient quarters plateau instead of spiking
+function stampChurn() {
+  let changed = false;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (!grid[y * N + x]) continue;
+    for (const v of [HV(x, y), HV(x + 1, y), HV(x, y + 1), HV(x + 1, y + 1)]) {
+      if (churnDelta[v] < CHURN_MAX) { churnDelta[v] = Math.min(CHURN_MAX, churnDelta[v] + CHURN_RATE); changed = true; }
+    }
+  }
+  return changed;
+}
+
+// seeded value noise in [0,1]: smooth interpolation of hashed lattice values
+function valueNoise(i, j, wavelength, salt) {
+  const gx = i / wavelength, gy = j / wavelength;
+  const x0 = Math.floor(gx), y0 = Math.floor(gy);
+  const fx = gx - x0, fy = gy - y0;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const v00 = hash01(globalSeed, x0, y0, salt), v10 = hash01(globalSeed, x0 + 1, y0, salt);
+  const v01 = hash01(globalSeed, x0, y0 + 1, salt), v11 = hash01(globalSeed, x0 + 1, y0 + 1, salt);
+  return (v00 * (1 - sx) + v10 * sx) * (1 - sy) + (v01 * (1 - sx) + v11 * sx) * sy;
+}
+
+function buildHeightField() {
+  heightField = new Float32Array((N + 1) * (N + 1));
+  // keep accumulated tells and erosion across a re-carve (river-width change);
+  // resetCity clears them by nulling both first for a fresh city.
+  if (!tellDelta || tellDelta.length !== (N + 1) * (N + 1)) tellDelta = new Float32Array((N + 1) * (N + 1));
+  if (!erosionDelta || erosionDelta.length !== (N + 1) * (N + 1)) erosionDelta = new Float32Array((N + 1) * (N + 1));
+  if (!churnDelta || churnDelta.length !== (N + 1) * (N + 1)) churnDelta = new Float32Array((N + 1) * (N + 1));
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    // three octaves: major landforms, medium undulation, fine roughness
+    let h = (valueNoise(i, j, N / 2.5, 0x411) - 0.5) * 1.3
+          + (valueNoise(i, j, N / 8, 0x412) - 0.5) * 0.4
+          + (valueNoise(i, j, 2.3, 0x413) - 0.5) * 0.08;
+    h = Math.max(0, h + 0.45);      // bias above the water table; clipped lows read as desert flats
+    // fade to 0 at the grid rim so the city plateau meets the outer desert cleanly
+    const rim = Math.min(i, j, N - i, N - j) / 5;
+    h *= rim >= 1 ? 1 : rim * rim * (3 - 2 * rim);
+    // carve the canal valley: bed below water, banks stepping up from it
+    const d = vertexFloodDist(i, j);
+    if (d === 0) h = CHANNEL_BED;
+    else if (d === 1) h = Math.min(h, WATER_LEVEL + 0.06);
+    else if (d === 2) h = Math.min(h, WATER_LEVEL + 0.3);
+    heightField[HV(i, j)] = h;
+  }
+}
+
+// Ziggurats flatten their footprint up to its local high point (a level
+// platform), with a half-height terraced skirt one vertex out. tellDelta only
+// ever increases, so the platform persists as a tell after the ziggurat dies.
+function stampTells(zigs) {
+  let changed = false;
+  for (const z of zigs) {
+    const i0 = z.x0, j0 = z.y0, i1 = z.x0 + z.size, j1 = z.y0 + z.size;
+    let plateau = -Infinity;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++)
+      plateau = Math.max(plateau, terrainHeight(i, j));
+    // GOD MODE: the plateau is measured off full terrain (incl. churn), so the
+    // stamped delta must subtract churn too — otherwise tell absorbs churn and
+    // the plateau feeds back on itself, climbing every generation.
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const need = plateau - heightField[HV(i, j)] - churnDelta[HV(i, j)];
+      if (need > tellDelta[HV(i, j)] + 1e-4) { tellDelta[HV(i, j)] = need; changed = true; }
+    }
+    for (let j = j0 - 1; j <= j1 + 1; j++) for (let i = i0 - 1; i <= i1 + 1; i++) {
+      if (i >= i0 && i <= i1 && j >= j0 && j <= j1) continue;
+      if (i < 0 || i > N || j < 0 || j > N) continue;
+      const need = (plateau - heightField[HV(i, j)] - churnDelta[HV(i, j)]) * 0.5;
+      if (need > tellDelta[HV(i, j)] + 1e-4) { tellDelta[HV(i, j)] = need; changed = true; }
+    }
+  }
+  return changed;
+}
+
+// River erosion: the immediate bank (1-2 cells out) loses a little sediment
+// each generation — small, so it reads as settling rather than carving.
+// erosionDelta only ever grows, and terrainHeight() floors at CHANNEL_BED, so
+// a bank can sink down to meet the river but the river's own bed — its
+// current position — stays the lowest point either way.
+const EROSION_RATE = 0.0015;        // per generation, at the immediate bank
+function stampErosion() {
+  if (!canalOn) return false;
+  let changed = false;
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const d = vertexFloodDist(i, j);
+    if (d < 1 || d > 2) continue;             // only the banks erode; the bed is already at the floor
+    const v = HV(i, j);
+    const room = (heightField[v] + tellDelta[v] - erosionDelta[v]) - CHANNEL_BED;
+    if (room <= 0) continue;                  // already settled to the floor
+    erosionDelta[v] += Math.min(room, EROSION_RATE / d);   // farther bank erodes slower
+    changed = true;
+  }
+  return changed;
+}
+
+/* ============================================================================
+   INSTANCING — one InstancedMesh per (shape, material) pair ("bucket"), shared
+   across every tile and ziggurat in the city, instead of a mesh tree per
+   building. The generator already emits primitive instruction lists rather
+   than direct meshes, so this is the mechanical swap the spec called for:
+   thousands of individual meshes/draw-calls collapse into a few dozen.
+   Capacity grows with headroom (1.5x) so it rarely needs to reallocate.
+   ------------------------------------------------------------------------- */
+
+class InstancedBucket {
+  constructor(shape, matKey) {
+    this.shape = shape;
+    this.matKey = matKey;
+    this.capacity = 0;
+    this.mesh = null;
+  }
+  ensureCapacity(n) {
+    if (this.mesh && n <= this.capacity) return;
+    const newCap = Math.max(n, Math.ceil((this.capacity || 8) * 1.5), 16);
+    const mesh = new THREE.InstancedMesh(GEOS[this.shape], MATS[this.matKey] || MATS.sand, newCap);
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.frustumCulled = false;         // instances span the whole city; culling the bucket wastes nothing
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    if (this.mesh) scene.remove(this.mesh);
+    this.mesh = mesh;
+    this.capacity = newCap;
+    scene.add(this.mesh);
+  }
+}
+
+const buckets = new Map();              // "shape:matKey" -> InstancedBucket
+function getBucket(shape, matKey) {
+  const key = shape + ':' + matKey;
+  let b = buckets.get(key);
+  if (!b) { b = new InstancedBucket(shape, matKey); buckets.set(key, b); }
+  return b;
+}
+
+// scratch objects reused every instance to avoid per-call allocation
+const _pos = new THREE.Vector3(), _euler = new THREE.Euler(), _quat = new THREE.Quaternion(), _scl = new THREE.Vector3();
+function composeMatrix(out, px, py, pz, rx, ry, rz, sx, sy, sz) {
+  _pos.set(px, py, pz);
+  _euler.set(rx, ry, rz);
+  _quat.setFromEuler(_euler);
+  _scl.set(sx, sy, sz);
+  return out.compose(_pos, _quat, _scl);
+}
+
+const wrap = document.getElementById('canvas-wrap');
+// phones get the lightweight path: no shadows, no post-processing
+const isPhone = matchMedia('(pointer: coarse)').matches && Math.min(innerWidth, innerHeight) < 820;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = !isPhone;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9dc4e6);   // daytime sky blue
+scene.fog = new THREE.Fog(0xe4d4b4, 1, 1);      // warm sandy haze at the horizon
+
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.addEventListener('change', render);
+
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.4);
+sun.castShadow = !isPhone;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.05;          // instanced boxes: pushes samples off the surface, kills acne
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xcfe0ff, 0xc7a86e, 0.9));
+
+// Camera/fog/shadow framing scales with grid size N — called on load and
+// whenever the user changes the grid size.
+function updateCameraFraming() {
+  scene.fog.near = N * 2.2;
+  scene.fog.far = N * 5;
+  camera.far = N * 12;
+  camera.position.set(0, N * 0.94, N * 1.06);
+  camera.updateProjectionMatrix();
+  controls.update();                 // reorient the camera to look at the target (else it faces default -Z)
+  sun.position.set(N * 0.75, N * 1.12, N * 0.5);
+  // shadow frustum hugs the grid (plus a margin for tall monuments at the rim)
+  const s = N * 0.75;
+  sun.shadow.camera.left = -s; sun.shadow.camera.right = s;
+  sun.shadow.camera.top = s; sun.shadow.camera.bottom = -s;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = N * 4;
+  sun.shadow.camera.updateProjectionMatrix();
+}
+
+// beyond the grid: endless desert, or (ocean mode) endless sea with a sandy shore
+const desertMaterial = new THREE.MeshStandardMaterial({ color: 0xdcc396, roughness: 1 });
+// polygonOffset pushes the sea plane slightly back in depth so the tidal
+// foreshore reliably wins the thin band where they cross at the shoreline —
+// no coin-flip depth ties to shimmer as the camera moves.
+const seaMaterial = new THREE.MeshStandardMaterial({ color: 0x3a7ba8, roughness: 0.3, metalness: 0.1,
+  polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+const outerGroundY = () => oceanOn ? WATER_LEVEL - 0.1 : WATER_LEVEL - 0.07;   // below water so it's never occluding
+const outerGround = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), desertMaterial);
+outerGround.rotation.x = -Math.PI / 2;
+outerGround.position.y = outerGroundY();
+outerGround.receiveShadow = true;
+scene.add(outerGround);
+
+let shoreRing = null;               // sandy apron so the city sits on an island, rebuilt when N changes
+function applyOcean() {
+  outerGround.material = oceanOn ? seaMaterial : desertMaterial;
+  outerGround.position.y = outerGroundY();
+  buildGroundSkirt();               // skirt bottom tracks outerGroundY() too
+  if (shoreRing) { scene.remove(shoreRing); shoreRing.geometry.dispose(); shoreRing = null; }
+  // Square grid keeps its flat square apron. The circular island replaces the
+  // apron with a tidal zone (built separately) — so only build the flat ring here.
+  if (oceanOn && !circularIsland) {
+    shoreRing = new THREE.Mesh(new THREE.PlaneGeometry(N + 14, N + 14), desertMaterial);
+    shoreRing.rotation.x = -Math.PI / 2;
+    shoreRing.position.y = WATER_LEVEL - 0.04;   // sand apron just above the sea, below the city rim
+    shoreRing.receiveShadow = true;
+    scene.add(shoreRing);
+  }
+  buildTidalZone();                 // circular+ocean only; disposes itself otherwise
+}
+
+/* ----------------------------------------------------------------------------
+   TIDAL ZONE — the circular island's coast. Instead of a flat sand apron, an
+   annulus ramping from the city rim down under the sea, coloured dry sand ->
+   wet sand -> salt marsh -> mud, with a seeded wobbly waterline (inlets and
+   sandbars). It's the sea's answer to the river's green floodplain: the reed
+   clumps that dress it are scattered in the instancing pass (rebuildInstances).
+   ------------------------------------------------------------------------- */
+
+let tidalMesh = null;
+let _tidalPh = null;                // seeded harmonic phases for the wobbly coast
+const _cSandDry = new THREE.Color(0xd7bd90);
+const _cSandWet = new THREE.Color(0x9c8358);
+const _cMarsh   = new THREE.Color(0x6f7d3d);
+const _cMud     = new THREE.Color(0x54492c);
+const _cShallow = new THREE.Color(0x3f6f8c);   // blend toward the sea at the waterline
+const _tcT = new THREE.Color();
+
+// Shared geometry so the mesh and the reed scatter agree on where the coast is.
+// Rin tucks a good way UNDER the city rim (N/2) so the annulus always underlaps
+// the island ground — no gap can open at the seam.
+function tidalGeom() {
+  return { seaY: outerGroundY(), Rin: N / 2 - 1.4, width: Math.max(8, N * 0.18) };
+}
+function tidalWobble(a) {
+  let n = 0;
+  for (let k = 1; k <= 5; k++) n += Math.sin(a * k + _tidalPh[k - 1]) / k;
+  return n * 0.5;                              // roughly [-1, 1]
+}
+// (angle, t in [0,1] from coast to open sea) -> world x/z and terrain height h.
+// The wobble is masked to zero at the inner edge (t=0) and eases in by t~0.4, so
+// the seam under the city stays a clean circle and only the waterline gets ragged.
+function tidalSample(a, t) {
+  const { seaY, Rin, width } = tidalGeom();
+  const w = tidalWobble(a);
+  const u = Math.min(1, t / 0.4), mask = u * u * (3 - 2 * u);   // smoothstep 0 -> 0.4
+  const rad = Rin + t * width + w * width * 0.2 * mask;
+  // Height in two acts. Above water: a broad, gently-sloping exposed foreshore
+  // from the coast down to the shoreline. Below: a STEEP plunge to a deep
+  // seabed. The submerged part must dive well clear of the flat sea plane — if
+  // it instead ran nearly parallel just beneath it, that wide near-coplanar band
+  // is what shimmered against the sea when orbiting/zooming (depth-buffer fight).
+  const tSh = 0.7;                                // shoreline at 70% out: most of the flat is dry
+  const shoreY = seaY + 0.015;                    // foreshore bottoms out a hair above the sea plane
+  let h;
+  if (t < tSh) {
+    const s = (t / tSh) * (t / tSh) * (3 - 2 * (t / tSh));       // smoothstep, flattens into the tide
+    h = s * shoreY;
+  } else {
+    const p = (t - tSh) / (1 - tSh);
+    h = shoreY + p * (2 - p) * ((seaY - 1.8) - shoreY);          // ease-out: steep at the shore, deep below
+  }
+  h += w * 0.05 * (1 - t) * mask;                 // small sandbars on the exposed flat
+  return { x: Math.cos(a) * rad, z: Math.sin(a) * rad, h };
+}
+
+function buildTidalZone() {
+  if (tidalMesh) { scene.remove(tidalMesh); tidalMesh.geometry.dispose(); tidalMesh = null; }
+  if (!(circularIsland && oceanOn) || !lattice) return;
+  _tidalPh = [];
+  for (let k = 0; k < 5; k++) _tidalPh.push(hash01(globalSeed, k, 7, 0x7DA1) * Math.PI * 2);
+  const { seaY, width } = tidalGeom();
+  const rings = 16, seg = Math.max(120, Math.round(N * 2.5));
+  const verts = [], colors = [], idx = [];
+  for (let r = 0; r <= rings; r++) {
+    const t = r / rings;
+    for (let s = 0; s <= seg; s++) {
+      const a = (s / seg) * Math.PI * 2;
+      const smp = tidalSample(a, t);
+      verts.push(smp.x, smp.h, smp.z);
+      const above = smp.h - seaY;              // >0 exposed foreshore, <=0 sunk under the sea plane
+      if (above > 0.20) {                      // upper beach: dry, drying to wet as it nears the tide
+        _tcT.copy(_cSandDry).lerp(_cSandWet, Math.min(1, (0.34 - above) / 0.14));
+      } else if (above > 0.06) {               // mid foreshore: wet sand blotched with salt marsh
+        const marsh = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(a * 6 + _tidalPh[0]));
+        _tcT.copy(_cSandWet).lerp(_cMarsh, ((0.20 - above) / 0.14) * marsh);
+      } else {                                 // waterline and below: mud grading into the sea colour
+        _tcT.copy(_cMud).lerp(_cShallow, Math.min(1, (0.06 - above) / 0.14));
+      }
+      colors.push(_tcT.r, _tcT.g, _tcT.b);
+    }
+  }
+  const stride = seg + 1;
+  for (let r = 0; r < rings; r++) for (let s = 0; s < seg; s++) {
+    const a = r * stride + s, b = a + 1, c = a + stride, d = c + 1;
+    idx.push(a, b, c, b, d, c);              // wound so normals face up
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  tidalMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+  tidalMesh.receiveShadow = true;
+  scene.add(tidalMesh);
+}
+
+// Reed/marsh tuft: a spray of thin green blades, dressing the wet foreshore.
+function reedClump(rng, out) {
+  const n = 4 + Math.floor(rng() * 5);
+  for (let i = 0; i < n; i++) {
+    const rr = range(rng, 0, 0.22), aa = rng() * Math.PI * 2, hh = range(rng, 0.22, 0.55);
+    out.push(I('cone', 'palm', [Math.cos(aa) * rr, hh / 2, Math.sin(aa) * rr],
+      [0.05, hh, 0.05], [range(rng, -0.12, 0.12), 0, range(rng, -0.12, 0.12)]));
+  }
+}
+
+// grid ground: a real warped mesh whose vertices follow the jittered lattice
+let gridGround = null;
+// vertex colours: sand base, green floodplain near the river, darker sunken riverbed
+const _groundSand = new THREE.Color(0xd7bd90);
+const _groundGreen = new THREE.Color(0x93a95e);
+const _groundBed = new THREE.Color(0x9a8a68);
+const _tmpColor = new THREE.Color();
+
+// distance-to-water sampled at a lattice vertex = min over its (up to 4) adjacent cells
+function vertexFloodDist(i, j) {
+  if (!canalOn) return 255;
+  let d = 255;
+  for (const [cx, cy] of [[i - 1, j - 1], [i, j - 1], [i - 1, j], [i, j]]) {
+    if (cx < 0 || cx >= N || cy < 0 || cy >= N) continue;
+    d = Math.min(d, floodDist[cy * N + cx]);
+  }
+  return d;
+}
+
+function buildGroundMesh() {
+  if (gridGround) { scene.remove(gridGround); gridGround.geometry.dispose(); }
+  const geo = new THREE.PlaneGeometry(N, N, N, N);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array((N + 1) * (N + 1) * 3);
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const v = j * (N + 1) + i;
+    pos.setX(v, lattice[j][i].x);
+    pos.setZ(v, lattice[j][i].z);
+    pos.setY(v, terrainHeight(i, j));  // heightField + tells (canal valley already carved in)
+    const d = vertexFloodDist(i, j);
+    if (d === 0) {
+      _tmpColor.copy(_groundBed);
+    } else if (d === 1) {
+      _tmpColor.copy(_groundSand).lerp(_groundGreen, 0.75);
+    } else if (d === 2) {
+      _tmpColor.copy(_groundSand).lerp(_groundGreen, 0.35);
+    } else {
+      _tmpColor.copy(_groundSand);
+    }
+    colors[v * 3] = _tmpColor.r; colors[v * 3 + 1] = _tmpColor.g; colors[v * 3 + 2] = _tmpColor.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  gridGround = new THREE.Mesh(geo,
+    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+  gridGround.receiveShadow = true;
+  scene.add(gridGround);
+  buildGroundSkirt();
+}
+
+// Perimeter "curtain": the grid ground's rim fades toward height 0, but the
+// outer desert plane sits at a fixed lower Y (below the water level) — so
+// without this there's a permanent step-down cliff at the seam with nothing
+// filling it, letting the camera see straight under the grid's edge. This
+// wraps the boundary with a vertical strip connecting rim height down to the
+// outer plane's height, so the seam always reads as solid ground.
+let groundSkirt = null;
+function buildGroundSkirt() {
+  if (groundSkirt) { scene.remove(groundSkirt); groundSkirt.geometry.dispose(); groundSkirt = null; }
+  if (!lattice) return;
+  const bottomY = outerGroundY() - 0.3;   // a bit past the outer plane so no seam even if it shifts
+  const ring = [];
+  for (let i = 0; i <= N; i++) ring.push([i, 0]);
+  for (let j = 1; j <= N; j++) ring.push([N, j]);
+  for (let i = N - 1; i >= 0; i--) ring.push([i, N]);
+  for (let j = N - 1; j >= 1; j--) ring.push([0, j]);
+  const verts = [];
+  for (const [i, j] of ring) {
+    const p = lattice[j][i];
+    verts.push(p.x, terrainHeight(i, j), p.z, p.x, bottomY, p.z);
+  }
+  const idx = [];
+  for (let k = 0; k < ring.length; k++) {
+    const kn = (k + 1) % ring.length;
+    const a = k * 2, b = k * 2 + 1, c = kn * 2, d = kn * 2 + 1;
+    idx.push(a, c, b, b, c, d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  groundSkirt = new THREE.Mesh(geo,
+    new THREE.MeshStandardMaterial({ color: 0xc9ab7a, roughness: 1, side: THREE.DoubleSide }));
+  groundSkirt.receiveShadow = true;
+  scene.add(groundSkirt);
+}
+
+// Cheap per-step terrain refresh: tells grew, so rewrite vertex heights in
+// place (colours are static per seed — no need to touch them).
+function updateGroundHeights() {
+  if (!gridGround) return;
+  const pos = gridGround.geometry.attributes.position;
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    pos.setY(j * (N + 1) + i, terrainHeight(i, j));
+  }
+  pos.needsUpdate = true;
+  buildGroundSkirt();                // rim heights may have shifted too (tells near the edge)
+  gridGround.geometry.computeVertexNormals();
+}
+
+// Water surface: flat quads over every canal cell (following the jittered
+// lattice), plus two straight strips carrying the river to the horizon.
+let waterMesh = null, horizonWater = null;
+const WATER_Y = WATER_LEVEL;        // the one water plane, shared with the carved valley
+const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x2f6d9e, roughness: 0.25, metalness: 0.1 });
+
+// LIVING WATER — perturb the surface normal with travelling sine waves in the
+// fragment shader, so sunlight glints and shifts across the river without any
+// extra geometry. World-position based, so tile seams stay continuous. The
+// same patch dresses the open sea. Driven by uTime from the ambient loop.
+const waterTime = { value: 0 };
+function patchWater(mat, amp) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = waterTime;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+      .replace('#include <worldpos_vertex>',
+        '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec3 vWPos;')
+      .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+        {
+          float w1 = sin(vWPos.x * 2.3 + uTime * 1.3) + sin(vWPos.x * 4.1 + vWPos.z * 1.7 - uTime * 0.8);
+          float w2 = sin(vWPos.z * 2.9 + uTime * 1.0) + sin((vWPos.x + vWPos.z) * 1.6 - uTime * 1.6);
+          normal = normalize(normal + vec3(w1, 0.0, w2) * ${amp});
+        }`);
+  };
+}
+patchWater(waterMaterial, '0.10');   // river: lively glints between the banks
+patchWater(seaMaterial, '0.05');     // open sea: broader, calmer swell
+
+function buildWaterMesh() {
+  if (waterMesh) { scene.remove(waterMesh); waterMesh.geometry.dispose(); waterMesh = null; }
+  if (horizonWater) { scene.remove(horizonWater); horizonWater.geometry.dispose(); horizonWater = null; }
+  if (!canalOn) return;
+  const verts = [], idx = [];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (!canalMask[y * N + x]) continue;
+    const p00 = lattice[y][x], p10 = lattice[y][x + 1], p01 = lattice[y + 1][x], p11 = lattice[y + 1][x + 1];
+    const base = verts.length / 3;
+    verts.push(p00.x, WATER_Y, p00.z, p10.x, WATER_Y, p10.z, p01.x, WATER_Y, p01.z, p11.x, WATER_Y, p11.z);
+    idx.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  waterMesh = new THREE.Mesh(geo, waterMaterial);
+  waterMesh.receiveShadow = true;
+  scene.add(waterMesh);
+
+  // horizon strips: continue the channel straight off both edges, under the fog.
+  // A circular island has no straight edges for the channel to run off — the
+  // river simply meets the round coast — so skip them there.
+  if (circularIsland) return;
+  const L = N * 6;
+  const w0 = canalWidths[0], wN = canalWidths[N - 1];
+  const wIn = lattice[canalRows[0]][0], wOut = lattice[canalRows[0] + w0][0];
+  const eIn = lattice[canalRows[N - 1]][N], eOut = lattice[canalRows[N - 1] + wN][N];
+  const hVerts = new Float32Array([
+    wIn.x - L, WATER_Y, wIn.z,  wIn.x, WATER_Y, wIn.z,  wOut.x - L, WATER_Y, wOut.z,  wOut.x, WATER_Y, wOut.z,
+    eIn.x, WATER_Y, eIn.z,  eIn.x + L, WATER_Y, eIn.z,  eOut.x, WATER_Y, eOut.z,  eOut.x + L, WATER_Y, eOut.z,
+  ]);
+  const hGeo = new THREE.BufferGeometry();
+  hGeo.setAttribute('position', new THREE.BufferAttribute(hVerts, 3));
+  hGeo.setIndex([0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7]);
+  hGeo.computeVertexNormals();
+  horizonWater = new THREE.Mesh(hGeo, waterMaterial);
+  scene.add(horizonWater);
+}
+
+/* ============================================================================
+   CITY STATE — automaton + per-tile birth records + two-frame lookahead.
+   ------------------------------------------------------------------------- */
+
+let globalSeed = 1;
+let preset = PRESETS.find(p => p.name === 'Caravan Sprawl');   // default culture: gentle sprawl
+let buildingCap = 2500;             // max tiles per rebuild that get the full decorated recipe
+let grid = null;                    // current committed generation
+let generation = 0;
+let records = null;                 // per tile: {seed, n} fixed at birth, or null
+
+function recordBirths(newGrid, oldRecords, gen) {
+  const recs = new Array(N * N).fill(null);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    if (!newGrid[i]) continue;
+    if (oldRecords && oldRecords[i]) {
+      recs[i] = oldRecords[i];      // survivor: form fixed at birth, never re-rolls
+    } else {
+      recs[i] = { seed: hashSeed(globalSeed, x, y, gen), n: neighbourCount(newGrid, x, y), g: gen };
+    }
+  }
+  return recs;
+}
+
+function resetCity() {
+  generation = 0;
+  buildLattice(globalSeed);
+  buildCanal();
+  templeZig = null;                  // fresh city: re-pick the special ziggurat from scratch
+  tellDelta = null;                  // fresh city: clear tells and erosion before rebuilding the base
+  erosionDelta = null;
+  buildHeightField();                // fresh immutable base + cleared tells/erosion
+  resetWalls();
+  grid = applyCanal(new Uint8Array(N * N));   // blank desert — the player paints the city
+  churnDelta = new Float32Array((N + 1) * (N + 1));
+  sculptUnlocked = false;
+  updateBrushUI();
+  records = recordBirths(grid, null, 0);
+  stampTells(detectZiggurats(grid).zigs);
+  buildGroundMesh();                 // reads heightField + tells
+  buildWaterMesh();
+  applyOcean();                      // shore ring size tracks N
+  rebuildInstances();
+  updateGenLabel();
+  render();
+}
+
+function stepCity() {
+  const next = stepSim(grid, generation);
+  generation++;
+  grid = next;
+  if (canalOn && riverFlow.wave) {              // auto flow preset: re-lay the channel for this generation
+    buildCanal();
+    grid = applyCanal(grid);
+    buildHeightField();
+    buildGroundMesh();
+    buildWaterMesh();
+  }
+  records = recordBirths(grid, records, generation);
+  const tellsChanged = stampTells(detectZiggurats(grid).zigs);
+  const erosionChanged = stampErosion();          // all three must run every step; don't short-circuit
+  const churnChanged = stampChurn();              // occupied districts slowly rise
+  if (tellsChanged || erosionChanged || churnChanged) updateGroundHeights();
+  updateUnlocks();
+  updateBrushUI();                                // vernacular growth/decay moves the brush max too
+  updateWalls();
+  rebuildInstances();
+  updateGenLabel();
+  render();
+}
+
+// River width changed live: re-lay the channel, drown any buildings now under
+// water, re-carve the valley (tells preserved), and let the city react — the new
+// bank sprouts docks/floodplain, and the automaton evolves from the new state.
+function setRiverWidth() {
+  buildCanal();
+  grid = applyCanal(grid);           // kill buildings on the newly-covered tiles
+  records = recordBirths(grid, records, generation);   // drop records for drowned tiles
+  buildHeightField();                // re-carve the valley, keep tells
+  buildGroundMesh();
+  buildWaterMesh();
+  rebuildInstances();
+  render();
+}
+
+/* ============================================================================
+   ZIGGURAT DETECTION — read-only pass over Life state. Maximal solid squares
+   (>= 3x3), claimed largest-first non-overlapping. Claimed tiles opt out of
+   per-tile building generation. Runs on both current and next grid so a
+   collapsing ziggurat gets one "ruined ziggurat" telegraph frame.
+   ------------------------------------------------------------------------- */
+
+function detectZiggurats(g) {
+  // dp[i] = side of the largest solid square whose bottom-right corner is i
+  const dp = new Int16Array(N * N);
+  let maxS = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    if (!g[i]) continue;
+    dp[i] = (x > 0 && y > 0) ? 1 + Math.min(dp[i - 1], dp[i - N], dp[i - N - 1]) : 1;
+    if (dp[i] > maxS) maxS = dp[i];
+  }
+  const claimed = new Uint8Array(N * N);
+  const zigs = [];
+  for (let s = maxS; s >= 3; s--) {            // largest-first
+    for (let y = s - 1; y < N; y++) for (let x = s - 1; x < N; x++) {
+      if (dp[y * N + x] < s) continue;
+      const x0 = x - s + 1, y0 = y - s + 1;
+      let free = true;
+      outer: for (let yy = y0; yy <= y; yy++) for (let xx = x0; xx <= x; xx++) {
+        if (claimed[yy * N + xx]) { free = false; break outer; }
+      }
+      if (!free) continue;
+      for (let yy = y0; yy <= y; yy++) for (let xx = x0; xx <= x; xx++) claimed[yy * N + xx] = 1;
+      zigs.push({ x0, y0, size: s });
+    }
+  }
+  return { zigs, claimed };
+}
+
+const zigsOverlap = (a, b) =>
+  a.x0 < b.x0 + b.size && b.x0 < a.x0 + a.size &&
+  a.y0 < b.y0 + b.size && b.y0 < a.y0 + a.size;
+
+// Aim the ramp-stair at the face with the least living city beside it (2-deep
+// strip; out-of-bounds counts as open sand). Faces: 0 +z(y+), 1 +x, 2 -z, 3 -x.
+function bestStairFace(z, g) {
+  const strips = [
+    { dx: 0, dy: 1 }, { dx: 1, dy: 0 }, { dx: 0, dy: -1 }, { dx: -1, dy: 0 },
+  ];
+  let best = 0, bestCount = Infinity;
+  for (let f = 0; f < 4; f++) {
+    const { dx, dy } = strips[f];
+    let count = 0;
+    for (let depth = 1; depth <= 2; depth++) for (let k = 0; k < z.size; k++) {
+      const x = dx !== 0 ? z.x0 + (dx > 0 ? z.size - 1 + depth : -depth) : z.x0 + k;
+      const y = dy !== 0 ? z.y0 + (dy > 0 ? z.size - 1 + depth : -depth) : z.y0 + k;
+      if (x >= 0 && x < N && y >= 0 && y < N) count += g[y * N + x];
+    }
+    if (count < bestCount) { bestCount = count; best = f; }
+  }
+  return best;
+}
+
+/* ============================================================================
+   WALLS — temenos precinct walls seeded by ziggurats, growing into a grand
+   city wall. Lifecycle: a ziggurat that persists >= 3 generations gets a
+   precinct wall project (rectangle around it +2 margin, max 4 concurrent,
+   largest/oldest first). A crew builds M segments per generation, so the wall
+   crawls around the ring, telegraphed by scaffolds. Projects whose rings
+   touch merge into one; a finished ring pressed by outside growth expands;
+   a ring covering most of the city snaps to the whole city's extent (the
+   grand wall). Outgrown or orphaned rings persist forever as ruins that the
+   city swallows. Segments over the canal are skipped: water gates.
+   ------------------------------------------------------------------------- */
+
+let zigTracks = [];                 // {x0, y0, size, age} — persistence across generations
+let templeZig = null;               // {x0, y0, size} of the current special (tallest) ziggurat — persists across rebuilds so the coloured crown doesn't hop between near-equal peers
+let wallProjects = [];              // {rect, queue:[{x,y}], built, grand}
+let wallRuins = new Map();          // "x,y" -> true; render ruin while tile is empty
+const WALL_MAX_PROJECTS = 4;
+const WALL_MIN_ZIG_AGE = 3;
+
+function resetWalls() {
+  zigTracks = [];
+  wallProjects = [];
+  wallRuins = new Map();
+}
+
+const rectsTouch = (a, b) =>
+  a.x0 <= b.x1 + 1 && b.x0 <= a.x1 + 1 && a.y0 <= b.y1 + 1 && b.y0 <= a.y1 + 1;
+const rectArea = r => (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1);
+const clampRect = r => ({
+  x0: Math.max(0, r.x0), y0: Math.max(0, r.y0),
+  x1: Math.min(N - 1, r.x1), y1: Math.min(N - 1, r.y1),
+});
+
+// Ordered ring of perimeter tiles, clockwise from the south-side gate position.
+function ringTiles(rect) {
+  const { x0, y0, x1, y1 } = rect;
+  const tiles = [];
+  const midX = (x0 + x1) >> 1;
+  for (let x = midX; x <= x1; x++) tiles.push({ x, y: y1 });          // south: mid -> east
+  for (let y = y1 - 1; y >= y0; y--) tiles.push({ x: x1, y });        // east edge up
+  for (let x = x1 - 1; x >= x0; x--) tiles.push({ x, y: y0 });        // north edge west
+  for (let y = y0 + 1; y <= y1; y++) tiles.push({ x: x0, y });        // west edge down
+  for (let x = x0 + 1; x < midX; x++) tiles.push({ x, y: y1 });       // south: west -> mid
+  return tiles;
+}
+
+function startProject(rect, grand) {
+  rect = clampRect(rect);
+  wallProjects.push({ rect, queue: ringTiles(rect), built: 0, grand: !!grand, age: 0, missing: 0 });
+}
+
+function abandonProject(p) {
+  for (let k = 0; k < p.built; k++) wallRuins.set(p.queue[k].x + ',' + p.queue[k].y, true);
+  wallProjects.splice(wallProjects.indexOf(p), 1);
+}
+
+// bounding box of established city tiles (2+ neighbours, so stray hamlets don't count)
+function cityBBox() {
+  let x0 = N, y0 = N, x1 = -1, y1 = -1;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (grid[y * N + x] && neighbourCount(grid, x, y) >= 2) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+
+function updateWalls() {
+  const zigs = detectZiggurats(grid).zigs;
+
+  // 1. persistence tracking: a ziggurat inherits the age of any overlapping predecessor
+  zigTracks = zigs.map(z => {
+    let age = 1;
+    for (const t of zigTracks) if (zigsOverlap(z, t)) age = Math.max(age, t.age + 1);
+    return { ...z, age };
+  });
+
+  for (const p of wallProjects) p.age++;
+
+  // 2. orphaned precinct projects: with a grace period, so a ziggurat that
+  //    flickers out for a generation doesn't dump its whole ring to ruins.
+  //    (The grand wall isn't tied to one ziggurat, so it's exempt.)
+  for (const p of [...wallProjects]) {
+    if (p.grand) continue;
+    const hasZig = zigs.some(z =>
+      z.x0 >= p.rect.x0 && z.x0 + z.size - 1 <= p.rect.x1 &&
+      z.y0 >= p.rect.y0 && z.y0 + z.size - 1 <= p.rect.y1);
+    p.missing = hasZig ? 0 : p.missing + 1;
+    if (p.missing >= 3) abandonProject(p);
+  }
+
+  // 3. merging: two COMPLETED precinct rings that touch become one precinct.
+  //    Gating on completion (not the build frontier) stops constant re-merging.
+  let merged = true;
+  while (merged) {
+    merged = false;
+    outer: for (let a = 0; a < wallProjects.length; a++) {
+      for (let b = a + 1; b < wallProjects.length; b++) {
+        const pa = wallProjects[a], pb = wallProjects[b];
+        if (pa.grand || pb.grand) continue;
+        if (pa.built < pa.queue.length || pb.built < pb.queue.length) continue;
+        if (!rectsTouch(pa.rect, pb.rect)) continue;
+        const union = {
+          x0: Math.min(pa.rect.x0, pb.rect.x0), y0: Math.min(pa.rect.y0, pb.rect.y0),
+          x1: Math.max(pa.rect.x1, pb.rect.x1), y1: Math.max(pa.rect.y1, pb.rect.y1),
+        };
+        abandonProject(pb); abandonProject(pa);
+        startProject(union, false);
+        merged = true;
+        break outer;
+      }
+    }
+  }
+
+  // 4. grand wall: a single one-time promotion once the city is large and at
+  //    least one precinct is mature. Promotion retires the precincts (they
+  //    become the inner-ring ruins the grand wall encloses). Afterwards the
+  //    grand wall only re-expands when the city has genuinely outgrown it, on
+  //    a long cooldown — so expansion is an era, not a per-tick event.
+  const bbox = cityBBox();
+  const grand = wallProjects.find(p => p.grand);
+  if (grand && !bbox) {
+    abandonProject(grand);                          // city died out; retire the ring
+  } else if (bbox) {
+    const bw = bbox.x1 - bbox.x0 + 1, bh = bbox.y1 - bbox.y0 + 1;
+    if (!grand) {
+      const cityLarge = bw >= N * 0.5 && bh >= N * 0.5;
+      const maturePrecinct = wallProjects.some(p => p.built === p.queue.length && p.age >= 4);
+      if (cityLarge && maturePrecinct) {
+        for (const p of [...wallProjects]) abandonProject(p);
+        startProject({ x0: bbox.x0 - 1, y0: bbox.y0 - 1, x1: bbox.x1 + 1, y1: bbox.y1 + 1 }, true);
+      }
+    } else if (grand.built === grand.queue.length && grand.age >= 8) {
+      const outgrown = bbox.x0 < grand.rect.x0 || bbox.y0 < grand.rect.y0 ||
+                       bbox.x1 > grand.rect.x1 || bbox.y1 > grand.rect.y1;
+      if (outgrown) {
+        abandonProject(grand);
+        startProject({ x0: bbox.x0 - 1, y0: bbox.y0 - 1, x1: bbox.x1 + 1, y1: bbox.y1 + 1 }, true);
+      }
+    }
+  }
+
+  // 5. new precinct projects — only while there's no grand wall yet. Worthy
+  //    ziggurats (old enough, not already walled), largest then oldest first.
+  if (!wallProjects.some(p => p.grand)) {
+    const candidates = zigTracks
+      .filter(t => t.age >= WALL_MIN_ZIG_AGE)
+      .filter(t => !wallProjects.some(p =>
+        t.x0 >= p.rect.x0 - 2 && t.x0 + t.size - 1 <= p.rect.x1 + 2 &&
+        t.y0 >= p.rect.y0 - 2 && t.y0 + t.size - 1 <= p.rect.y1 + 2))
+      .sort((a, b) => b.size - a.size || b.age - a.age);
+    for (const t of candidates) {
+      if (wallProjects.length >= WALL_MAX_PROJECTS) break;
+      startProject({ x0: t.x0 - 2, y0: t.y0 - 2, x1: t.x0 + t.size + 1, y1: t.y0 + t.size + 1 }, false);
+    }
+  }
+
+  // 6. construction: each crew lays several segments per generation
+  for (const p of wallProjects) {
+    const M = Math.max(8, Math.ceil(p.queue.length / 20));
+    p.built = Math.min(p.queue.length, p.built + M);
+  }
+
+  // safety valve: bound the ruin memory on very long runs. Genuine outgrown
+  // rings are few now, so this only ever trims truly ancient history.
+  if (wallRuins.size > 4000) {
+    let excess = wallRuins.size - 4000;
+    for (const k of wallRuins.keys()) { if (excess-- <= 0) break; wallRuins.delete(k); }
+  }
+}
+
+// Current render state of every wall tile: "x,y" -> {type, seed, run}
+// type: built | tower | gate | scaffold. run: 0 = wall runs along x, 1 = along z.
+function wallClaims() {
+  const claims = new Map();
+  for (const p of wallProjects) {
+    const { x0, y0, x1, y1 } = p.rect;
+    const gateXs = new Set([(x0 + x1) >> 1]);
+    for (let k = 0; k < Math.min(p.queue.length, p.built + 12); k++) {
+      const { x, y } = p.queue[k];
+      if (canalOn && canalMask[y * N + x]) continue;      // water gate: river breaches the wall
+      const key = x + ',' + y;
+      const seed = hashSeed(globalSeed, x, y, 0x3A11);
+      if (k >= p.built) { claims.set(key, { type: 'scaffold', seed }); continue; }
+      const corner = (x === x0 || x === x1) && (y === y0 || y === y1);
+      const onNS = y === y0 || y === y1;                  // north/south edge: wall runs along x
+      const gate = !corner && ((onNS && gateXs.has(x)) || (!onNS && y === (y0 + y1) >> 1));
+      claims.set(key, { type: corner ? 'tower' : gate ? 'gate' : 'built', seed, run: onNS ? 0 : 1 });
+    }
+  }
+  return claims;
+}
+
+// Wall segment instructions, tile-local (same frame the building generator uses)
+// Foundation skirt: walls sit at the tile's AVERAGE corner height, but the
+// ground mesh follows the exact per-corner slope, so a flat-bottomed wall box
+// can float above a dip and expose open air underneath. A tall skirt reaching
+// well below any plausible terrain variation closes that gap unconditionally,
+// cheaper and more robust than trying to contour-match the footprint.
+const WALL_SKIRT_DEPTH = 2.5;
+function wallSkirt(out, mat = 'sandDark') {
+  out.push(I('box', mat, [0, -WALL_SKIRT_DEPTH / 2, 0], [1, WALL_SKIRT_DEPTH, 1]));
+}
+
+function generateWallSegment(claim) {
+  const out = [];
+  const rng = mulberry32(claim.seed);
+  if (claim.type === 'scaffold') return generateScaffold(claim.seed);
+  if (claim.type === 'tower') {
+    wallSkirt(out, 'sand');
+    out.push(I('box', 'sand', [0, 0.55, 0], [1, 1.1, 1]));
+    cornice(rng, out, { pos: [0, 0.55, 0], scale: [1, 1.1, 1] }, 'sandDark', false);
+    return out;
+  }
+  wallSkirt(out);
+  const h = 0.75;
+  out.push(I('box', 'sand', [0, h / 2, 0], [1, h, 1]));
+  // crenellation teeth along the top, following the wall's run direction
+  for (let i = 0; i < 5; i++) {
+    const t = (i + 0.5) / 5 - 0.5;
+    out.push(I('box', 'sandDark',
+      claim.run === 0 ? [t, h + 0.08, 0] : [0, h + 0.08, t],
+      [0.11, 0.16, 0.11]));
+  }
+  if (claim.type === 'gate') {
+    // dark opening through both faces + arch, perpendicular to the run
+    const d = claim.run === 0 ? [0.36, 0.5, 1.06] : [1.06, 0.5, 0.36];
+    out.push(I('box', 'window', [0, 0.25, 0], d));
+    archHead(out, 0, 0.5, 0, 0.42, 0.21, 0.07, 0.06,
+      claim.run === 0 ? 'z' : 'x', 'sandDark');
+  }
+  return out;
+}
+
+function generateWallRuin(seed) {
+  const out = [];
+  const rng = mulberry32(seed);
+  const h = 0.2 + rng() * 0.18;
+  out.push(I('box', 'sandDark', [0, h / 2, 0], [1, h, 1]));
+  for (let i = 0; i < 3; i++) {
+    const s = 0.06 + rng() * 0.08;
+    out.push(I('box', 'sand', [(rng() - 0.5) * 0.8, h + s / 2, (rng() - 0.5) * 0.8],
+      [s, s, s], [0, rng() * Math.PI, 0]));
+  }
+  return out;
+}
+
+/* ============================================================================
+   REBUILD — recomputes every tile + ziggurat's instructions and writes their
+   transformed instances into the shared buckets. Runs on every step/reset
+   (per spec, rebuild cost matters more than steady-state render cost, since
+   this only happens on step, not every frame). Four tile cases from the
+   two-frame lookahead: stable building / sand / scaffold (about to be born) /
+   ruin (about to die). Ziggurat-claimed tiles are skipped for per-tile
+   generation; ziggurat tier count is re-evaluated fresh every call (the
+   deliberate exception to "no re-roll on survival").
+   ------------------------------------------------------------------------- */
+
+const _tileMat = new THREE.Matrix4(), _localMat = new THREE.Matrix4(), _worldMat = new THREE.Matrix4();
+
+// Terrain-tilt factor by neighbour count: lone huts lean into the slope,
+// dense fused blocks stay near-upright so continuous quarters read coherent.
+function tiltForNeighbours(n) {
+  return n >= 5 ? 0.1 : n >= 3 ? 0.25 : 0.6;
+}
+
+// Cheap stand-in for a stable building beyond the building cap: one plain box,
+// roughly storey-height, no decoration. ~1 primitive instead of ~40-100, but
+// still visibly "something is here" rather than lying that the tile is sand.
+const _placeholderStoreys = [0, 1, 1, 2, 3, 3, 3, 3, 3];
+function generatePlaceholder(n) {
+  const h = Math.max(0.28, _placeholderStoreys[n] * 0.32);
+  return [{ shape: 'box', mat: 'sand', pos: [0, h / 2, 0], scale: [1, h, 1], rot: [0, 0, 0] }];
+}
+
+function rebuildInstances() {
+  const next = stepSim(grid, generation);        // lookahead, not committed
+  const curZ = detectZiggurats(grid);
+  const nextZ = detectZiggurats(next);
+
+  const sources = [];                            // { matrix: Matrix4, instructions: [] }
+  const stableCandidates = [];                    // { x, y, dist2 } — the capped, expensive case
+  const claims = wallClaims();                    // active wall segments/scaffolds by tile
+
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    if (curZ.claimed[i]) continue;                // ziggurat footprint: no per-tile building
+    if (canalOn && canalMask[i]) continue;        // water: nothing builds on the river
+    let instructions = null;
+    let tiltF = 0.4;                              // how much this structure leans with the terrain
+    const wc = claims.get(x + ',' + y);
+    const cur = grid[i], fut = next[i];
+    if (wc) {                                     // active wall segment claims the tile outright
+      instructions = generateWallSegment(wc);
+      tiltF = 0;                                  // walls stay upright, stepping with the ground
+    } else if (cur && canalOn && floodDist[i] === 1) {   // riverbank: a dock, not a building
+      let wx = 0, wz = 0;                          // which way the water lies (for the pier finger)
+      if (y > 0 && canalMask[i - N]) wz = -1;
+      else if (y < N - 1 && canalMask[i + N]) wz = 1;
+      else if (x > 0 && canalMask[i - 1]) wx = -1;
+      else if (x < N - 1 && canalMask[i + 1]) wx = 1;
+      instructions = generateDock(hashSeed(globalSeed, x, y, 0xD0C65), wx, wz);
+      tiltF = 0;                                  // docks stay level
+    } else if (cur && fut) {                       // stable building: subject to the cap, handled below
+      const dx = x - N / 2, dy = y - N / 2;
+      stableCandidates.push({ x, y, dist2: dx * dx + dy * dy });
+      continue;
+    } else if (cur && !fut) {                      // ruin: already cheap, always full detail
+      const r = records[i];
+      instructions = generateBuilding(r.n, r.seed, 'ruin');
+      tiltF = tiltForNeighbours(r.n);
+    } else if (!cur && fut) {                      // scaffold: already cheap, always full detail
+      instructions = generateScaffold(hashSeed(globalSeed, x, y, generation + 1));
+      tiltF = 0.3;
+    } else if (wallRuins.has(x + ',' + y)) {       // crumbled old wall on otherwise empty ground
+      instructions = generateWallRuin(hashSeed(globalSeed, x, y, 0x3A11));
+    } else if (canalOn && floodDist[i] <= 2) {     // floodplain scenery: reeds, palms, crop fields
+      const roll = hash01(globalSeed, x, y, 0x9A1A);   // static per seed, so greenery doesn't flicker
+      if (floodDist[i] === 1 && roll < 0.3) {
+        instructions = [];
+        const rng = mulberry32(hashSeed(globalSeed, x, y, 0x9EED));
+        const reeds = 3 + Math.floor(rng() * 4);
+        for (let k = 0; k < reeds; k++) {
+          instructions.push(I('cone', 'palm',
+            [(rng() - 0.5) * 0.8, 0.11, (rng() - 0.5) * 0.8],
+            [0.03, 0.22 + rng() * 0.12, 0.03], [0, 0, (rng() - 0.5) * 0.3]));
+        }
+      } else if (roll < 0.62) {                     // irrigated fields across the floodplain
+        instructions = [];
+        cropField(mulberry32(hashSeed(globalSeed, x, y, 0xF1E1D)), instructions);
+        tiltF = 1;                                  // flat soil bed: snap fully to the terrain face, no float/gap
+      } else if (roll > 0.88) {
+        instructions = [];
+        const rng = mulberry32(hashSeed(globalSeed, x, y, 0x9A1A));
+        palmTree(rng, instructions, (rng() - 0.5) * 0.5, (rng() - 0.5) * 0.5, 0.9);
+      } else {
+        continue;
+      }
+    } else {
+      // stable sand: one market stall per frontage tile (the "edge" layer).
+      // A single stall against one built neighbour keeps maze presets from
+      // carpeting every corridor — cheap and reads as an occasional stall.
+      let dx = 0, dy = 0;
+      if (y > 0 && grid[i - N] && !curZ.claimed[i - N]) dy = -1;
+      else if (y < N - 1 && grid[i + N] && !curZ.claimed[i + N]) dy = 1;
+      else if (x > 0 && grid[i - 1] && !curZ.claimed[i - 1]) dx = -1;
+      else if (x < N - 1 && grid[i + 1] && !curZ.claimed[i + 1]) dx = 1;
+      else continue;                                     // no frontage: nothing to draw
+      if (hash01(globalSeed, x, y, 0x57A11) >= 0.28) continue;
+      instructions = [];
+      marketStall(instructions, dx, dy, CLOTHS[Math.floor(hash01(globalSeed, x, y, 0x5C0) * 3)]);
+      tiltF = 0;
+    }
+    const t = tileTransform(x, y);
+    const m = composeMatrix(new THREE.Matrix4(),
+      t.cx, t.cy, t.cz, t.tx * tiltF, t.yaw, t.tz * tiltF, t.sx, 1, t.sz);
+    sources.push({ matrix: m, instructions });
+  }
+
+  // building cap: full decorated recipe for the buildingCap tiles closest to
+  // the grid center, cheap placeholder box for the rest. Priority is fixed
+  // (center-out), not camera-based, which reinforces the dense-core/fading-
+  // outskirts read the jittered dead-edge grid already has.
+  stableCandidates.sort((a, b) => a.dist2 - b.dist2);
+  for (let k = 0; k < stableCandidates.length; k++) {
+    const { x, y } = stableCandidates[k];
+    const i = y * N + x;
+    const r = records[i];
+    const full = k < buildingCap;
+    const senes = senesOf(r);
+    const instructions =
+      r.s ? generateScaffold(r.seed)                          // painted this click: under construction
+      : full ? generateBuilding(r.n, r.seed,
+          senes !== null && senes >= 0.95 ? 'ruin' : 'normal', // last 5%: ruin telegraph, still alive
+          generation - (r.g || 0), senes)
+      : generatePlaceholder(r.n);
+    const t = tileTransform(x, y);
+    const tiltF = full ? tiltForNeighbours(r.n) : 0;   // placeholders stay cheap and upright
+    const m = composeMatrix(new THREE.Matrix4(),
+      t.cx, t.cy, t.cz, t.tx * tiltF, t.yaw, t.tz * tiltF, t.sx, 1, t.sz);
+    sources.push({ matrix: m, instructions });
+  }
+
+  // ---- vertex furniture: read the 4 cells meeting at each interior lattice
+  // vertex and drop a small structure keyed to how many are built. 3 built +
+  // 1 sand -> courtyard well; 2+2 -> frontage brazier/palm; 1+3 -> outer-corner
+  // obelisk. Skips vertices touching a ziggurat or the canal. Uses grid geometry
+  // (the lines/vertices) the per-tile pass ignores. ----
+  // Allocation-free: index the 4 cells (NW/NE/SW/SE) by flat grid index.
+  const claimedArr = curZ.claimed;
+  for (let j = 1; j < N; j++) for (let i = 1; i < N; i++) {
+    const iNW = (j - 1) * N + (i - 1), iNE = (j - 1) * N + i, iSW = j * N + (i - 1), iSE = j * N + i;
+    const alive = grid[iNW] + grid[iNE] + grid[iSW] + grid[iSE];
+    if (alive === 0 || alive === 4) continue;              // open desert or buried interior
+    if (claimedArr[iNW] || claimedArr[iNE] || claimedArr[iSW] || claimedArr[iSE]) continue;
+    if (canalOn && (canalMask[iNW] || canalMask[iNE] || canalMask[iSW] || canalMask[iSE])) continue;
+    const gate = hash01(globalSeed, i, j, 0x7E27);         // cheap gate, no closure
+    if (!(alive === 3 ? gate < 0.55 : alive === 2 ? gate < 0.45 : gate < 0.12)) continue;
+    const rng = mulberry32(hashSeed(globalSeed, i, j, 0x7E28));
+    const instructions = [];
+    if (alive === 3) well(rng, instructions);
+    else if (alive === 2) { if (gate < 0.3) brazier(rng, instructions); else palmTree(rng, instructions, 0, 0, 0.8); }
+    else obelisk(rng, instructions);                       // alive === 1
+    // sit it in open ground: pull the vertex toward the centroid of the sand cells
+    const v = lattice[j][i];
+    let sx = 0, sz = 0, nd = 0;
+    if (!grid[iNW]) { const p = lattice[j - 1][i - 1], q = lattice[j][i]; sx += (p.x + q.x) / 2; sz += (p.z + q.z) / 2; nd++; }
+    if (!grid[iNE]) { const p = lattice[j - 1][i], q = lattice[j][i + 1]; sx += (p.x + q.x) / 2; sz += (p.z + q.z) / 2; nd++; }
+    if (!grid[iSW]) { const p = lattice[j][i - 1], q = lattice[j + 1][i]; sx += (p.x + q.x) / 2; sz += (p.z + q.z) / 2; nd++; }
+    if (!grid[iSE]) { const p = lattice[j][i], q = lattice[j + 1][i + 1]; sx += (p.x + q.x) / 2; sz += (p.z + q.z) / 2; nd++; }
+    const px = v.x + (sx / nd - v.x) * 0.55, pz = v.z + (sz / nd - v.z) * 0.55;
+    const m = composeMatrix(new THREE.Matrix4(), px, terrainHeight(i, j), pz, 0, rng() * Math.PI * 2, 0, 1, 1, 1);
+    sources.push({ matrix: m, instructions });
+  }
+
+  // ---- boats drifting on the canal (float on the water plane, not terrain) ----
+  if (canalOn) {
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x;
+      if (!canalMask[i]) continue;
+      if (hash01(globalSeed, x, y, 0xB0A7) >= 0.06) continue;   // a scattering of boats, not a jam
+      const rng = mulberry32(hashSeed(globalSeed, x, y, 0xB0A8));
+      const p00 = lattice[y][x], p10 = lattice[y][x + 1], p01 = lattice[y + 1][x], p11 = lattice[y + 1][x + 1];
+      const cx = (p00.x + p10.x + p01.x + p11.x) / 4, cz = (p00.z + p10.z + p01.z + p11.z) / 4;
+      const instructions = [];
+      boat(rng, instructions);
+      const m = composeMatrix(new THREE.Matrix4(), cx, WATER_LEVEL + 0.02, cz, 0, (rng() - 0.5) * 0.4, 0, 1, 1, 1);
+      sources.push({ matrix: m, instructions });
+    }
+  }
+
+  // ---- reed clumps dressing the tidal foreshore (circular island, ocean on) ----
+  if (circularIsland && oceanOn && _tidalPh) {
+    const seaY = outerGroundY();
+    const clumps = Math.round(N * 3);
+    for (let k = 0; k < clumps; k++) {
+      const a = hash01(globalSeed, k, 3, 0x71DA) * Math.PI * 2;
+      const t = 0.16 + hash01(globalSeed, k, 4, 0x71DB) * 0.5;   // wet band, coast -> waterline
+      const smp = tidalSample(a, t);
+      if (smp.h < seaY + 0.02) continue;             // skip the fully submerged outer flats
+      const rng = mulberry32(hashSeed(globalSeed, k, 0, 0x71DC));
+      const instructions = [];
+      reedClump(rng, instructions);
+      const m = composeMatrix(new THREE.Matrix4(), smp.x, smp.h, smp.z, 0, rng() * Math.PI * 2, 0, 1, 1, 1);
+      sources.push({ matrix: m, instructions });
+    }
+  }
+
+  // ziggurats: exempt from the cap, always full. Two passes: first place every
+  // one normally and measure its absolute world peak (terrain lift + tell mound
+  // included, not just tier count — a squat ziggurat on a tall mound can beat a
+  // taller one sitting low); then the single tallest true ziggurat (size 3-4, or
+  // the grand ziggurat-on-podium band 10+ — gardens/palaces in between aren't
+  // ziggurats) gets regenerated with the reference photo's bitumen/sky-blue/
+  // orange palette in place of the usual sand/lapis/gold.
+  const zigEntries = [];
+  for (const z of curZ.zigs) {
+    const survives = nextZ.zigs.some(n => zigsOverlap(z, n));
+    const seed = hashSeed(globalSeed, z.x0, z.y0, 0x5169);
+    let variant = survives ? 'normal' : 'ruin';
+    // consecrated-monument lifecycle: scaffolding while any member tile is
+    // under construction; ruin telegraph through the synced clock's last 5%
+    let anyS = false, allC = true, rc = null;
+    for (let yy = z.y0; yy < z.y0 + z.size; yy++) for (let xx = z.x0; xx < z.x0 + z.size; xx++) {
+      const r = records[yy * N + xx];
+      if (r && r.s) anyS = true;
+      if (!r || !r.c) allC = false; else rc = r;
+    }
+    if (anyS) variant = 'scaffold';
+    else if (variant === 'normal' && allC && rc) {
+      const frac = senesOf(rc);                       // members share one synced clock
+      if (frac !== null && frac >= 0.95) variant = 'ruin';
+    }
+    const stairFace = bestStairFace(z, grid);
+    const instructions = variant === 'scaffold'
+      ? monumentConstruction(z.size, seed ^ 0x5CAF)   // all monument types share the construction site
+      : generateMonument(z.size, seed, variant, stairFace);
+    // affine placement from the footprint's four jittered lattice corners
+    const p00 = lattice[z.y0][z.x0], p10 = lattice[z.y0][z.x0 + z.size],
+          p01 = lattice[z.y0 + z.size][z.x0], p11 = lattice[z.y0 + z.size][z.x0 + z.size];
+    const cx = (p00.x + p10.x + p01.x + p11.x) / 4;
+    const cz = (p00.z + p10.z + p01.z + p11.z) / 4;
+    const yaw = -(Math.atan2(p10.z - p00.z, p10.x - p00.x) + Math.atan2(p11.z - p01.z, p11.x - p01.x)) / 2;
+    const len = (a, b) => Math.hypot(b.x - a.x, b.z - a.z);
+    const sx = (len(p00, p10) + len(p01, p11)) / 2 / z.size;
+    const sz = (len(p00, p01) + len(p10, p11)) / 2 / z.size;
+    // upright on its stamped tell platform (flat after stampTells, so avg = plateau)
+    const cy = (terrainHeight(z.x0, z.y0) + terrainHeight(z.x0 + z.size, z.y0) +
+                terrainHeight(z.x0, z.y0 + z.size) + terrainHeight(z.x0 + z.size, z.y0 + z.size)) / 4;
+    let localTop = 0;                                // highest point of the instruction set, tile-local
+    for (const ins of instructions) localTop = Math.max(localTop, ins.pos[1] + ins.scale[1] / 2);
+    zigEntries.push({
+      z, seed, variant, stairFace, instructions, cx, cy, cz, yaw, sx, sz,
+      // GOD MODE: only a grand ziggurat (size 10+) can wear the special
+      // crown — that's also the sculpt-unlock threshold, so the palette
+      // change doubles as the "sculpt is now unlocked" telegraph.
+      isZiggurat: z.size >= 10,
+      peakY: cy + localTop,
+    });
+  }
+  // hysteresis: the reigning temple keeps the crown unless another true
+  // ziggurat's peak beats it by a clear margin, so near-equal peers (or peaks
+  // jittering across generations as the automaton churns) don't trade the
+  // colour scheme back and forth. Less than one tier (tierH 0.55) so a
+  // genuinely taller ziggurat still takes over, but terrain/tell jitter won't.
+  const TEMPLE_HYSTERESIS = 0.4;
+  let tallest = null;
+  for (const e of zigEntries) if (e.isZiggurat && (!tallest || e.peakY > tallest.peakY)) tallest = e;
+  let chosen = tallest;
+  if (templeZig) {
+    const reigning = zigEntries.find(e => e.isZiggurat && zigsOverlap(e.z, templeZig));
+    if (reigning && tallest && tallest.peakY - reigning.peakY < TEMPLE_HYSTERESIS) chosen = reigning;
+  }
+  templeZig = chosen ? { x0: chosen.z.x0, y0: chosen.z.y0, size: chosen.z.size } : null;
+  if (chosen && chosen.variant !== 'scaffold') {   // a construction site takes no crown yet
+    chosen.instructions = generateMonument(chosen.z.size, chosen.seed, chosen.variant, chosen.stairFace, true);
+  }
+  for (const e of zigEntries) {
+    const m = composeMatrix(new THREE.Matrix4(), e.cx, e.cy, e.cz, 0, e.yaw, 0, e.sx, 1, e.sz);
+    sources.push({ matrix: m, instructions: e.instructions });
+  }
+
+  // pass 1: count instances needed per bucket, grow capacity up front
+  const counts = new Map();
+  for (const src of sources) for (const ins of src.instructions) {
+    const key = ins.shape + ':' + ins.mat;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  for (const [key, n] of counts) {
+    const [shape, matKey] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+    getBucket(shape, matKey).ensureCapacity(n);
+  }
+
+  // pass 2: write world matrices (tile transform * instruction-local transform)
+  const cursors = new Map();
+  for (const src of sources) {
+    _tileMat.copy(src.matrix);
+    for (const ins of src.instructions) {
+      const key = ins.shape + ':' + ins.mat;
+      composeMatrix(_localMat, ins.pos[0], ins.pos[1], ins.pos[2],
+        ins.rot[0], ins.rot[1], ins.rot[2], ins.scale[0], ins.scale[1], ins.scale[2]);
+      _worldMat.multiplyMatrices(_tileMat, _localMat);
+      const idx = cursors.get(key) || 0;
+      buckets.get(key).mesh.setMatrixAt(idx, _worldMat);
+      cursors.set(key, idx + 1);
+    }
+  }
+
+  // finalize: buckets untouched this frame draw nothing (count = 0)
+  for (const [key, bucket] of buckets) {
+    bucket.mesh.count = counts.get(key) || 0;
+    bucket.mesh.instanceMatrix.needsUpdate = true;
+  }
+}
+
+/* ============================================================================
+   GOD MODE — the player is the automaton. Click to paint tiles alive; the
+   generator decides what appears. Verb ladder (see GOD_GAME_MODE.md):
+     Paint  — always available. Convert desert tiles to city.
+     Sculpt — unlocked by the Great Ziggurat (a 10+ monument). Carves the
+              accumulated churn/tell sediment back toward the floor, with soft
+              falloff — and razes the buildings that made the height (lossy).
+   Brush: one global slider, range [1, area of your largest building], 1:1 —
+   an N-tile building buys an N-tile brush. Geometry: grow-from-center (the N
+   nearest tiles to the click).
+   ------------------------------------------------------------------------- */
+
+let verb = 'paint';
+let brushSize = 1;
+let sculptUnlocked = false;
+let timeOn = false;                  // the Time checkbox: frozen diorama vs living world
+const PAINT_DEPOSIT = 0.02;          // immediate sediment per painted tile vertex
+
+/* -- the live layer: consecrated lifetimes, click-as-turn, scaffolding -------
+   Record flags (on the per-tile birth records):
+     r.c — consecrated: player paint; the culture rule can't kill it, but it
+           expires after r.L generations and crumbles back to open ground.
+     r.L — lifetime in generations, size-scaled + seeded jitter.
+     r.s — scaffolding: painted this click, completes (loses the flag) on the
+           player's next click.
+   Vernacular tiles (grown by the culture rule) carry no flags and live/die
+   by the rule alone — with the standard scaffold/ruin telegraphs.
+   ------------------------------------------------------------------------- */
+
+const LIFE_BASE = 50, LIFE_SCALE = 25, LIFE_JITTER = 0.15;
+// √area: monuments stand long but not forever — the player must get to see
+// their greatest work fall. Jitter is per-birth + seeded, so a district
+// painted in one stroke decays over a window, not as a demolition wave.
+function rollLifetime(seed, area = 1) {
+  return Math.max(10, Math.round((LIFE_BASE + LIFE_SCALE * Math.sqrt(area))
+    * (1 - LIFE_JITTER + 2 * LIFE_JITTER * mulberry32(seed)())));
+}
+
+// fraction of lifetime lived, or null for vernacular / unclocked tiles
+function senesOf(r) {
+  return r && r.c && r.L ? Math.min(1, (generation - r.g) / r.L) : null;
+}
+
+// last click's construction completes: scaffolds become buildings
+function finishScaffolds() {
+  for (const r of records) if (r && r.s) r.s = false;
+}
+
+// One landmark, one lifetime, one collapse — but ONLY at the god's hand.
+// Called with the tile indices touched by this click: a detected monument
+// square containing freshly-painted tiles ADOPTS all its members (vernacular
+// squatters who complete a landmark are consecrated into it), syncs them to
+// one clock and rolls a single size-scaled lifetime. Squares the sprawl forms
+// on its own are never adopted — the world can't consecrate itself, or
+// adoption creep spreads immortality across the whole map (verified bug).
+function syncMonumentClocks(touched) {
+  if (!touched || !touched.size) return;
+  for (const z of detectZiggurats(grid).zigs) {
+    const members = [];
+    let hit = false;
+    for (let y = z.y0; y < z.y0 + z.size; y++) for (let x = z.x0; x < z.x0 + z.size; x++) {
+      const i = y * N + x;
+      if (!records[i]) { members.length = 0; break; }  // shouldn't happen for a detected square
+      members.push(records[i]);
+      if (touched.has(i)) hit = true;
+    }
+    if (!members.length || !hit) continue;
+    const gmax = Math.max(...members.map(r => r.g));   // youngest member's clock
+    const L = rollLifetime(hashSeed(globalSeed, z.x0 ^ Math.imul(gmax + 1, 0x9E37), z.y0, 0x11FE), z.size * z.size);
+    for (const r of members) { r.c = true; r.g = gmax; r.L = L; }
+  }
+}
+
+const verbPaintBtn = document.getElementById('verbPaint');
+const verbSculptBtn = document.getElementById('verbSculpt');
+const brushEl = document.getElementById('brush');
+const brushLabelEl = document.getElementById('brushLabel');
+const brushMaxEl = document.getElementById('brushMax');
+
+function setVerbUI(v) {
+  verb = v;
+  verbPaintBtn.classList.toggle('active', v === 'paint');
+  verbSculptBtn.classList.toggle('active', v === 'sculpt');
+}
+verbPaintBtn.onclick = () => setVerbUI('paint');
+verbSculptBtn.onclick = () => { if (sculptUnlocked) setVerbUI('sculpt'); };
+
+// The keystone rule: max brush area = footprint area of the largest structure
+// on the map. Single-tile buildings give 1; a size-s monument gives s*s.
+function maxBrushArea() {
+  let anyAlive = false;
+  for (let i = 0; i < grid.length; i++) if (grid[i]) { anyAlive = true; break; }
+  if (!anyAlive) return 1;
+  const zigs = detectZiggurats(grid).zigs;
+  let s = 1;
+  for (const z of zigs) s = Math.max(s, z.size * z.size);
+  return Math.min(s, 100);   // cap at the great-ziggurat footprint: no quadratic runaway (playtest #1)
+}
+
+function updateBrushUI() {
+  const max = maxBrushArea();
+  brushEl.max = max;
+  if (brushSize > max) brushSize = max;
+  brushEl.value = brushSize;
+  brushLabelEl.textContent = brushSize;
+  brushMaxEl.textContent = max;
+}
+
+// The verb ladder, made explicit. Each rung is diegetic — the structure IS
+// the tool, and the locked label names what to build next:
+//   Paint      — always yours.
+//   Brush      — max area = your largest building's footprint (self-enforcing
+//                via maxBrushArea; the slider tooltip names the next rung).
+//   Sculpt     — unlocked by a Great Ziggurat (10+ footprint). Persists until
+//                reset: the knowledge outlives the monument.
+function updateUnlocks() {
+  if (!sculptUnlocked && detectZiggurats(grid).zigs.some(z => z.size >= 10)) {
+    sculptUnlocked = true;
+  }
+  verbSculptBtn.disabled = !sculptUnlocked;
+  verbSculptBtn.innerHTML = sculptUnlocked ? '&#9968;&#65039; Sculpt' : '&#9968;&#65039; Sculpt &#128274;';
+  verbSculptBtn.title = sculptUnlocked
+    ? 'Lowers terrain; destroys the buildings on it'
+    : 'Locked: requires a great ziggurat';
+  if (!sculptUnlocked && verb === 'sculpt') setVerbUI('paint');
+  // brush max hint: what raises it
+  const max = maxBrushArea();
+  brushEl.title = brushMaxEl.title =
+    max < 9 ? 'Build a 3×3 block to increase the maximum brush size'
+    : max < 100 ? 'Max brush size equals the area of your largest building'
+    : 'Maximum brush size reached';
+}
+
+// Grow-from-center: the `count` nearest valid tiles to the clicked tile,
+// by distance from the click point — organic rounded blobs, exact area.
+// Paint targets dead land; sculpt targets any land (water is never valid).
+function growFromCenter(tx, ty, px, pz, count, forSculpt) {
+  const cells = [];
+  const R = Math.ceil(Math.sqrt(count)) + 2;      // search window comfortably over-covers count
+  for (let y = Math.max(0, ty - R); y <= Math.min(N - 1, ty + R); y++) {
+    for (let x = Math.max(0, tx - R); x <= Math.min(N - 1, tx + R); x++) {
+      const i = y * N + x;
+      if (canalOn && canalMask[i]) continue;                 // the river is not yours
+      if (!forSculpt && grid[i]) {                           // paint fills open desert…
+        const f = senesOf(records[i]);
+        if (f === null || f < 0.6) continue;                 // …or renews aging consecrated tiles
+      }
+      const dx = (x + 0.5 - N / 2) - px, dz = (y + 0.5 - N / 2) - pz;
+      cells.push({ x, y, d2: dx * dx + dz * dz });
+    }
+  }
+  cells.sort((a, b) => a.d2 - b.d2);
+  return cells.slice(0, count);
+}
+
+function paintAt(tx, ty, px, pz) {
+  const cells = growFromCenter(tx, ty, px, pz, brushSize, false);
+  if (!cells.length) return;
+  if (timeOn) finishScaffolds();                             // last click's construction completes
+  for (const c of cells) grid[c.y * N + c.x] = 1;
+  records = recordBirths(grid, records, generation);         // newborns roll their form now
+  for (const c of cells) {
+    const r = records[c.y * N + c.x];
+    r.c = true;                                              // consecrated: yours, the rule can't kill it
+    r.g = generation;                                        // renewal resets the clock (form is kept: restoration)
+    r.L = rollLifetime(hashSeed(globalSeed, c.x, c.y, generation ^ 0x11FE));
+    if (timeOn) r.s = true;                                  // lands as scaffolding, completes next click
+    for (const v of [HV(c.x, c.y), HV(c.x + 1, c.y), HV(c.x, c.y + 1), HV(c.x + 1, c.y + 1)]) {
+      churnDelta[v] = Math.min(CHURN_MAX, churnDelta[v] + PAINT_DEPOSIT);   // immediate sediment deposit
+    }
+  }
+  syncMonumentClocks(new Set(cells.map(c => c.y * N + c.x)));
+  if (timeOn) { stepCity(); updateBrushUI(); return; }       // click = turn: the world responds
+  stampTells(detectZiggurats(grid).zigs);                    // a new monument stamps its platform
+  updateGroundHeights();
+  updateWalls();
+  updateUnlocks();
+  updateBrushUI();
+  rebuildInstances();
+  render();
+}
+
+// Lossy undo-terraform. Soft falloff: the click centre goes to the floor, the
+// outer ring keeps most of its height. Tiles losing a real fraction of their
+// sediment lose their buildings too — the district is spent as raw material.
+function sculptAt(tx, ty, px, pz) {
+  const cells = growFromCenter(tx, ty, px, pz, brushSize, true);
+  if (!cells.length) return;
+  const dmax = Math.sqrt(cells[cells.length - 1].d2) + 0.001;
+  const vertexCut = new Map();                               // vertex -> strongest cut fraction
+  let razed = false;
+  for (const c of cells) {
+    const f = brushSize === 1 ? 1 : Math.pow(1 - Math.sqrt(c.d2) / dmax, 0.7);   // 1 at centre -> 0 at rim
+    for (const v of [HV(c.x, c.y), HV(c.x + 1, c.y), HV(c.x, c.y + 1), HV(c.x + 1, c.y + 1)]) {
+      vertexCut.set(v, Math.max(vertexCut.get(v) || 0, f));
+    }
+    if (f > 0.35 && grid[c.y * N + c.x]) {                   // lossy: the height cost its makers
+      grid[c.y * N + c.x] = 0;
+      razed = true;
+    }
+  }
+  for (const [v, f] of vertexCut) {                          // carve accumulated sediment only —
+    churnDelta[v] *= 1 - f;                                  // never below the natural floor
+    tellDelta[v] *= 1 - f;
+  }
+  if (razed) records = recordBirths(grid, records, generation);
+  // sculpt does NOT advance the turn — destruction should be seen, not
+  // instantly regrown over by the sprawl (playtest #3)
+  if (timeOn) { updateGroundHeights(); updateWalls(); updateBrushUI(); rebuildInstances(); render(); return; }
+  updateGroundHeights();
+  updateWalls();
+  updateBrushUI();
+  rebuildInstances();
+  render();
+}
+
+// Click-to-act: raycast the ground mesh; a press that barely moves is a click,
+// a drag stays with OrbitControls.
+const _ray = new THREE.Raycaster();
+const _ndc = new THREE.Vector2();
+let _downX = 0, _downY = 0, _downTime = 0;
+renderer.domElement.addEventListener('pointerdown', e => {
+  _downX = e.clientX; _downY = e.clientY; _downTime = performance.now();
+});
+renderer.domElement.addEventListener('pointerup', e => {
+  if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 6) return;   // it was a camera drag
+  if (performance.now() - _downTime > 600) return;                       // long-press: not a click
+  const r = renderer.domElement.getBoundingClientRect();
+  _ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  _ray.setFromCamera(_ndc, camera);
+  const hit = gridGround ? _ray.intersectObject(gridGround)[0] : null;
+  if (!hit) return;
+  const px = hit.point.x, pz = hit.point.z;                 // world coords, grid centred at origin
+  const tx = Math.floor(px + N / 2), ty = Math.floor(pz + N / 2);
+  if (tx < 0 || tx >= N || ty < 0 || ty >= N) return;
+  if (verb === 'sculpt') sculptAt(tx, ty, px, pz);
+  else paintAt(tx, ty, px, pz);
+});
+
+/* ----------------------------------------------------------------------------
+   BRUSH PREVIEW — hover highlight of the exact grow-from-center blob the next
+   click will touch, so aiming is informed, not hopeful. Paint: cream = fresh
+   ground, blue = renewal of an aging consecrated tile. Sculpt: red = falloff
+   past the raze threshold (buildings destroyed), amber = height lowered only.
+   Flat instanced quads floating just above the terrain; recomputed only when
+   the hovered tile / brush / verb / generation changes.
+   ------------------------------------------------------------------------- */
+
+const previewGeo = new THREE.PlaneGeometry(1, 1);
+previewGeo.rotateX(-Math.PI / 2);
+const previewMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.45, depthWrite: false });
+let previewMesh = null, previewCap = 0;
+let _prevKey = '';
+const _cPaint = new THREE.Color(0xfff2c8), _cRenew = new THREE.Color(0x86d7ff),
+      _cRaze = new THREE.Color(0xd23b2a), _cLower = new THREE.Color(0xe6a13c);
+
+function ensurePreview(n) {
+  if (previewMesh && n <= previewCap) return;
+  if (previewMesh) scene.remove(previewMesh);
+  previewCap = Math.max(n, 16);
+  previewMesh = new THREE.InstancedMesh(previewGeo, previewMat, previewCap);
+  previewMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  previewMesh.frustumCulled = false;
+  previewMesh.count = 0;
+  scene.add(previewMesh);
+}
+
+function hidePreview() {
+  _prevKey = '';
+  if (previewMesh && previewMesh.count) { previewMesh.count = 0; render(); }
+}
+
+function showPreview(tx, ty, px, pz) {
+  const key = tx + ',' + ty + ',' + brushSize + ',' + verb + ',' + generation;
+  if (key === _prevKey) return;                            // nothing changed since last frame
+  _prevKey = key;
+  const forSculpt = verb === 'sculpt';
+  const cells = growFromCenter(tx, ty, px, pz, brushSize, forSculpt);
+  if (!cells.length) { hidePreview(); return; }
+  ensurePreview(cells.length);
+  const dmax = Math.sqrt(cells[cells.length - 1].d2) + 0.001;
+  for (let k = 0; k < cells.length; k++) {
+    const c = cells[k];
+    const t = tileTransform(c.x, c.y);
+    composeMatrix(_localMat, t.cx, t.cy + 0.04, t.cz, 0, t.yaw, 0, t.sx, 1, t.sz);
+    previewMesh.setMatrixAt(k, _localMat);
+    let col;
+    if (forSculpt) {                                       // mirrors sculptAt's falloff exactly
+      const f = brushSize === 1 ? 1 : Math.pow(1 - Math.sqrt(c.d2) / dmax, 0.7);
+      col = f > 0.35 ? _cRaze : _cLower;
+    } else {
+      col = grid[c.y * N + c.x] ? _cRenew : _cPaint;
+    }
+    previewMesh.setColorAt(k, col);
+  }
+  previewMesh.count = cells.length;
+  previewMesh.instanceMatrix.needsUpdate = true;
+  if (previewMesh.instanceColor) previewMesh.instanceColor.needsUpdate = true;
+  render();
+}
+
+renderer.domElement.addEventListener('pointermove', e => {
+  if (e.buttons) { hidePreview(); return; }                // dragging the camera, not aiming
+  const r = renderer.domElement.getBoundingClientRect();
+  _ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  _ray.setFromCamera(_ndc, camera);
+  const hit = gridGround ? _ray.intersectObject(gridGround)[0] : null;
+  if (!hit) { hidePreview(); return; }
+  const px = hit.point.x, pz = hit.point.z;
+  const tx = Math.floor(px + N / 2), ty = Math.floor(pz + N / 2);
+  if (tx < 0 || tx >= N || ty < 0 || ty >= N) { hidePreview(); return; }
+  showPreview(tx, ty, px, pz);
+});
+renderer.domElement.addEventListener('pointerleave', hidePreview);
+
+/* ============================================================================
+   UI
+   ------------------------------------------------------------------------- */
+
+const seedEl = document.getElementById('seed');
+const genEl = document.getElementById('gen');
+const playBtn = document.getElementById('play');
+
+function updateGenLabel() { genEl.textContent = 'year ' + generation; }
+
+function setSeed(s) {
+  globalSeed = s | 0;
+  seedEl.value = globalSeed;
+  resetCity();
+}
+
+document.getElementById('prev').onclick = () => setSeed((seedEl.valueAsNumber | 0) - 1);
+document.getElementById('next').onclick = () => setSeed((seedEl.valueAsNumber | 0) + 1);
+document.getElementById('random').onclick = () => setSeed(Math.floor(Math.random() * 1e6));
+seedEl.onchange = () => setSeed(seedEl.valueAsNumber | 0);
+
+brushEl.oninput = () => {
+  brushSize = Math.max(1, brushEl.valueAsNumber | 0);
+  brushLabelEl.textContent = brushSize;
+};
+
+// Time: the god's own verb. OFF -> ON adopts everything standing as
+// consecrated, born NOW (nothing aged while time was stopped). ON -> OFF
+// freezes mid-arc — half-bleached stays half-bleached, scaffolds hold, the
+// flood stops mid-sweep. State is preserved, never reset.
+const timeToggleEl = document.getElementById('timeToggle');
+timeToggleEl.onchange = () => {
+  timeOn = timeToggleEl.checked;
+  if (timeOn) {
+    const adopted = new Set();
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x;
+      const r = records[i];
+      if (!grid[i] || !r) continue;
+      r.c = true;
+      r.g = generation;
+      r.L = rollLifetime(hashSeed(globalSeed, x, y, generation ^ 0xAD07));
+      adopted.add(i);
+    }
+    syncMonumentClocks(adopted);
+  }
+  rebuildInstances();
+  render();
+};
+
+const cultureEl = document.getElementById('culture');
+for (let i = 0; i < PRESETS.length; i++) {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = PRESETS[i].name;
+  cultureEl.appendChild(opt);
+}
+cultureEl.value = PRESETS.indexOf(preset);
+cultureEl.onchange = () => {                 // culture switch is live — no reset, the city converts
+  preset = PRESETS[+cultureEl.value];
+};
+
+const gridSizeEl = document.getElementById('gridSize');
+gridSizeEl.onchange = () => {                  // grid size change: structural, needs a full reset
+  N = Math.max(16, Math.min(256, gridSizeEl.valueAsNumber | 0));
+  gridSizeEl.value = N;
+  updateCameraFraming();
+  resetCity();
+};
+
+const buildingCapEl = document.getElementById('buildingCap');
+buildingCapEl.onchange = () => {               // cap change only affects LOD selection, no reset needed
+  buildingCap = Math.max(1, buildingCapEl.valueAsNumber | 0);
+  rebuildInstances();
+  render();
+};
+
+const canalToggleEl = document.getElementById('canalToggle');
+canalToggleEl.onchange = () => {               // river shapes the simulation, so this is a reset
+  canalOn = canalToggleEl.checked;
+  resetCity();
+};
+
+const riverWidthEl = document.getElementById('riverWidth');
+riverWidthEl.oninput = () => {                 // live: widen/narrow without resetting the city (baseline under a flow preset)
+  riverWidth = riverWidthEl.valueAsNumber | 0;
+  if (canalOn) setRiverWidth();
+};
+
+const riverFlowEl = document.getElementById('riverFlow');
+for (let i = 0; i < RIVER_FLOWS.length; i++) {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = RIVER_FLOWS[i].name;
+  riverFlowEl.appendChild(opt);
+}
+riverFlowEl.onchange = () => {                 // switching flow re-lays the channel for the current generation
+  riverFlow = RIVER_FLOWS[+riverFlowEl.value];
+  if (canalOn) setRiverWidth();
+};
+
+const oceanToggleEl = document.getElementById('oceanToggle');
+oceanToggleEl.onchange = () => {               // scenery swap; on the island it also (un)dresses the tidal reeds
+  oceanOn = oceanToggleEl.checked;
+  applyOcean();
+  if (circularIsland) rebuildInstances();      // spawn/clear the foreshore reeds
+  render();
+};
+
+const circularToggleEl = document.getElementById('circularToggle');
+circularToggleEl.onchange = () => {            // layout change: needs full rebuild
+  circularIsland = circularToggleEl.checked;
+  resetCity();
+};
+
+document.getElementById('step').onclick = stepCity;
+// Wait: play out N years, animated (~7/sec) so the god can watch the city
+// live. Clicking again mid-wait stops it.
+const waitBtn = document.getElementById('wait');
+let waitTimer = null, waitLeft = 0;
+function stopWait() {
+  if (waitTimer) { clearInterval(waitTimer); waitTimer = null; }
+  waitBtn.innerHTML = '&#8987; Wait';
+}
+waitBtn.onclick = () => {
+  if (!timeOn) return;
+  if (waitTimer) { stopWait(); return; }               // second click cancels
+  waitLeft = Math.max(1, Math.min(500, document.getElementById('waitYears').valueAsNumber | 0));
+  finishScaffolds();
+  waitTimer = setInterval(() => {
+    stepCity();
+    updateBrushUI();
+    waitBtn.textContent = '⏳ ' + --waitLeft;      // countdown on the button
+    if (waitLeft <= 0) stopWait();
+  }, 140);
+};
+document.getElementById('reset').onclick = () => {     // Anew: back to the tablet
+  stopPlay();
+  landingEl.classList.remove('gone');
+};
+// THE TABLET — world settings are chosen here and locked in by Begin. The
+// landing stays in the DOM: "Anew" wipes the world and returns to it. The old
+// in-game world panel remains in the code (hidden) for dev use.
+const landingEl = document.getElementById('landing');
+const setupSeedEl = document.getElementById('setupSeed');
+document.getElementById('setupRandom').onclick = () => {
+  setupSeedEl.value = Math.floor(Math.random() * 1e6);
+};
+const setupFlowEl = document.getElementById('setupFlow');
+for (let i = 0; i < RIVER_FLOWS.length; i++) {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = RIVER_FLOWS[i].name;
+  setupFlowEl.appendChild(opt);
+}
+setupFlowEl.value = 1;                       // Seasonal: the river breathes by default
+document.getElementById('begin').onclick = () => {
+  // carve the chosen settings into the world (mirrored into the hidden dev
+  // panel controls so their state stays consistent)
+  globalSeed = setupSeedEl.valueAsNumber | 0;
+  seedEl.value = globalSeed;
+  N = Math.max(16, Math.min(256, +document.getElementById('setupSize').value));
+  gridSizeEl.value = N;
+  canalOn = document.getElementById('setupRiver').checked;
+  canalToggleEl.checked = canalOn;
+  riverFlow = RIVER_FLOWS[+setupFlowEl.value];
+  riverFlowEl.value = setupFlowEl.value;     // keep the hidden dev panel consistent
+  oceanOn = document.getElementById('setupOcean').checked;
+  oceanToggleEl.checked = oceanOn;
+  circularIsland = document.getElementById('setupIsland').checked;
+  circularToggleEl.checked = circularIsland;
+  const god = document.querySelector('input[name=mode]:checked').value === 'god';
+  updateCameraFraming();
+  resetCity();
+  resize();
+  timeToggleEl.checked = god;              // God Game: time flows. Creative: frozen.
+  timeToggleEl.onchange();
+  landingEl.classList.add('gone');
+};
+
+let playTimer = null;
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.innerHTML = '&#9654;'; playBtn.title = 'Advance time automatically'; }
+}
+function startPlay() {
+  stopPlay();
+  playTimer = setInterval(stepCity, 1000 / parseFloat(speedEl.value));
+  playBtn.innerHTML = '&#10074;&#10074;';
+  playBtn.title = 'Pause';
+}
+playBtn.onclick = () => (playTimer ? stopPlay() : startPlay());
+const speedEl = document.getElementById('speed');
+speedEl.onchange = () => { if (playTimer) startPlay(); };
+
+/* ----------------------------------------------------------------------------
+   POST-PROCESSING — tilt-shift miniature look. A horizontal focus band across
+   the screen centre stays sharp; blur ramps in above and below it, which is
+   what sells the city as a hand-built diorama. Two cheap separable passes
+   (H + V); phones skip the composer entirely and render direct.
+   ------------------------------------------------------------------------- */
+let composer = null, tiltH = null, tiltV = null;
+let TILT_FOCUS = 0.48;               // focus band centre, 0..1 up the screen (city sits just below middle)
+let TILT_BLUR = 2.2;                 // blur strength in pixels at the screen edge
+if (!isPhone) {
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  tiltH = new ShaderPass(HorizontalTiltShiftShader);
+  tiltV = new ShaderPass(VerticalTiltShiftShader);
+  tiltH.uniforms.r.value = tiltV.uniforms.r.value = TILT_FOCUS;
+  composer.addPass(tiltH);
+  composer.addPass(tiltV);
+}
+
+function render() {
+  if (composer) composer.render();
+  else renderer.render(scene, camera);
+}
+function resize() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const pr = Math.min(devicePixelRatio, isPhone ? 1.5 : 2);
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(pr);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  if (composer) {
+    composer.setSize(w, h);
+    composer.setPixelRatio(pr);
+    tiltH.uniforms.h.value = TILT_BLUR / (w * pr);   // separable blur step, in UV units
+    tiltV.uniforms.v.value = TILT_BLUR / (h * pr);
+  }
+  render();
+}
+
+// Ambient animation: the water must move even while the god is thinking, so
+// desktop trades render-on-demand for a continuous loop (~1ms/frame — cheap).
+// Phones keep on-demand rendering and static water to save battery.
+if (!isPhone) {
+  (function ambient() {
+    requestAnimationFrame(ambient);
+    if (document.hidden) return;                     // tab in background: skip work
+    waterTime.value = performance.now() / 1000;
+    render();
+  })();
+}
+addEventListener('resize', resize);
+
+// Phones: lighten the defaults (smaller grid + fewer full-detail buildings) so
+// it stays smooth on mobile GPUs. (isPhone is declared at renderer setup —
+// shadows and post-processing key off it too.)
+if (isPhone) {
+  N = 40;
+  buildingCap = 900;
+}
+
+globalSeed = seedEl.valueAsNumber | 0;
+gridSizeEl.value = N;
+buildingCapEl.value = buildingCap;
+updateCameraFraming();
+resetCity();
+resize();
+
+// dev hook for headless sanity checks (harmless in production)
+window.__city = {
+  // god-mode surface
+  paintAt: (tx, ty) => paintAt(tx, ty, tx + 0.5 - N / 2, ty + 0.5 - N / 2),
+  sculptAt: (tx, ty) => sculptAt(tx, ty, tx + 0.5 - N / 2, ty + 0.5 - N / 2),
+  setBrush: (n) => { brushSize = Math.max(1, n | 0); updateBrushUI(); },
+  setVerb: (v) => setVerbUI(v),
+  brush: () => ({ size: brushSize, max: maxBrushArea(), verb, sculptUnlocked }),
+  forceUnlock: () => { sculptUnlocked = true; updateUnlocks(); },
+  setTime: (on) => { timeToggleEl.checked = !!on; timeToggleEl.onchange(); },
+  preview: (tx, ty) => { showPreview(tx, ty, tx + 0.5 - N / 2, ty + 0.5 - N / 2); return previewMesh ? previewMesh.count : 0; },
+  hidePreview,
+  tilt: (focus, blur) => {           // live-tune the miniature look: focus 0..1, blur px
+    if (!composer) return 'no composer (phone path)';
+    if (focus !== undefined) TILT_FOCUS = focus;
+    if (blur !== undefined) TILT_BLUR = blur;
+    tiltH.uniforms.r.value = tiltV.uniforms.r.value = TILT_FOCUS;
+    resize();                        // recomputes the blur-step uniforms and renders
+    return { focus: TILT_FOCUS, blur: TILT_BLUR };
+  },
+  shadows: (on) => {                 // toggle for perf comparison
+    renderer.shadowMap.enabled = !!on;
+    sun.castShadow = !!on;
+    MATS.sand.needsUpdate = true;    // force material recompile
+    render();
+    return renderer.shadowMap.enabled;
+  },
+  time: () => timeOn,
+  culture: () => preset.name,
+  setCulture: (name) => { const i = PRESETS.findIndex(p => p.name === name); if (i >= 0) { cultureEl.value = i; cultureEl.onchange(); } },
+  recordAt: (x, y) => { const r = records[y * N + x]; return r && { ...r, senes: senesOf(r) }; },
+  census: () => {                       // consecrated / vernacular / scaffolding counts
+    let c = 0, v = 0, s = 0;
+    for (let i = 0; i < N * N; i++) {
+      if (!grid[i]) continue;
+      const r = records[i];
+      if (r && r.s) s++;
+      if (r && r.c) c++; else v++;
+    }
+    return { consecrated: c, vernacular: v, scaffolding: s };
+  },
+  churn: () => {
+    let max = 0, sum = 0;
+    for (let v = 0; v < churnDelta.length; v++) { if (churnDelta[v] > max) max = churnDelta[v]; sum += churnDelta[v]; }
+    return { max: +max.toFixed(3), sum: +sum.toFixed(1) };
+  },
+  generateBuilding,
+  alive: () => grid.reduce((a, b) => a + b, 0),
+  gen: () => generation,
+  zigs: () => detectZiggurats(grid).zigs.length,
+  templeZig: () => templeZig && { ...templeZig },   // footprint of the special (tallest) ziggurat
+  bucketCount: () => buckets.size,
+  activeBucketKeys: () => [...buckets.entries()].filter(([, b]) => b.mesh.count > 0).map(([k]) => k),
+  bucketCounts: () => Object.fromEntries([...buckets.entries()].filter(([, b]) => b.mesh.count > 0).map(([k, b]) => [k, b.mesh.count])),
+  activeBuckets: () => { let c = 0; for (const b of buckets.values()) if (b.mesh.count > 0) c++; return c; },
+  instanceTotal: () => { let n = 0; for (const b of buckets.values()) n += b.mesh.count; return n; },
+  drawCalls: () => renderer.info.render.calls,
+  stepTiming: () => { const t0 = performance.now(); stepCity(); return performance.now() - t0; },
+  gridN: () => N,
+  cap: () => buildingCap,
+  walls: () => wallProjects.map(p => ({ ...p.rect, built: p.built, total: p.queue.length, grand: p.grand })),
+  wallRuinCount: () => wallRuins.size,
+  canalCells: () => canalMask.reduce((a, b) => a + b, 0),
+  canalSpan: (x) => [canalRows[x], canalRows[x] + canalWidths[x] - 1],   // [top, bottom] at column x
+  riverFlow: () => riverFlow.name,
+  tileTransform,
+  terrainHeight,
+  floodDistAt: (x, y) => floodDist[y * N + x],
+  terrain: () => {
+    let min = 1e9, max = -1e9, tellMax = 0, tellSum = 0, erosionMax = 0, erosionSum = 0;
+    for (let v = 0; v < heightField.length; v++) {
+      const h = Math.max(CHANNEL_BED, heightField[v] + tellDelta[v] - erosionDelta[v]);
+      if (h < min) min = h; if (h > max) max = h;
+      if (tellDelta[v] > tellMax) tellMax = tellDelta[v];
+      tellSum += tellDelta[v];
+      if (erosionDelta[v] > erosionMax) erosionMax = erosionDelta[v];
+      erosionSum += erosionDelta[v];
+    }
+    return {
+      min: +min.toFixed(2), max: +max.toFixed(2),
+      tellMax: +tellMax.toFixed(2), tellSum: +tellSum.toFixed(1),
+      erosionMax: +erosionMax.toFixed(3), erosionSum: +erosionSum.toFixed(1),
+      waterLevel: WATER_LEVEL, channelBed: CHANNEL_BED,
+    };
+  },
+};
+</script>
+</body>
+</html>

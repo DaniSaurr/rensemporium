@@ -1,0 +1,839 @@
+<title>Wordwood</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=block">
+<style>
+/* One full-bleed canvas of letters on black. Single deliberate dark look. */
+:root { --ground: #000; --ink: #9fb38a; color-scheme: dark; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--ground); color: var(--ink); overflow: hidden; }
+canvas { display: block; width: 100vw; height: 100%; touch-action: none; cursor: default; }
+/* The ` menu: hidden until asked for, in the page's own letters. */
+:root { --panel: rgba(6, 9, 6, 0.88); --line: #2c3a26; --dim: #6f805f; --bright: #d6e6c2; --mono: "JetBrains Mono", Menlo, Consolas, monospace; }
+#menu { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; width: min(320px, calc(100vw - 32px));
+  max-height: calc(100% - 32px); overflow: auto; box-sizing: border-box; padding: 14px 16px; display: grid; gap: 10px;
+  background: var(--panel); border: 1px solid var(--line); color: var(--ink); font: 12px/1.45 var(--mono); }
+#menu[hidden] { display: none; }
+#menu h2 { margin: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bright); }
+#menu .row { display: flex; align-items: center; gap: 8px; }
+#menu .slider { display: grid; gap: 2px; }
+#menu .slider span { display: flex; justify-content: space-between; gap: 8px; }
+#menu output { color: var(--bright); font-variant-numeric: tabular-nums; }
+#menu input[type=range] { width: 100%; accent-color: var(--ink); }
+#menu input[type=checkbox] { accent-color: var(--ink); margin: 0; }
+#menu kbd { font: inherit; color: var(--bright); border: 1px solid var(--line); padding: 0 4px; }
+#menu pre { margin: 0; font: inherit; color: var(--dim); white-space: pre-wrap; }
+#menu button { justify-self: start; font: inherit; color: var(--ink); background: none; border: 1px solid var(--line); padding: 3px 10px; cursor: pointer; }
+#menu :focus-visible { outline: 1px solid var(--bright); outline-offset: 2px; }
+</style>
+<canvas id="wood" aria-label="A woodland clearing written in words"></canvas>
+<div id="menu" hidden>
+  <h2>Wordwood</h2>
+  <label class="row"><input type="checkbox" id="fit"> Fit words to object width <kbd>F</kbd></label>
+  <label class="row"><input type="checkbox" id="map"> Category map</label>
+  <label class="slider"><span>Word changes per second <output id="rate-out"></output></span><input type="range" id="rate" min="1" max="60" step="1"></label>
+  <label class="slider"><span>Letter size (px) <output id="size-out"></output></span><input type="range" id="size" min="5" max="28" step="0.5"></label>
+  <label class="slider"><span>Colour <output id="colour-out"></output></span><input type="range" id="colour" min="0" max="1" step="0.01"></label>
+  <label class="slider"><span>Letter brightness <output id="gain-out"></output></span><input type="range" id="gain" min="0.5" max="4" step="0.05"></label>
+  <label class="slider"><span>Between letters <output id="gap-out"></output></span><input type="range" id="gap" min="0" max="1" step="0.01"></label>
+  <pre id="legend"></pre>
+  <pre>` menu, F fit words. 60 changes a second = every frame.</pre>
+  <button type="button" id="reset">Reset</button>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// Word bank, one list per category (built from words/*.txt by build.py).
+const WORDS = {"bark": ["bark", "trunk", "bole", "stem", "wood", "timber", "oak", "beech", "ash", "birch", "cambium", "phloem", "xylem", "sapwood", "heartwood", "pith", "ring", "growth ring", "annual ring", "grain", "fibre", "lignin", "cellulose", "cork", "lenticel", "fissure", "furrow", "ridge", "plate", "scale", "flake", "peel", "knot", "burr", "burl", "epicormic", "canker", "scar", "wound", "callus", "occlusion", "resin", "sap", "gum", "lichen", "moss", "ivy", "algae", "green stain", "bark beetle", "gallery", "borehole", "woodworm", "woodpecker", "great spotted woodpecker", "nuthatch", "treecreeper", "root flare", "buttress", "girth", "column", "pillar", "upright", "standard", "maiden", "pollard", "veteran", "grey", "brown", "umber", "silver", "rough", "smooth", "year", "decade", "century", "increment", "dendrochronology"], "branch": ["branch", "bough", "limb", "twig", "spur", "fork", "crotch", "union", "collar", "shoot", "offshoot", "sprig", "stick", "switch", "wand", "bud", "node", "internode", "leaf scar", "bud scale scar", "leader", "lateral", "whorl", "crook", "elbow", "reach", "spread", "spray", "perch", "nest", "drey", "squirrel", "grey squirrel", "red squirrel", "dormouse", "tawny owl", "jay", "magpie", "crow", "woodpigeon", "rook", "wren", "robin", "blackbird", "song thrush", "mistle thrush", "deadwood", "dieback", "snap", "crack", "creak", "sway", "fall"], "deadwood": ["log", "deadwood", "windfall", "windthrow", "fallen", "stump", "snag", "rot", "brown rot", "white rot", "punk", "crumble", "hollow", "heart rot", "bracket fungus", "turkey tail", "honey fungus", "candlesnuff", "king alfred's cakes", "jelly ear", "oyster mushroom", "chicken of the woods", "dryad's saddle", "beefsteak fungus", "slime mould", "stag beetle", "lesser stag beetle", "larva", "grub", "woodlouse", "centipede", "wood wasp", "click beetle", "cardinal beetle", "moss", "lichen", "fern", "seedling", "nurse log", "ring", "grain", "split"], "fern": ["fern", "bracken", "frond", "pinna", "pinnae", "pinnule", "rachis", "stipe", "crozier", "fiddlehead", "sorus", "sori", "spore", "sporangium", "indusium", "rhizome", "male fern", "lady fern", "broad buckler fern", "narrow buckler fern", "hard shield fern", "soft shield fern", "hart's-tongue", "polypody", "hard fern", "royal fern", "maidenhair spleenwort", "scaly male fern", "mountain fern", "uncurl", "unfurl", "prothallus", "gametophyte", "sporophyte", "vascular", "devonian", "carboniferous", "coal measures", "cyathea", "tree fern", "shade", "damp", "green"], "floor": ["litter", "leaf litter", "leaf mould", "humus", "mould", "soil", "loam", "earth", "topsoil", "subsoil", "mulch", "duff", "mast", "beechmast", "acorn", "husk", "shell", "cone", "needle", "twig", "stick", "bark", "debris", "detritus", "decay", "rot", "decomposition", "fungus", "fungi", "mycelium", "hypha", "hyphae", "mycorrhiza", "mushroom", "toadstool", "puffball", "earthball", "springtail", "mite", "woodlouse", "millipede", "centipede", "beetle", "ground beetle", "earthworm", "slug", "snail", "ant", "spider", "harvestman", "pseudoscorpion", "nematode", "bacteria", "root", "rootlet", "ground", "floor", "brown", "ochre", "russet", "rust", "tan", "umber", "crumble", "fall", "autumn", "winter", "last year"], "flower": ["flower", "bloom", "blossom", "bud", "petal", "sepal", "stamen", "anther", "pollen", "stigma", "style", "ovary", "nectar", "nectary", "corolla", "calyx", "bract", "bell", "spike", "raceme", "umbel", "foxglove", "bluebell", "wood anemone", "primrose", "cowslip", "celandine", "lesser celandine", "dog violet", "violet", "wood sorrel", "red campion", "herb robert", "buttercup", "daisy", "dandelion", "forget-me-not", "speedwell", "bugle", "self-heal", "ramsons", "stitchwort", "yellow archangel", "betony", "harebell", "heather", "ling", "tormentil", "honeysuckle", "dog rose", "cow parsley", "meadowsweet", "knapweed", "scabious", "bumblebee", "honeybee", "hoverfly", "bee-fly", "brimstone", "orange tip", "speckled wood", "red admiral", "peacock", "purple", "mauve", "yellow", "white"], "fungus": ["mushroom", "toadstool", "fungus", "cap", "gill", "gills", "pore", "stem", "stipe", "ring", "annulus", "volva", "veil", "spore", "spore print", "mycelium", "hypha", "fruiting body", "fly agaric", "death cap", "destroying angel", "penny bun", "cep", "bolete", "chanterelle", "honey fungus", "sulphur tuft", "shaggy ink cap", "ink cap", "puffball", "earthstar", "stinkhorn", "amethyst deceiver", "deceiver", "wood blewit", "oyster", "porcelain fungus", "beefsteak", "birch polypore", "razor strop", "tinder fungus", "hoof fungus", "jelly ear", "yellow brain", "candlesnuff", "dead man's fingers", "scarlet elf cup", "parasol", "blusher", "panther cap", "russula", "sickener", "milkcap", "brittlegill", "waxcap", "fairy ring", "mycorrhiza", "saprotroph", "decomposer", "flush", "damp"], "grass": ["grass", "blade", "sward", "tussock", "tuft", "sedge", "rush", "bent", "fescue", "cocksfoot", "timothy", "ryegrass", "meadow grass", "couch", "wood melick", "wood millet", "false brome", "tufted hair-grass", "wavy hair-grass", "yorkshire fog", "sweet vernal grass", "wood sedge", "pendulous sedge", "soft rush", "woodrush", "sheath", "ligule", "node", "culm", "awn", "spikelet", "seedhead", "panicle", "glume", "floret", "stolon", "rhizome", "tiller", "stem", "stalk", "verge", "edge", "clump", "seed", "pollen", "dew", "green", "straw", "yellow"], "leaves": ["leaf", "leaves", "foliage", "canopy", "crown", "leafage", "greenery", "verdure", "green", "oak", "beech", "ash", "birch", "hazel", "lime", "linden", "sycamore", "maple", "field maple", "alder", "elm", "hornbeam", "sweet chestnut", "horse chestnut", "rowan", "whitebeam", "willow", "aspen", "poplar", "cherry", "blade", "lamina", "vein", "midrib", "petiole", "stalk", "lobe", "margin", "serration", "tooth", "apex", "stoma", "cuticle", "chlorophyll", "chloroplast", "photosynthesis", "transpiration", "bud", "shoot", "flush", "lammas growth", "spray", "shade", "dapple", "sunfleck", "rustle", "flutter", "cover", "summer", "spring", "june", "july", "august", "olive", "emerald", "viridian", "chartreuse", "sap green", "lime green", "catkin", "samara", "key", "acorn", "cupule", "mast", "gall", "oak apple", "spangle gall", "aphid", "honeydew", "caterpillar", "leaf miner", "sawfly", "winter moth", "oak roller", "chaffinch", "blue tit", "great tit", "wood warbler", "chiffchaff", "blackcap", "woodpigeon"], "moss": ["moss", "cushion", "carpet", "mat", "feather moss", "sphagnum", "haircap", "common haircap", "fork moss", "broom moss", "tamarisk moss", "thyme moss", "swan's-neck thyme moss", "cypress-leaved plait moss", "silky wall feather moss", "bank haircap", "liverwort", "hornwort", "bryophyte", "rhizoid", "capsule", "seta", "spore", "calyptra", "peristome", "gametophyte", "tardigrade", "rotifer", "water bear", "damp", "wet", "soft", "green", "velvet"], "path": ["path", "track", "trail", "footpath", "way", "bridleway", "walk", "ride", "route", "desire line", "rut", "groove", "tread", "footprint", "bootprint", "hoofprint", "slot", "print", "mud", "dirt", "dust", "clay", "silt", "gravel", "grit", "stone", "pebble", "flint", "puddle", "root", "step", "worn", "trodden", "compacted", "bare", "erosion", "camber", "verge", "waymark", "stile", "gate", "walker", "dog", "horse", "deer", "badger run", "going", "coming", "here", "on", "along", "ahead", "behind"], "sky": ["sky", "air", "blue", "light", "cloud", "cirrus", "cumulus", "stratus", "nimbus", "altostratus", "mackerel sky", "mares' tails", "overcast", "haze", "mist", "vapour", "wisp", "drift", "glare", "daylight", "noon", "forenoon", "afternoon", "sun", "sunlight", "brightness", "pale", "white", "azure", "cerulean", "cobalt", "gap", "opening", "clearing", "above", "overhead", "height", "zenith", "vault", "firmament", "heaven", "welkin", "weather", "wind", "breeze", "gust", "draught", "thermal", "updraft", "rain", "shower", "drizzle", "squall", "front", "pressure", "high", "low", "swift", "swallow", "house martin", "rook", "jackdaw", "buzzard", "kite", "kestrel", "pigeon", "contrail", "aircraft", "distance", "empty", "open", "far", "up"], "stone": ["stone", "rock", "boulder", "cobble", "flint", "chert", "sandstone", "gritstone", "millstone grit", "limestone", "granite", "gneiss", "schist", "slate", "shale", "mudstone", "quartz", "quartzite", "feldspar", "mica", "chalk", "erratic", "glacial erratic", "till", "outcrop", "scree", "bedrock", "grain", "cleavage", "joint", "bedding", "fossil", "crinoid", "ammonite", "lichen", "map lichen", "crust", "weathering", "frost", "heave", "grey", "cold", "weight", "age"], "undergrowth": ["undergrowth", "understorey", "thicket", "scrub", "shrub", "bush", "brush", "copse", "coppice", "tangle", "snarl", "bramble", "briar", "blackberry", "dog rose", "holly", "hazel", "elder", "hawthorn", "blackthorn", "dogwood", "spindle", "privet", "box", "yew", "rhododendron", "laurel", "guelder rose", "wayfaring tree", "honeysuckle", "ivy", "old man's beard", "nettle", "dock", "foxglove", "red campion", "bluebell", "wood anemone", "ramsons", "wild garlic", "dog's mercury", "herb robert", "lords-and-ladies", "cuckoo pint", "wood sorrel", "bugle", "enchanter's nightshade", "wood avens", "cow parsley", "hogweed", "thorn", "prickle", "spine", "berry", "hip", "haw", "sloe", "cob", "bud", "flower", "wren", "dunnock", "robin", "blackbird", "bank vole", "wood mouse", "muntjac", "roe deer", "fox", "badger", "hedgehog"]};
+const CATS = Object.keys(WORDS).sort();
+const cat = (n) => { const i = CATS.indexOf(n); if (i < 0) throw new Error('no words for ' + n); return i; };
+
+// ---------------------------------------------------------------- settings
+const CELL_ASPECT = 5.4 / 9.5;     // letter cell width / height
+const YAW = 80 * Math.PI / 180;    // look left/right range from the start
+const PITCH_UP = 55 * Math.PI / 180;
+const PITCH_DOWN = 38 * Math.PI / 180;
+const START_YAW = 0.35, START_PITCH = -0.06;
+const ATLAS = { w: 32, h: 48, size: 34 };
+const MAXL = 31;
+
+// ---------------------------------------------------------------- helpers
+function rng(seed) {
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const R = rng(2026);
+const rr = (a, b) => a + (b - a) * R();
+const ri = (a, b) => Math.floor(rr(a, b + 1));
+
+function hash3(x, y, z) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(z | 0, 2147483647);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function noise3(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const f = (t) => t * t * (3 - 2 * t);
+  const u = f(x - xi), v = f(y - yi), w = f(z - zi);
+  const l = (a, b, t) => a + (b - a) * t;
+  const c = (i, j, k) => hash3(xi + i, yi + j, zi + k);
+  return l(l(l(c(0,0,0), c(1,0,0), u), l(c(0,1,0), c(1,1,0), u), v),
+           l(l(c(0,0,1), c(1,0,1), u), l(c(0,1,1), c(1,1,1), u), v), w);
+}
+const smooth = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+
+// The path crosses the clearing a little to one side of where you stand.
+const pathX = (z) => 1.6 + Math.sin(z * 0.06) * 3.0 + Math.sin(z * 0.17 + 1.0) * 0.8;
+const pathDist = (x, z) => Math.abs(x - pathX(z));
+function height(x, z) {
+  const r = Math.hypot(x, z);
+  const h = (noise3(x * 0.05, 0, z * 0.05) - 0.5) * 3.2 + (noise3(x * 0.2, 3, z * 0.2) - 0.5) * 0.4;
+  return h * smooth(5, 16, r) - (1 - smooth(0.9, 2.5, pathDist(x, z))) * 0.08;
+}
+
+const UP = new THREE.Vector3(0, 1, 0);
+// Positions only, plus aObj (which sub-object a vertex belongs to).
+function prep(geo, obj = 0) {
+  let g = geo.index ? geo.toNonIndexed() : geo;
+  for (const k of Object.keys(g.attributes)) if (k !== 'position') g.deleteAttribute(k);
+  g.setAttribute('aObj', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(obj), 1));
+  return g;
+}
+function placed(geo, pos, quat = new THREE.Quaternion(), scale = new THREE.Vector3(1, 1, 1), obj = 0) {
+  return prep(geo, obj).applyMatrix4(new THREE.Matrix4().compose(pos, quat, scale));
+}
+const towards = (dir) => new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize());
+const yawQ = (a) => new THREE.Quaternion().setFromAxisAngle(UP, a);
+function lumpy(geo, amount, freq) {
+  const p = geo.attributes.position;
+  const v = new THREE.Vector3(), c = new THREE.Vector3();
+  geo.computeBoundingBox(); geo.boundingBox.getCenter(c);
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const d = v.clone().sub(c).normalize();
+    const n = noise3(v.x * freq + 9, v.y * freq, v.z * freq) - 0.5;
+    v.addScaledVector(d, n * amount);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  return geo;
+}
+
+// ---------------------------------------------------------------- shaders
+const NOISE = /* glsl */`
+float nz_hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float vnoise3(vec3 x) {
+  vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(nz_hash(i), nz_hash(i + vec3(1,0,0)), f.x), mix(nz_hash(i + vec3(0,1,0)), nz_hash(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(nz_hash(i + vec3(0,0,1)), nz_hash(i + vec3(1,0,1)), f.x), mix(nz_hash(i + vec3(0,1,1)), nz_hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+}`;
+const VERT = /* glsl */`
+in float aObj;
+uniform int objBase;
+out vec3 vWorld;
+flat out int vObj;
+void main() {
+  mat4 m = modelMatrix;
+  #ifdef USE_INSTANCING
+  m = m * instanceMatrix;
+  #endif
+  vec4 w = m * vec4(position, 1.0);
+  vWorld = w.xyz;
+  vObj = objBase + int(aObj) + gl_InstanceID;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+// Colour pass: unlit base colour, fading with distance.
+const COL_FRAG = /* glsl */`
+${NOISE}
+uniform vec3 colA; uniform vec3 colB; uniform float scale;
+in vec3 vWorld;
+flat in int vObj;
+void main() {
+  float n = vnoise3(vWorld * scale), n2 = vnoise3(vWorld * scale * 3.7 + 11.0);
+  vec3 base = mix(colA, colB, clamp(n * 0.75 + n2 * 0.4 - 0.1, 0.0, 1.0));
+  float d = distance(vWorld, cameraPosition);
+  gl_FragColor = vec4(mix(base, vec3(0.1, 0.12, 0.11), 1.0 - exp(-d * 0.024)), 1.0);
+}`;
+// ID pass: category and object number as bytes.
+const ID_FRAG = /* glsl */`
+uniform int category;
+in vec3 vWorld;
+flat in int vObj;
+void main() {
+  gl_FragColor = vec4(float(category + 1), float(vObj & 255), float((vObj >> 8) & 255), 255.0) / 255.0;
+}`;
+// The ground picks path, moss or forest floor per pixel.
+const GROUND_PICK = /* glsl */`
+${NOISE}
+uniform int catPath; uniform int catMoss; uniform int catFloor;
+in vec3 vWorld;
+flat in int vObj;
+float pathX(float z) { return 1.6 + sin(z * 0.06) * 3.0 + sin(z * 0.17 + 1.0) * 0.8; }
+int pick(out vec3 base) {
+  float d = abs(vWorld.x - pathX(vWorld.z)) + (vnoise3(vec3(vWorld.x * 1.3, 0.0, vWorld.z * 1.3)) - 0.5) * 0.6;
+  float r = length(vWorld.xz) + (vnoise3(vec3(vWorld.x * 0.4, 5.0, vWorld.z * 0.4)) - 0.5) * 3.0;
+  float n = vnoise3(vWorld * 0.6), n2 = vnoise3(vWorld * 2.3 + 5.0);
+  if (d < 0.85) { base = mix(vec3(0.5, 0.44, 0.35), vec3(0.74, 0.66, 0.54), clamp(n * 0.6 + n2 * 0.5, 0.0, 1.0)); return catPath; }
+  if (r < 7.5 || vnoise3(vec3(vWorld.x * 0.16 + 3.0, 0.0, vWorld.z * 0.16 + 9.0)) > 0.66) {
+    base = mix(vec3(0.24, 0.44, 0.1), vec3(0.45, 0.63, 0.18), n2); return catMoss; }
+  base = mix(vec3(0.38, 0.27, 0.15), vec3(0.6, 0.44, 0.25), clamp(n * 0.7 + n2 * 0.5 - 0.1, 0.0, 1.0)); return catFloor;
+}`;
+const GROUND_COL = GROUND_PICK + `
+void main() { vec3 base; pick(base); float d = distance(vWorld, cameraPosition);
+  gl_FragColor = vec4(mix(base, vec3(0.1, 0.12, 0.11), 1.0 - exp(-d * 0.024)), 1.0); }`;
+const GROUND_ID = GROUND_PICK + `
+void main() { vec3 base; int c = pick(base); int obj = c == catPath ? 1 : (c == catMoss ? 2 : 3);
+  gl_FragColor = vec4(float(c + 1), float(obj), 0.0, 255.0) / 255.0; }`;
+
+// Fit pass, one pixel per letter cell: on each line, find the run of cells
+// one object covers and choose words that fill it exactly.
+const FIT_FRAG = /* glsl */`
+precision highp float; precision highp int;
+uniform sampler2D ids; uniform sampler2D words; uniform sampler2D lens;
+uniform int ncat; uniform int skyCat; uniform float yScale;
+uniform bool fitWords; uniform sampler2D streams; uniform int streamLen;
+out vec4 outColor;
+const int MAXL = ${MAXL};
+ivec4 bytesAt(sampler2D t, ivec2 p) { return ivec4(round(texelFetch(t, p, 0) * 255.0)); }
+int idAt(int x, int y) { ivec3 b = ivec3(round(texelFetch(ids, ivec2(x, y), 0).rgb * 255.0)); return b.r | (b.g << 8) | (b.b << 16); }
+int countOf(int c, int l) { return bytesAt(lens, ivec2(l, c)).r; }
+int lengthsUpto(int c, int l) { return bytesAt(lens, ivec2(clamp(l, 0, MAXL), c)).g; }
+int nthLength(int c, int i) { return bytesAt(lens, ivec2(i, c)).b; }
+int wordChar(int c, int l, int idx, int i) { return bytesAt(words, ivec2(idx * l + i, c * 32 + l)).r; }
+uint stepHash(uint h) { h = h * 747796405u + 2891336453u; h = ((h >> ((h >> 28u) + 4u)) ^ h) * 277803737u; return (h >> 22u) ^ h; }
+// A word of exactly n letters wins. Longer runs take words in a fixed order
+// from the left, so a change in width only changes the end of the run.
+int fillChar(int c, int n, int o, uint h) {
+  int nl = lengthsUpto(c, MAXL);
+  if (nl == 0) return 0;
+  int shortest = nthLength(c, 0), longest = nthLength(c, nl - 1);
+  int rem = n, pos = 0;
+  bool ending = false;
+  for (int it = 0; it < 400 && rem > 0; it++) {
+    h = stepHash(h);
+    int cnt = rem <= MAXL ? countOf(c, rem) : 0;
+    int l = nthLength(c, int((h >> 4u) % uint(nl)));
+    if (pos == 0 && cnt > 0) {
+      ending = true;
+    } else if (!ending && l + 1 + longest < rem) {
+      if (o < pos + l) return wordChar(c, l, int((h >> 12u) % uint(countOf(c, l))), o - pos);
+      if (o == pos + l) return 0;
+      pos += l + 1; rem -= l + 1;
+      continue;
+    }
+    ending = true;
+    if (cnt > 0) return wordChar(c, rem, int(h % uint(cnt)), o - pos);
+    if (rem <= 2 || shortest > rem - 2) {
+      // No exact fit and no room to split: a whole shorter word, then blanks.
+      int fits = lengthsUpto(c, rem);
+      if (fits == 0) return 0;
+      l = nthLength(c, int(h % uint(fits)));
+      int i = o - pos;
+      return i < l ? wordChar(c, l, int((h >> 8u) % uint(countOf(c, l))), i) : 0;
+    }
+    l = nthLength(c, int((h >> 4u) % uint(lengthsUpto(c, rem - 2))));
+    if (o < pos + l) return wordChar(c, l, int((h >> 12u) % uint(countOf(c, l))), o - pos);
+    if (o == pos + l) return 0;
+    pos += l + 1; rem -= l + 1;
+  }
+  return 0;
+}
+// Objects narrower than this many cells don't get words of their own.
+const int TINY = 3;
+// The object a cell's letters belong to: its own, unless it is a sliver
+// narrower than TINY on this line, which takes the object to its left
+// (or right, at the screen edge). A twig in front of a trunk doesn't split it.
+int owner(int x, int y, int w) {
+  int k = idAt(x, y);
+  int s = x, e = x + 1;
+  while (s > 0 && x - s < TINY && idAt(s - 1, y) == k) s--;
+  while (e < w && e - x < TINY && idAt(e, y) == k) e++;
+  if (e - s >= TINY) return k;
+  return s > 0 ? idAt(s - 1, y) : (e < w ? idAt(e, y) : k);
+}
+void main() {
+  ivec2 cell = ivec2(gl_FragCoord.xy);
+  ivec2 isz = textureSize(ids, 0);
+  int y = min(int((float(cell.y) + 0.5) * yScale), isz.y - 1);
+  int x = min(cell.x, isz.x - 1);
+  int k = owner(x, y, isz.x);
+  int s = x; while (s > 0 && owner(s - 1, y, isz.x) == k) s--;
+  int e = x + 1; while (e < isz.x && owner(e, y, isz.x) == k) e++;
+  int n = e - s, o = x - s;
+  int c = (k & 255) - 1;
+  if (c < 0 || c >= ncat) c = skyCat;
+  int gap = n >= TINY ? 1 : 0;   // runs end in a space so neighbouring words stay apart
+  int code = 0;
+  if (!fitWords) {
+    // Each line runs on through the category's shuffled words, ignoring objects.
+    uint off = stepHash(uint(cell.y) ^ (uint(c) * 2654435761u)) % uint(streamLen);
+    code = bytesAt(streams, ivec2(int((uint(cell.x) + off) % uint(streamLen)), c)).r;
+  } else if (n >= TINY && o < n - gap) {
+    code = fillChar(c, n - gap, o, uint(k >> 8) * 73856093u ^ uint(cell.y) * 19349663u ^ uint(c) * 83492791u);
+  }
+  outColor = vec4(float(code) / 255.0, float(c + 1) / 255.0, 0.0, 1.0);
+}`;
+// Final pass: each cell's letter in the colour under that cell, on black.
+const OVERLAY_FRAG = /* glsl */`
+precision highp float; precision highp int;
+uniform sampler2D grid; uniform sampler2D colour; uniform sampler2D atlas;
+uniform vec2 cell; uniform vec2 screen; uniform float lod;
+uniform float gain; uniform float colourAmt; uniform float gap; uniform bool catMap;
+vec3 catColour(int c) { float h = fract(float(c) * 0.618034 + 0.1);
+  return mix(vec3(1.0), clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0), 0.75) * 0.8; }
+out vec4 outColor;
+void main() {
+  vec2 p = gl_FragCoord.xy / cell;
+  ivec2 c = ivec2(floor(p));
+  ivec2 gs = textureSize(grid, 0);
+  ivec2 g = ivec2(round(texelFetch(grid, min(c, gs - 1), 0).rg * 255.0));
+  int code = g.x;
+  float mask = 0.0;
+  if (code > 0 && code < 95) {
+    vec2 tile = vec2(float(code % 16), float(code / 16));
+    vec2 f = clamp(vec2(fract(p.x), 1.0 - fract(p.y)), vec2(0.03), vec2(0.97));
+    mask = textureLod(atlas, (tile + f) / vec2(16.0, 6.0), lod).r;
+  }
+  vec3 col = catMap ? catColour(g.y - 1) : texture(colour, (vec2(c) + 0.5) * cell / screen).rgb;
+  col = mix(vec3(dot(col, vec3(0.299, 0.587, 0.114))), col, colourAmt);
+  outColor = vec4(min(col * gain, vec3(1.0)) * mask + col * gap * (1.0 - mask), 1.0);
+}`;
+const QUAD_VERT = /* glsl */`in vec3 position; void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+
+// ---------------------------------------------------------------- scene
+const scene = new THREE.Scene();
+const meshes = [];   // { mesh, col, id }
+let nextObj = 16;    // 1-3 are the ground's path, moss and floor
+
+function surface(geo, catName, a, b, opts = {}) {
+  const c = cat(catName);
+  const col = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: COL_FRAG,
+    uniforms: { colA: { value: new THREE.Color(...a) }, colB: { value: new THREE.Color(...b) }, scale: { value: opts.scale ?? 0.6 }, objBase: { value: 0 } },
+    side: THREE.DoubleSide });
+  const id = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: ID_FRAG,
+    uniforms: { category: { value: c }, objBase: { value: 0 } }, side: THREE.DoubleSide });
+  return { col, id, geo };
+}
+function addInstanced(s, xfs, objs = 1) {
+  if (!xfs.length) return;
+  const mesh = new THREE.InstancedMesh(s.geo, s.col, xfs.length);
+  xfs.forEach((m, i) => mesh.setMatrixAt(i, m));
+  mesh.frustumCulled = false;
+  s.col.uniforms.objBase.value = s.id.uniforms.objBase.value = nextObj;
+  nextObj += xfs.length * objs;
+  scene.add(mesh);
+  meshes.push({ mesh, col: s.col, id: s.id });
+}
+// A merged mesh of several sub-objects (aObj tells them apart).
+function addMerged(s, count) {
+  const mesh = new THREE.Mesh(s.geo, s.col);
+  mesh.frustumCulled = false;
+  s.col.uniforms.objBase.value = s.id.uniforms.objBase.value = nextObj;
+  nextObj += count;
+  scene.add(mesh);
+  meshes.push({ mesh, col: s.col, id: s.id });
+}
+const xf = (x, z, s = new THREE.Vector3(1, 1, 1), sink = 0, yaw = R() * Math.PI * 2) =>
+  new THREE.Matrix4().compose(new THREE.Vector3(x, height(x, z) - sink, z), yawQ(yaw), s);
+
+const COLS = {
+  bark: [[0.25, 0.2, 0.16], [0.46, 0.4, 0.33]], branch: [[0.28, 0.22, 0.16], [0.44, 0.36, 0.27]],
+  leaves: [[0.2, 0.42, 0.1], [0.52, 0.7, 0.2]], undergrowth: [[0.16, 0.36, 0.08], [0.4, 0.6, 0.14]],
+  fern: [[0.26, 0.52, 0.12], [0.46, 0.72, 0.2]], grass: [[0.36, 0.6, 0.15], [0.64, 0.8, 0.3]],
+  stone: [[0.45, 0.46, 0.43], [0.66, 0.66, 0.61]], deadwood: [[0.36, 0.27, 0.18], [0.54, 0.43, 0.3]],
+};
+
+// Ground.
+{
+  const g = new THREE.PlaneGeometry(130, 130, 130, 130).rotateX(-Math.PI / 2);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setY(i, height(p.getX(i), p.getZ(i)));
+  const geo = prep(g);
+  const mk = (frag) => new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: frag,
+    uniforms: { catPath: { value: cat('path') }, catMoss: { value: cat('moss') }, catFloor: { value: cat('floor') }, objBase: { value: 0 } } });
+  const col = mk(GROUND_COL), id = mk(GROUND_ID);
+  const mesh = new THREE.Mesh(geo, col);
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  meshes.push({ mesh, col, id });
+}
+
+// Sky: a dome; in the ID pass it draws nothing, which reads as sky.
+{
+  const col = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
+    vertexShader: `out vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `${NOISE}
+      in vec3 vDir;
+      void main() { vec3 d = normalize(vDir);
+        vec3 c = mix(vec3(0.78, 0.84, 0.86), vec3(0.42, 0.6, 0.86), smoothstep(0.0, 0.6, d.y));
+        float cl = vnoise3(d * 6.0) * 0.6 + vnoise3(d * 15.0) * 0.4;
+        gl_FragColor = vec4(mix(c, vec3(0.95), smoothstep(0.55, 0.8, cl) * 0.6 * step(0.0, d.y)), 1.0); }` });
+  const id = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
+    vertexShader: `void main() { gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `void main() { gl_FragColor = vec4(0.0); }` });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(200, 32, 16), col);
+  mesh.renderOrder = -1;
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  meshes.push({ mesh, col, id });
+}
+
+// Trees. Build one tree's bark, branch and leaf geometry.
+function tree({ h, r, branches, clump, toward = null, reach = 1 }) {
+  const bark = [], twig = [], leaf = [];
+  const pts = [new THREE.Vector3()];
+  let pos = new THREE.Vector3(), dir = UP.clone();
+  const segs = 4;
+  for (let i = 0; i < segs; i++) {
+    const len = h / segs;
+    const r0 = r * (1 - 0.65 * i / segs), r1 = r * (1 - 0.65 * (i + 1) / segs);
+    bark.push(placed(new THREE.CylinderGeometry(r1, r0, len * 1.04, 10, 1), pos.clone().addScaledVector(dir, len / 2), towards(dir)));
+    pos = pos.clone().addScaledVector(dir, len); pts.push(pos);
+    dir = dir.clone().add(new THREE.Vector3(rr(-0.15, 0.15), 0, rr(-0.15, 0.15))).normalize();
+  }
+  if (r > 0.2) bark.push(placed(new THREE.CylinderGeometry(r, r * 1.9, 1.0, 10, 1), new THREE.Vector3(0, 0.4, 0)));
+  const along = (t) => { const f = t * segs, i = Math.min(Math.floor(f), segs - 1); return pts[i].clone().lerp(pts[i + 1], f - i); };
+  const clumpAt = (at, size) => {
+    for (let i = ri(3, 5); i > 0; i--) {
+      const rad = size * rr(0.5, 1.0);
+      const g = lumpy(prep(new THREE.IcosahedronGeometry(rad, 1)), rad * 0.5, 1.4);
+      leaf.push(g.applyMatrix4(new THREE.Matrix4().compose(
+        at.clone().add(new THREE.Vector3(rr(-1, 1), rr(-0.4, 0.6), rr(-1, 1)).multiplyScalar(size * 0.7)),
+        yawQ(R() * 6.28), new THREE.Vector3(1, 0.8, 1))));
+    }
+  };
+  for (let i = 0; i < branches; i++) {
+    const start = along(rr(0.35, 0.92));
+    let out = new THREE.Vector3(Math.cos(i * 2.4 + R()), rr(0.4, 1.1), Math.sin(i * 2.4 + R()));
+    let bl = rr(2, 4.5) * (r > 0.2 ? 1 : 0.4);
+    if (toward && i < 3) { out = toward.clone().setY(rr(0.25, 0.5)); bl = rr(4, 7) * reach; }
+    out.normalize();
+    twig.push(placed(new THREE.CylinderGeometry(Math.max(r * 0.08, 0.015), Math.max(r * 0.28, 0.03), bl, 6, 1),
+      start.clone().addScaledVector(out, bl / 2), towards(out)));
+    clumpAt(start.clone().addScaledVector(out, bl), clump * (toward && i < 3 ? 1.3 : 1));
+  }
+  clumpAt(pts[segs], clump * 1.3);
+  return { bark: mergeGeometries(bark), twig: mergeGeometries(twig), leaf: mergeGeometries(leaf) };
+}
+const barkS = (geo) => surface(geo, 'bark', ...COLS.bark, { scale: 1.3 });
+const twigS = (geo) => surface(geo, 'branch', ...COLS.branch);
+const leafS = (geo) => surface(geo, 'leaves', ...COLS.leaves, { scale: 0.35 });
+const trunks = [];   // [x, z, radius] for spacing
+
+// The rim: big trees whose long branches reach over the clearing.
+{
+  const rim = { bark: [], twig: [], leaf: [] };
+  const n = 11;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2 + rr(-0.15, 0.15), d = rr(8.5, 11.5);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (pathDist(x, z) < 2.2) continue;
+    const r = rr(0.38, 0.55);
+    const t = tree({ h: rr(12, 16), r, branches: ri(5, 7), clump: 1.6, toward: new THREE.Vector3(-x, 0, -z).normalize(), reach: d / 10 });
+    const m = new THREE.Matrix4().makeTranslation(x, height(x, z) - 0.15, z);
+    for (const k of ['bark', 'twig', 'leaf']) rim[k].push(prep(t[k], i).applyMatrix4(m));
+    trunks.push([x, z, r]);
+  }
+  addMerged(barkS(mergeGeometries(rim.bark)), n);
+  addMerged(twigS(mergeGeometries(rim.twig)), n);
+  addMerged(leafS(mergeGeometries(rim.leaf)), n);
+}
+// The wood beyond: instanced tree shapes.
+{
+  const kinds = [];
+  for (let i = 0; i < 5; i++) kinds.push({ r: rr(0.28, 0.45), t: null, big: true });
+  for (let i = 0; i < 6; i++) kinds.push({ r: rr(0.05, 0.11), t: null, big: false });
+  for (const k of kinds) k.t = tree(k.big ? { h: rr(10, 15), r: k.r, branches: ri(4, 7), clump: 1.4 } : { h: rr(4.5, 8), r: k.r, branches: ri(2, 4), clump: 0.7 });
+  const xfs = kinds.map(() => []);
+  let tries = 0;
+  while (tries++ < 6000) {
+    const a = R() * Math.PI * 2, d = 11 + Math.pow(R(), 0.8) * 45;
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (pathDist(x, z) < 2.0) continue;
+    const big = R() < 0.35;
+    const k = big ? ri(0, 4) : ri(5, 10);
+    const s = rr(0.85, 1.2), r = kinds[k].r * s;
+    if (trunks.some(([tx, tz, tr]) => Math.hypot(tx - x, tz - z) < (tr + r) * 4 + 1.4)) continue;
+    trunks.push([x, z, r]);
+    xfs[k].push(xf(x, z, new THREE.Vector3(s, s, s), 0.15));
+  }
+  kinds.forEach((k, i) => {
+    addInstanced(barkS(k.t.bark), xfs[i]);
+    addInstanced(twigS(k.t.twig), xfs[i]);
+    addInstanced(leafS(k.t.leaf), xfs[i]);
+  });
+}
+
+// Undergrowth.
+{
+  const shapes = [0, 1, 2].map(() => {
+    const parts = [];
+    for (let i = ri(3, 6); i > 0; i--) {
+      const rad = rr(0.3, 0.7);
+      parts.push(lumpy(prep(new THREE.IcosahedronGeometry(rad, 1)), rad * 0.45, 2.0).applyMatrix4(
+        new THREE.Matrix4().compose(new THREE.Vector3(rr(-0.6, 0.6), rad * 0.6 + rr(0, 0.4), rr(-0.6, 0.6)), new THREE.Quaternion(), new THREE.Vector3(1, 0.85, 1))));
+    }
+    return mergeGeometries(parts);
+  });
+  const xfs = [[], [], []];
+  for (let i = 0; i < 900; i++) {
+    const a = R() * Math.PI * 2, d = rr(7.5, 45);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (pathDist(x, z) < 1.5 || (d > 14 && R() < 0.5)) continue;
+    const s = rr(0.6, 1.5);
+    xfs[i % 3].push(xf(x, z, new THREE.Vector3(s, s * rr(0.7, 1.2), s), 0.1));
+  }
+  shapes.forEach((g, i) => addInstanced(surface(g, 'undergrowth', ...COLS.undergrowth), xfs[i]));
+}
+
+// Ferns: arching fronds with serrated edges.
+{
+  const verts = [];
+  for (let k = 0; k < 9; k++) {
+    const a = k / 9 * Math.PI * 2 + rr(-0.2, 0.2), L = rr(0.7, 1.1);
+    const out = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), side = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a));
+    let pl = null, pr = null;
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      const spine = out.clone().multiplyScalar(t * L).add(new THREE.Vector3(0, L * (1.25 * t - 1.05 * t * t), 0));
+      const w = 0.14 * L * Math.pow(Math.sin(Math.PI * Math.min(t * 1.05, 1)), 0.7) * (i % 2 ? 1 : 0.45);
+      const l = spine.clone().addScaledVector(side, -w), r = spine.clone().addScaledVector(side, w);
+      if (pl) for (const v of [pl, pr, l, pr, r, l]) verts.push(v.x, v.y, v.z);
+      pl = l; pr = r;
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  const xfs = [];
+  for (let i = 0; i < 1600; i++) {
+    const a = R() * Math.PI * 2, d = rr(5.5, 40);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (pathDist(x, z) < 1.2 || (d > 12 && R() < 0.6)) continue;
+    const s = rr(0.6, 1.5);
+    xfs.push(xf(x, z, new THREE.Vector3(s, s, s)));
+  }
+  addInstanced(surface(prep(g), 'fern', ...COLS.fern), xfs);
+}
+
+// Grass tufts, thick in the clearing and along the path.
+{
+  const verts = [];
+  for (let b = 0; b < 14; b++) {
+    const base = new THREE.Vector3(rr(-0.15, 0.15), 0, rr(-0.15, 0.15));
+    const tall = rr(0.3, 0.75), a = R() * 6.28;
+    const lean = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(rr(0.05, 0.25));
+    const side = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)).multiplyScalar(0.025);
+    for (let i = 0; i < 3; i++) {
+      const t0 = i / 3, t1 = (i + 1) / 3;
+      const p0 = base.clone().add(new THREE.Vector3(0, tall * t0, 0)).addScaledVector(lean, t0 * t0);
+      const p1 = base.clone().add(new THREE.Vector3(0, tall * t1, 0)).addScaledVector(lean, t1 * t1);
+      const q = [p0.clone().addScaledVector(side, -(1 - t0)), p0.clone().addScaledVector(side, 1 - t0),
+                 p1.clone().addScaledVector(side, -(1 - t1)), p1.clone().addScaledVector(side, 1 - t1)];
+      for (const v of [q[0], q[1], q[2], q[1], q[3], q[2]]) verts.push(v.x, v.y, v.z);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  const xfs = [];
+  for (let i = 0; i < 9000; i++) {
+    const a = R() * Math.PI * 2, d = Math.sqrt(R()) * 30;
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    const pd = pathDist(x, z);
+    const keep = pd < 0.8 ? 0.03 : (d < 7.5 ? 0.8 : (pd < 4 ? 0.7 : 0.08));
+    if (R() > keep || Math.hypot(x, z) < 0.6) continue;
+    const s = rr(0.7, 1.3);
+    xfs.push(xf(x, z, new THREE.Vector3(s, s, s)));
+  }
+  addInstanced(surface(prep(g), 'grass', ...COLS.grass), xfs);
+}
+
+// Wildflowers: foxglove spikes, bluebell clusters, daisies and buttercups.
+{
+  const stem = (h) => placed(new THREE.CylinderGeometry(0.008, 0.012, h, 4, 1), new THREE.Vector3(0, h / 2, 0));
+  // Foxglove: a tall stem with bells down one side.
+  const fox = [stem(1.2)];
+  for (let i = 0; i < 12; i++) {
+    const y = 0.55 + i * 0.05, a = i * 0.9;
+    fox.push(placed(new THREE.ConeGeometry(0.035 - i * 0.0015, 0.08, 6, 1, true), new THREE.Vector3(Math.cos(a) * 0.04, y, Math.sin(a) * 0.04), towards(new THREE.Vector3(Math.cos(a), -1.2, Math.sin(a)))));
+  }
+  // Bluebell: drooping bells on arched stems.
+  const blue = [];
+  for (let s = 0; s < 5; s++) {
+    const a = s * 1.3, h = rr(0.22, 0.32);
+    blue.push(placed(new THREE.CylinderGeometry(0.004, 0.006, h, 3, 1), new THREE.Vector3(Math.cos(a) * 0.05, h / 2, Math.sin(a) * 0.05)));
+    for (let i = 0; i < 4; i++) blue.push(placed(new THREE.ConeGeometry(0.016, 0.035, 6, 1, true),
+      new THREE.Vector3(Math.cos(a) * (0.06 + i * 0.012), h - i * 0.04, Math.sin(a) * (0.06 + i * 0.012)), towards(new THREE.Vector3(Math.cos(a), -1.5, Math.sin(a)))));
+  }
+  // Daisy or buttercup: a flat head on a stem.
+  const head = (h, r) => [stem(h), placed(new THREE.CylinderGeometry(r, r * 0.6, 0.012, 10, 1), new THREE.Vector3(0, h, 0))];
+  const kinds = [
+    { g: mergeGeometries(fox), a: [0.55, 0.3, 0.55], b: [0.82, 0.5, 0.78], n: 30, near: [6, 11] },
+    { g: mergeGeometries(blue), a: [0.3, 0.35, 0.75], b: [0.5, 0.55, 0.92], n: 220, near: [4, 14] },
+    { g: mergeGeometries(head(0.12, 0.022)), a: [0.85, 0.85, 0.8], b: [1.0, 0.98, 0.9], n: 260, near: [0.8, 7.5] },
+    { g: mergeGeometries(head(0.2, 0.016)), a: [0.85, 0.75, 0.15], b: [1.0, 0.9, 0.3], n: 200, near: [0.8, 7.5] },
+  ];
+  for (const k of kinds) {
+    const xfs = [];
+    for (let i = 0; i < k.n; i++) {
+      const a = R() * Math.PI * 2, d = rr(...k.near);
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      if (pathDist(x, z) < 0.9) continue;
+      const s = rr(0.8, 1.3);
+      xfs.push(xf(x, z, new THREE.Vector3(s, s, s)));
+    }
+    addInstanced(surface(k.g, 'flower', k.a, k.b, { scale: 2 }), xfs);
+  }
+}
+
+// Deadwood: a fallen trunk across the clearing, stumps, sticks.
+const fungusSpots = [];
+{
+  const parts = [];
+  let obj = 0;
+  const logAt = (x, z, len, r, yaw) => {
+    const q = yawQ(yaw).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2));
+    parts.push(placed(new THREE.CylinderGeometry(r * 0.85, r, len, 12, 1), new THREE.Vector3(x, height(x, z) + r * 0.6, z), q, undefined, obj++));
+    const dir = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    for (let i = 0; i < 6; i++) { const t = rr(-0.45, 0.45) * len; fungusSpots.push([x + dir.x * t, z + dir.z * t, r * 1.1]); }
+  };
+  logAt(-3.2, 2.6, 6.5, 0.38, 0.5);
+  logAt(5.5, -4.5, 4.0, 0.26, 2.2);
+  for (const [x, z, r] of [[-5.5, -3.0, 0.5], [3.8, 5.6, 0.42], [-2.0, -6.4, 0.35], [6.6, 1.5, 0.3]]) {
+    const h = rr(0.4, 0.8);
+    parts.push(placed(new THREE.CylinderGeometry(r * 0.85, r, h, 12, 1), new THREE.Vector3(x, height(x, z) + h / 2 - 0.05, z), undefined, undefined, obj++));
+    for (let i = 0; i < 4; i++) { const a = R() * 6.28; fungusSpots.push([x + Math.cos(a) * r * 1.2, z + Math.sin(a) * r * 1.2, 0]); }
+  }
+  for (let i = 0; i < 14; i++) {
+    const a = R() * 6.28, d = rr(1.5, 9), len = rr(0.6, 1.6);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (pathDist(x, z) < 1) continue;
+    const q = yawQ(R() * 6.28).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2 - 0.08));
+    parts.push(placed(new THREE.CylinderGeometry(0.02, 0.035, len, 5, 1), new THREE.Vector3(x, height(x, z) + 0.03, z), q, undefined, obj++));
+  }
+  addMerged(surface(mergeGeometries(parts), 'deadwood', ...COLS.deadwood, { scale: 1.2 }), obj);
+}
+
+// Mushrooms: on and around the deadwood, and a few rings in the moss.
+{
+  const cap = (r, h) => mergeGeometries([placed(new THREE.CylinderGeometry(r * 0.22, r * 0.28, h, 6, 1), new THREE.Vector3(0, h / 2, 0)),
+    placed(new THREE.SphereGeometry(r, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.Vector3(0, h, 0), undefined, new THREE.Vector3(1, 0.6, 1))]);
+  const kinds = [
+    { g: cap(0.06, 0.08), a: [0.62, 0.5, 0.36], b: [0.85, 0.74, 0.58] },
+    { g: cap(0.09, 0.14), a: [0.75, 0.18, 0.12], b: [0.92, 0.32, 0.2] },
+    { g: cap(0.035, 0.06), a: [0.85, 0.82, 0.72], b: [0.98, 0.96, 0.88] },
+  ];
+  const xfs = [[], [], []];
+  for (const [x, z, lift] of fungusSpots) {
+    for (let i = ri(1, 4); i > 0; i--) {
+      const px = x + rr(-0.25, 0.25), pz = z + rr(-0.25, 0.25), s = rr(0.7, 1.4);
+      xfs[ri(0, 2)].push(new THREE.Matrix4().compose(new THREE.Vector3(px, height(px, pz) + lift * 0.9, pz), yawQ(R() * 6.28), new THREE.Vector3(s, s, s)));
+    }
+  }
+  for (let ring = 0; ring < 2; ring++) {
+    const cx = rr(-5, 5), cz = rr(-5, 5), rad = rr(0.8, 1.4);
+    if (pathDist(cx, cz) < 2) continue;
+    for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28; const x = cx + Math.cos(a) * rad, z = cz + Math.sin(a) * rad;
+      xfs[0].push(xf(x, z, new THREE.Vector3(1.2, 1.2, 1.2))); }
+  }
+  kinds.forEach((k, i) => addInstanced(surface(k.g, 'fungus', k.a, k.b, { scale: 3 }), xfs[i]));
+}
+
+// Stones, and one boulder near where you stand.
+{
+  const shapes = [0, 1, 2, 3].map((v) => lumpy(prep(new THREE.IcosahedronGeometry(1, 2)), 0.7, 0.9 + v * 0.2));
+  const xfs = [[], [], [], []];
+  for (let i = 0; i < 60; i++) {
+    const a = R() * 6.28, d = rr(1.5, 30);
+    const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (pathDist(x, z) < 1.4) continue;
+    const s = rr(0.1, 0.5) * (d > 10 ? 2 : 1);
+    xfs[i % 4].push(xf(x, z, new THREE.Vector3(s * rr(0.8, 1.4), s * 0.6, s), s * 0.25));
+  }
+  xfs[0].push(xf(2.8, 3.6, new THREE.Vector3(1.3, 0.9, 1.1), 0.3));
+  shapes.forEach((g, i) => addInstanced(surface(g, 'stone', ...COLS.stone, { scale: 1.5 }), xfs[i]));
+}
+
+// ---------------------------------------------------------------- word tables
+function wordTables() {
+  const rows = CATS.map((n) => {
+    const byLen = Array.from({ length: MAXL + 1 }, () => []);
+    for (const w of WORDS[n]) if (w.length >= 1 && w.length <= MAXL && byLen[w.length].length < 255) byLen[w.length].push(w);
+    return byLen;
+  });
+  const width = Math.max(1, ...rows.flatMap((r) => r.map((ws, l) => ws.length * l)));
+  const words = new Uint8Array(width * CATS.length * 32 * 4);
+  const lens = new Uint8Array(32 * CATS.length * 4);
+  rows.forEach((byLen, c) => {
+    const order = [];
+    byLen.forEach((ws, l) => {
+      ws.forEach((w, j) => { for (let i = 0; i < l; i++) words[((c * 32 + l) * width + j * l + i) * 4] = Math.min(Math.max(w.charCodeAt(i) - 32, 0), 94); });
+      if (ws.length) order.push(l);
+      lens[(c * 32 + l) * 4] = ws.length;
+      lens[(c * 32 + l) * 4 + 1] = order.length;
+    });
+    order.forEach((l, i) => { lens[(c * 32 + i) * 4 + 2] = l; });
+  });
+  const tex = (data, w, h) => { const t = new THREE.DataTexture(data, w, h, THREE.RGBAFormat); t.needsUpdate = true; return t; };
+  return { words: tex(words, width, CATS.length * 32), lens: tex(lens, 32, CATS.length) };
+}
+
+// ---------------------------------------------------------------- glyph atlas
+async function glyphAtlas() {
+  const face = '700 ' + ATLAS.size + 'px "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace';
+  try { await Promise.race([document.fonts.load(face), new Promise((r) => setTimeout(r, 2500))]); } catch (e) { /* fall back */ }
+  const cv = document.createElement('canvas');
+  cv.width = 16 * ATLAS.w; cv.height = 6 * ATLAS.h;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = '#fff'; g.font = face; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  const m = g.measureText('Hgy');
+  const base = (ATLAS.h + m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+  for (let i = 0; i < 95; i++) g.fillText(String.fromCharCode(32 + i), (i % 16) * ATLAS.w + ATLAS.w / 2, Math.floor(i / 16) * ATLAS.h + base);
+  const t = new THREE.CanvasTexture(cv);
+  t.flipY = false; t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+  return t;
+}
+
+// ---------------------------------------------------------------- render
+const canvas = document.getElementById('wood');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 400);
+camera.rotation.order = 'YXZ';
+camera.position.set(0, height(0, 0) + 1.6, 0);
+
+const rt = (w, h, filter) => new THREE.WebGLRenderTarget(w, h, { minFilter: filter, magFilter: filter, depthBuffer: true, type: THREE.UnsignedByteType });
+const idRT = rt(1, 1, THREE.NearestFilter), colRT = rt(1, 1, THREE.LinearFilter);
+const gridRT = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: false });
+const tables = wordTables();
+const quad = new THREE.BufferGeometry();
+quad.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const pass = (frag, uniforms) => { const s = new THREE.Scene(); const m = new THREE.Mesh(quad, new THREE.RawShaderMaterial({ glslVersion: THREE.GLSL3, vertexShader: QUAD_VERT, fragmentShader: frag, uniforms, depthTest: false, depthWrite: false })); m.frustumCulled = false; s.add(m); return s; };
+// Run-on text for when fitting is off: each category's words shuffled and joined.
+const STREAM = 8192;
+function streams() {
+  const data = new Uint8Array(STREAM * CATS.length * 4);
+  CATS.forEach((n, c) => {
+    const r = rng(1000 + c), list = WORDS[n].slice();
+    let i = 0;
+    while (i < STREAM) {
+      for (let k = list.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [list[k], list[j]] = [list[j], list[k]]; }
+      for (const ch of list.join(' ') + ' ') { if (i >= STREAM) break; data[(c * STREAM + i++) * 4] = Math.min(Math.max(ch.charCodeAt(0) - 32, 0), 94); }
+    }
+  });
+  const t = new THREE.DataTexture(data, STREAM, CATS.length, THREE.RGBAFormat); t.needsUpdate = true; return t;
+}
+const fitU = { ids: { value: idRT.texture }, words: { value: tables.words }, lens: { value: tables.lens }, ncat: { value: CATS.length }, skyCat: { value: cat('sky') }, yScale: { value: 1 },
+  fitWords: { value: true }, streams: { value: streams() }, streamLen: { value: STREAM } };
+const overU = { grid: { value: gridRT.texture }, colour: { value: colRT.texture }, atlas: { value: null }, cell: { value: new THREE.Vector2() }, screen: { value: new THREE.Vector2() }, lod: { value: 0 },
+  gain: { value: 1.75 }, colourAmt: { value: 1 }, gap: { value: 0 }, catMap: { value: false } };
+
+// Settings, changed from the ` menu and remembered in this browser.
+const DEFAULTS = { fit: true, map: false, rate: 60, size: 20, colour: 1, gain: 1.75, gap: 0 };
+const S = { ...DEFAULTS };
+try { Object.assign(S, JSON.parse(localStorage.getItem('wordwood') || '{}')); } catch (e) { /* storage unavailable */ }
+const fitScene = pass(FIT_FRAG, fitU), overScene = pass(OVERLAY_FRAG, overU);
+
+let dirty = true;
+function resize() {
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+  const dpr = renderer.getPixelRatio();
+  const cw = Math.max(3, Math.round(S.size * CELL_ASPECT * dpr)), ch = Math.max(5, Math.round(S.size * dpr));
+  const cols = Math.ceil(size.x / cw), rows = Math.ceil(size.y / ch), idH = Math.ceil(size.y / cw);
+  idRT.setSize(cols, idH);
+  colRT.setSize(cols * 2, idH * 2);
+  gridRT.setSize(cols, rows);
+  camera.aspect = size.x / size.y; camera.updateProjectionMatrix();
+  fitU.yScale.value = ch / cw;
+  overU.cell.value.set(cw, ch); overU.screen.value.copy(size);
+  overU.lod.value = Math.log2(Math.max(ATLAS.h / ch, 1));
+  dirty = true;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Head turning: the pointer's place on the page sets where you look.
+const look = { yaw: START_YAW, pitch: START_PITCH, ty: START_YAW, tp: START_PITCH };
+function aim(e) {
+  const nx = e.clientX / window.innerWidth * 2 - 1, ny = e.clientY / window.innerHeight * 2 - 1;
+  look.ty = START_YAW - nx * YAW;
+  look.tp = ny < 0 ? -ny * PITCH_UP : -ny * PITCH_DOWN;
+}
+const menu = document.getElementById('menu');
+window.addEventListener('pointermove', (e) => { if (!menu.contains(e.target)) aim(e); });
+window.addEventListener('pointerdown', (e) => { if (!menu.contains(e.target)) aim(e); });
+
+function apply(key) {
+  fitU.fitWords.value = S.fit;
+  overU.catMap.value = S.map;
+  overU.colourAmt.value = S.colour; overU.gain.value = S.gain; overU.gap.value = S.gap;
+  for (const k of Object.keys(DEFAULTS)) {
+    const el = document.getElementById(k);
+    if (el.type === 'checkbox') el.checked = S[k]; else el.value = S[k];
+    const out = document.getElementById(k + '-out');
+    if (out) out.textContent = S[k];
+  }
+  if (key === 'size' || key === 'all') resize();
+  dirty = true;
+  try { localStorage.setItem('wordwood', JSON.stringify(S)); } catch (e) { /* storage unavailable */ }
+}
+for (const k of Object.keys(DEFAULTS)) {
+  const el = document.getElementById(k);
+  el.addEventListener('input', () => { S[k] = el.type === 'checkbox' ? el.checked : Number(el.value); apply(k); });
+}
+document.getElementById('reset').addEventListener('click', () => { Object.assign(S, DEFAULTS); apply('all'); });
+document.getElementById('legend').textContent = 'Word bank:\n' +
+  CATS.map((n, i) => `  ${String(i).padStart(2)}  ${n} (${WORDS[n].length})`).join('\n') +
+  `\n  ${CATS.reduce((a, n) => a + WORDS[n].length, 0)} words in ${CATS.length} categories`;
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Backquote') { menu.hidden = !menu.hidden; e.preventDefault(); }
+  else if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey) { S.fit = !S.fit; apply('fit'); }
+});
+apply('all');
+
+overU.atlas.value = await glyphAtlas();
+// refit: also rechoose the words (ID and fit passes); otherwise keep the last ones.
+let lastFit = -1e9, gridStale = true;
+function draw(refit = true) {
+  camera.rotation.set(look.pitch, look.yaw, 0);
+  camera.updateMatrixWorld();
+  for (const m of meshes) m.mesh.material = m.col;
+  renderer.setRenderTarget(colRT); renderer.setClearColor(0x000000, 1); renderer.render(scene, camera);
+  if (refit) {
+    for (const m of meshes) m.mesh.material = m.id;
+    renderer.setRenderTarget(idRT); renderer.setClearColor(0x000000, 0); renderer.render(scene, camera);
+    renderer.setRenderTarget(gridRT); renderer.render(fitScene, ortho);
+    lastFit = performance.now(); gridStale = false;
+  } else gridStale = true;
+  renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 1); renderer.render(overScene, ortho);
+}
+// Local testing only: __ww.shot('name', yaw, pitch) saves a frame through serve.py.
+if (location.hostname === 'localhost') window.__ww = { draw, renderer, gridRT, idRT, colRT, WORDS, S, apply,
+  shot: (name, yaw = look.yaw, pitch = look.pitch) => new Promise((done) => {
+    look.yaw = look.ty = yaw; look.pitch = look.tp = pitch; draw();
+    renderer.domElement.toBlob((b) => fetch('/shot?name=' + name, { method: 'POST', body: b }).then(() => done(name)));
+  }) };
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.1); last = now;
+  const k = 1 - Math.exp(-dt * 2.5);
+  const dy = look.ty - look.yaw, dp = look.tp - look.pitch;
+  const moving = Math.abs(dy) > 1e-4 || Math.abs(dp) > 1e-4;
+  if (moving) { look.yaw += dy * k; look.pitch += dp * k; dirty = true; }
+  if (dirty || gridStale) {
+    dirty = false;
+    draw(!moving || S.rate >= 60 || now - lastFit >= 1000 / S.rate);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>

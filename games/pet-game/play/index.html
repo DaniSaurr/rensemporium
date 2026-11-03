@@ -1,0 +1,680 @@
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pets!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+    <script>
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d")
+      canvas.addEventListener('mousemove', mouseMove);
+      canvas.addEventListener('click', handleClick);
+      const gameObjects = [];
+      const eggs = [];
+      const walls = [];
+      const buttons = [];
+      const foods = [];
+      let eggText = true;
+      let showStats = false;
+      let mousePos = [];
+      let boxcount = 0;
+      let eggcount = 0;
+      let clickCount = 0;
+      let curser = {
+        size: 5,
+        colour: "blue",
+      }
+      const gravity = 10;
+      class GameObject
+      {
+        constructor(name, x,y, width, height,colour0, colour1, speed)
+        {
+          this.name = name;
+          this.x = x;
+          this.y = y;
+          this.colour0 = colour0;
+          this.colour1 = colour1
+          this.width = width;
+          this.height = height;
+          this.static = false;
+          this.speed = speed;
+          this.direction = "left";
+          this.jumping = false;
+          this.action = "moving";
+          this.animate = "idle";
+          this.t = 0;
+          this.eyeY = this.height / 2;
+          this.eyeHeight = -1 * (this.height / 5);
+          this.leftEyeX = this.width / 4;
+          this.rightEyeX = (this.width / 4) + (this.width / 3);
+          this.timesClicked = 0;
+          this.foodEaten = 0;
+        }
+        draw()
+        {
+          ctx.fillStyle = this.colour0;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+          ctx.fillStyle = this.colour1;
+          ctx.fillRect(this.x, this.y, this.width, this.height / 8);
+          if(this.direction == "left" && this.action == "moving")
+          {
+            ctx.fillStyle = this.colour1;
+            ctx.fillRect(this.x+this.width, this.y, this.width / 12, this.height);
+            this.leftEyeX = this.width / 8;
+            this.rightEyeX = this.width / 2;
+          }
+          else if(this.direction == "right" && this.action == "moving")
+          {
+            ctx.fillStyle = this.colour1;
+            ctx.fillRect(this.x - this.width / 12, this.y, this.width / 12, this.height);
+            this.leftEyeX = this.width / 3;
+            this.rightEyeX = this.width - (this.width / 3);
+          }
+          else{
+            ctx.fillStyle = this.colour1;
+            ctx.fillRect(this.x+this.width, this.y, 2, this.height);
+            ctx.fillRect(this.x - 2, this.y, 2, this.height);
+            this.leftEyeX = this.width / 4;
+            this.rightEyeX = (this.width / 4) + (this.width / 3);
+          }
+          ctx.fillStyle = "black";
+          ctx.fillRect(this.x + this.leftEyeX, this.y + this.eyeY, this.width / 6, this.eyeHeight);
+          ctx.fillRect(this.x + this.rightEyeX, this.y + this.eyeY, this.width / 6, this.eyeHeight);
+
+          ctx.font = "15px Comic Sans MS"
+          ctx.fillStyle = "white"
+          // ctx.strokeText(this.name, this.x,this.y-3);
+          // ctx.fillText(this.name, this.x,this.y-3);
+        }
+        randomizeDirection()
+        {
+          let diceRoll = randomRange(1,2)
+          if(diceRoll == 1)
+          {
+            this.direction = "right";
+          }
+          else{
+            this.direction = "left";
+          }
+        }
+        doAnimation()
+        {
+          this.eyeY = this.height / 2;
+          switch(this.animate)
+          {
+            case "idle":
+              let diceRoll = randomRange(1,500);
+              if(diceRoll == 1)
+              {
+                this.animate = "eyeClose";
+              }
+              else
+              {
+                this.animate = "idle";
+              }
+              break;
+            case "eyeClose":
+              if(this.eyeHeight < 1)
+              {
+                this.eyeHeight += 4;
+              }
+              else {
+                this.animate = "eyeOpen"
+              }
+              break;
+            case "eyeOpen":
+              let eyeSize = -1 * (this.height / 5);
+              if(this.eyeHeight > eyeSize)
+              {
+                this.eyeHeight -=4;
+              }
+              else{
+                this.animate = "idle";
+              }
+
+          }
+        }
+        decideAction()
+        {
+          let diceRoll = randomRange(1,3);
+          switch(diceRoll)
+          {
+            case 1: this.action = "jumping";
+            break;
+            case 2: this.action = "moving";
+            break;
+            case 3: this.action = "stopping"
+          }
+          this.action = "jumping";
+        }
+        doAction()
+        {
+          switch(this.action)
+          {
+            case "moving":
+              this.t += 1;
+              if(this.t>randomRange(150,300))
+              {
+                this.t = 0;
+                let diceRoll = randomRange(1,2)
+                if(diceRoll == 1)
+                {
+                  this.randomizeDirection();
+                  this.action = "moving";
+                }
+                else
+                {
+                  this.action = "stopping";
+                }
+              }
+              if(checkCollision(this, leftWall))
+              {
+                this.direction = "right";
+              }
+              if(checkCollision(this, rightWall))
+              {
+                this.direction = "left";
+              }
+              if(checkCollision(this, floor)&& this.static == false)
+              {
+                if(this.direction == "right"){
+                  this.x += this.speed;
+                }
+                if(this.direction == "left")
+                {
+                  this.x -= this.speed;
+                }
+              }
+
+              break;
+            case "stopping":
+              this.t += 1;
+              if(this.t>randomRange(10,50))
+              {
+                this.t = 0;
+                let diceRoll = randomRange(1,4)
+                if(diceRoll == 1)
+                {
+                  this.action = "moving"
+                }
+                else if(diceRoll == 2)
+                {
+                  this.action = "stopping"
+                }
+                else{
+                  this.action = "jumping"
+                }
+              }
+              break;
+            case "jumping":
+              this.t += 1;
+              if(this.t>10)
+              {
+                this.t = 0;
+                this.action = "stopping"
+              }
+              else {
+                this.randomizeDirection();
+                this.y -= this.speed * randomRange(1,3.5);
+              }
+              break;
+            case "falling":
+              this.t += 1;
+              if(this.t>500)
+              {
+                this.t = 0;
+                this.decideAction();
+              }
+              break;
+          }
+        }
+        Gravity()
+        {
+          if(this.action != "jumping")
+          {
+            if(!checkCollision(this, floor))
+            {
+              this.y += gravity;
+            }
+          }
+        }
+        checkEating()
+        {
+          for(let i = foods.length - 1; i >= 0; i--)
+          {
+            if(checkCollision(this, foods[i]))
+            {
+              foods.splice(i,1);
+              this.foodEaten++;
+              this.height++;
+              this.width++;
+              this.y--;
+            }
+          }
+        }
+        checkHover()
+        {
+          const hitbox = new Path2D();
+          hitbox.rect(this.x, this.y, this.width, this.height);
+          if(ctx.isPointInPath(hitbox, mousePos[0], mousePos[1]))
+          {
+            showStats = true;
+            if(this.timesClicked % 2 == 0)
+            {
+              this.exclaim("?");
+              this.direction = "front"
+              this.action = "stopping";
+            }
+            else
+            {
+              this.exclaim("!");
+              this.direction = "front"
+              this.action = "stopping";
+            }
+          }
+          else
+          {
+            this.timesClicked = 0;
+            showStats = false;
+          }
+        }
+        checkClick()
+        {
+          const hitbox = new Path2D();
+          hitbox.rect(this.x, this.y, this.width, this.height);
+          if(ctx.isPointInPath(hitbox, mousePos[0], mousePos[1]))
+          {
+            this.timesClicked += 1;
+          }
+        }
+        exclaim(text)
+        {
+          ctx.font = "60px Comic Sans MS";
+          ctx.fillStyle = "black";
+          ctx.fillText(text,this.x + (this.width/2)-5,this.y-10);
+        }
+      }
+      class Wall
+      {
+        constructor(name, x,y, width, height,colour0, colour1,speed)
+        {
+          this.name = name;
+          this.x = x;
+          this.y = y;
+          this.colour0 = colour0;
+          this.colour1 = colour1;
+          this.width = width;
+          this.height = height;
+          this.static = true;
+          this.speed = speed;
+          this.direction = "left";
+          this.jumping = false;
+        }
+        draw()
+        {
+          ctx.fillStyle = this.colour0;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+          ctx.fillStyle = this.colour1;
+          ctx.fillRect(this.x, this.y-10, this.width, (this.height / 8) + 10);
+
+          ctx.font = "15px Comic Sans MS"
+          ctx.fillStyle = "white"
+        }
+      }
+      class Egg
+      {
+        constructor(name, x,y, width, height, colour0, colour1, speed)
+        {
+          this.name = name;
+          this.x = x;
+          this.y = y;
+          this.colour0 = colour0;
+          this.colour1 = colour1;
+          this.width = width;
+          this.height = height;
+          this.static = false;
+          this.speed = speed;
+          this.direction = "left";
+          this.jumping = false;
+          this.clickedCount = 0;
+        }
+        draw()
+        {
+          drawEgg(this.x,this.y,this.width,this.height,this.colour0);
+        }
+        Gravity()
+        {
+          if(!checkCollision(this, floor))
+          {
+            this.y += gravity;
+          }
+        }
+        checkClick(clickX, clickY)
+        {
+          const hitbox = new Path2D();
+          hitbox.ellipse(this.x, this.y, this.height, this.width, 0, 0, 2 * Math.PI);
+          if(ctx.isPointInPath(hitbox, clickX, clickY))
+          {
+            clickCount++;
+            this.clickedCount++;
+            if(this.clickedCount > 9)
+            {
+              this.Hatch();
+            }
+          }
+        }
+        Hatch()
+        {
+          eggText = false;
+          let name = String("box" + boxcount);
+          let obj = new GameObject(name,this.x,this.y, this.width, this.height,this.colour1,this.colour0, this.speed)
+          obj.jumping = true;
+          gameObjects.push(obj);
+          eggs.shift();
+        }
+      }
+      class Button
+      {
+        constructor(text, x,y,width,height)
+        {
+          this.text = text;
+          this.x = x;
+          this.y = y;
+          this.width = width;
+          this.height = height;
+        }
+        draw()
+        {
+          ctx.strokeStyle = "white";
+          ctx.strokeRect(this.x, this.y, this.height, this.width);
+          ctx.fillStyle = "black";
+          ctx.font = "30px Comic Sans MS";
+          ctx.fillText(this.text, this.x+10, this.y+60);
+        }
+        checkClick(clickX, clickY)
+        {
+          const hitbox = new Path2D();
+          hitbox.rect(this.x, this.y, this.height, this.width);
+          if(ctx.isPointInPath(hitbox, clickX, clickY))
+          {
+            return true;
+          }
+        }
+      }
+      class Food
+      {
+        constructor(x,y, width, height, colour)
+        {
+          this.x = x;
+          this.y = y;
+          this.width = width;
+          this.height = height;
+          this.colour = colour;
+          this.falling = true;
+        }
+        Gravity()
+        {
+          if(checkCollision(this, floor))
+          {
+            this.falling = false;
+          }
+          if(this.falling == true)
+          {
+            this.y += gravity;
+          }
+          for(let i = 0; i < foods.length; i++)
+          {
+            for(let j = 0; j < foods.length; j++)
+            {
+              if(i !== j && checkCollision(foods[i], foods[j]))
+              {
+                foods[i].falling = false;
+              }
+            }
+          }
+        }
+        draw()
+        {
+          ctx.fillStyle = this.colour;
+          ctx.fillRect(this.x,this.y,this.width,this.height,this.colour);
+        }
+        checkClick(clickX, clickY)
+        {
+          const hitbox = new Path2D();
+          hitbox.rect(this.x, this.y, this.height, this.width);
+          if(ctx.isPointInPath(hitbox, clickX, clickY))
+          {
+            return true;
+          }
+        }
+      }
+
+      function mouseMove(event){
+        mousePos[0] = event.offsetX;
+        mousePos[1] = event.offsetY;
+      }
+
+      let floor = new Wall("floor",0,canvas.height -50, canvas.width, 50,"orange","#964B00",0)
+      let leftWall = new Wall("leftWall", 0,0, 50, canvas.height, "orange","orange", 0);
+      let rightWall = new Wall("rightWall", canvas.width - 50 ,-50, canvas.height, canvas.height + 100, "orange","orange", 0);
+      let resetBtn = new Button("reset", 1000,50,100,100);
+      let foodBtn = new Button("food", 1000, 175, 100, 100);
+      leftWall.static = true;
+      rightWall.static = true;
+      floor.static = true;
+      walls.push(floor);
+      walls.push(leftWall);
+      walls.push(rightWall);
+      spawnNewEgg();
+      gameStart();
+
+
+      function spawnNewEgg()
+      {
+        let firstEggColours = randomColours();
+        let name = String("egg" + eggcount);
+        let obj = new Egg(name,randomRange(60,1100),0, randomRange(22,33)+randomRange(22,33)+randomRange(22,33), randomRange(10, 150)+randomRange(10, 150),firstEggColours[1], firstEggColours[0], randomRange(1,2)+randomRange(0,2)+randomRange(0,3))
+        eggs.push(obj);
+      }
+
+      function gameStart() {
+        //initialise the game state
+        update();
+      }
+      function update()
+      {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        ctx.fillStyle = "grey"
+        ctx.fillRect(0,0,1200,1200);
+        ctx.fillStyle = "black"
+        drawAllObjects();
+        drawEgg();
+        for(let i = 0; i < gameObjects.length; i++)
+        {
+          gameObjects[i].checkHover();
+        }
+        for(let i = 0; i < gameObjects.length; i++)
+        {
+          gameObjects[i].checkEating();
+        }
+        displayUI();
+        displayCurser();
+        displayEggText();
+
+
+        window.requestAnimationFrame(update);
+      }
+      function drawEgg(x, y, height, width, colour)
+      {
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.ellipse(x, y, height, width, 0, 0, 2 * Math.PI);
+        ctx.fill();
+
+      }
+      function displayUI()
+      {
+        for(let i = 0; i < gameObjects.length; i++)
+        {
+          if(showStats == true)
+          {
+            ctx.fillStyle = "white";
+            ctx.font = "30px Comic Sans MS";
+            ctx.fillText("STATS:",100,50)
+            ctx.fillText("height = " +gameObjects[i].height, 100,100);
+            ctx.fillText("width = " +gameObjects[i].width, 100,150);
+            ctx.fillText("speed = " +gameObjects[i].speed, 100,200);
+            ctx.fillText("food = " +gameObjects[i].foodEaten, 100,250);
+          }
+        }
+      }
+      function displayEggText()
+      {
+        if(eggText == true)
+        {
+          if(clickCount > 6)
+          {
+            ctx.font = "80px Comic Sans MS";
+            ctx.fillStyle = "black";
+            ctx.fillText("that's it! keep clicking", 100,100);
+          }
+          else if(clickCount > 0){
+          ctx.font = "100px Comic Sans MS";
+          ctx.fillStyle = "black";
+          ctx.fillText("keep going!", 100,100);
+          }
+          else{
+            ctx.font = "100px Comic Sans MS";
+            ctx.fillStyle = "black";
+            ctx.fillText("click the egg!", 100,100);
+          }
+        }
+      }
+      function displayCurser()
+      {
+        ctx.fillStyle = curser.colour;
+        ctx.fillRect(mousePos[0] - curser.size / 2, mousePos[1] - curser.size / 2, curser.size, curser.size);
+      }
+      function handleClick(event)
+      {
+        if(eggs.length > 0)
+        {
+          for(let i = 0; i < eggs.length; i++)
+          {
+            eggs[i].checkClick(mousePos[0],mousePos[1]);
+          }
+        }
+        else if(eggs.length < 1 && gameObjects.length > 0)
+        {
+          if(resetBtn.checkClick(mousePos[0],mousePos[1]))
+          {
+            console.log("you clicked reset")
+            gameObjects.length = 0;
+            spawnNewEgg();
+          }
+          if (foodBtn.checkClick(mousePos[0], mousePos[1]))
+          {
+            foods.push(new Food(randomRange(200,800),0,25,25,"pink"));
+          }
+          for(let i = 0; i < gameObjects.length; i++)
+          {
+            gameObjects[i].checkClick(mousePos[0],mousePos[1]);
+          }
+        }
+        else
+        {
+
+        }
+
+      }
+      function drawAllObjects()
+      {
+        resetBtn.draw();
+        foodBtn.draw();
+        for(let i = 0; i < walls.length; i++)
+        {
+          walls[i].draw();
+        }
+        for(let i = 0; i < gameObjects.length; i++)
+        {
+          gameObjects[i].doAnimation();
+          gameObjects[i].doAction();
+          gameObjects[i].Gravity();
+
+          gameObjects[i].draw();
+        }
+        for(let i = 0; i < eggs.length; i++)
+        {
+          eggs[i].Gravity();
+
+          eggs[i].draw();
+        }
+        for(let i = 0; i < foods.length; i++)
+        {
+          foods[i].Gravity();
+
+          foods[i].draw();
+        }
+      }
+
+      function checkCollision(box1, box2)
+      {
+        //define a bunch of local vars for the top right and bottom left of each box
+        let b1tr = {
+          x: box1.x,
+          y: box1.y
+        }
+        let b1bl = {
+          x: box1.x + box1.width,
+          y: box1.y + box1.height
+        }
+        let b2tr = {
+          x: box2.x,
+          y: box2.y
+        }
+        let b2bl = {
+          x: box2.x + box2.width,
+          y: box2.y + box2.height
+        }
+
+        //actually check if the boxes are overlappy
+        if(b2tr.x <= b1bl.x &&
+           b2bl.x >= b1tr.x &&
+           b2tr.y <= b1bl.y &&
+           b2bl.y >= b1tr.y)
+        {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+      //utility functions
+      function randomRange(min, max) {
+        return Math.floor(Math.random()*(max-min+1))+min;
+      }
+      function randomColour() {
+        let num = Math.floor(Math.random()*(16777215-1+1))+1;
+        return '#'+num.toString(16);
+      }
+      function randomColours() {
+        var r = Math.floor(Math.random() * 256);
+        var g = Math.floor(Math.random() * 256);
+        var b = Math.floor(Math.random() * 256);
+        let colour = ["rgb(" + r + "," + g + "," + b + ")","rgb(" + (r / 2) + "," + (g / 2) + "," + (b / 2) + ")"];
+        return colour;
+}
+      function isBetween(number, lowerBound, upperBound) {
+        return number >= lowerBound && number <= upperBound;
+      }
+
+    </script>
+  </body>
+</html>
