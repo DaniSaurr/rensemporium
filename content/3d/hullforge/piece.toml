@@ -1,0 +1,12 @@
+title = "hullforge"
+year = "2026"
+updated = "2026-11-03"
+made_with = ["blender 5.1", "python"]
+natural = true
+blurb = ""
+caption = ""
+thumb = "ardea-lophia.jpg"
+hero = { type = "image", src = "ardea-lophia.jpg", alt = "a white heron mech with red-dipped wing blades and a long lance, and a purple anglerfish bishop with a huge toothed underbite, both low-poly with ink outlines" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+]

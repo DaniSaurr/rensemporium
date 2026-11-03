@@ -1,6 +1,6 @@
 title = "monster ladies"
 year = "2026"
-updated = "2026-10-27"
+updated = "2026-11-03"
 made_with = ["blender 5.1", "python"]
 lead = true
 natural = true
@@ -201,6 +201,15 @@ gallery = [
   { src = "vespera-full.jpg", group = "vespera", contain = true },
   { src = "vespera-back.jpg", group = "vespera", contain = true },
   { src = "vespera-face.jpg", group = "vespera", contain = true },
+  { src = "falx-full.jpg", group = "falx", contain = true },
+  { src = "falx-back.jpg", group = "falx", contain = true },
+  { src = "falx-face.jpg", group = "falx", contain = true },
+  { src = "jadra-full.jpg", group = "jadra", contain = true },
+  { src = "jadra-back.jpg", group = "jadra", contain = true },
+  { src = "jadra-face.jpg", group = "jadra", contain = true },
+  { src = "orba-full.jpg", group = "orba", contain = true },
+  { src = "orba-back.jpg", group = "orba", contain = true },
+  { src = "orba-face.jpg", group = "orba", contain = true },
   { src = "abyssa-full.jpg", group = "abyssa", contain = true },
   { src = "abyssa-back.jpg", group = "abyssa", contain = true },
   { src = "abyssa-face.jpg", group = "abyssa", contain = true },

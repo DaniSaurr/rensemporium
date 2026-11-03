@@ -1,0 +1,20 @@
+title = "hull girls"
+year = "2026"
+updated = "2026-11-03"
+made_with = ["blender 5.1", "python"]
+natural = true
+blurb = ""
+caption = ""
+thumb = "mobula-dynasta.jpg"
+hero = { type = "image", src = "mobula-dynasta.jpg", alt = "a woman in navy armour banking on a plated manta wing, and a woman in green armour with a ringed amber horn landing on one knee, both low-poly with ink outlines" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "mobula-hull-front.jpg", group = "mobula", contain = true },
+  { src = "mobula-hull-three-quarter.jpg", group = "mobula", contain = true },
+  { src = "mobula-hull-back.jpg", group = "mobula", contain = true },
+  { src = "mobula-hull-face.jpg", group = "mobula", contain = true },
+  { src = "dynasta-hull-three-quarter.jpg", group = "dynasta", contain = true },
+  { src = "dynasta-hull-front.jpg", group = "dynasta", contain = true },
+  { src = "dynasta-hull-back.jpg", group = "dynasta", contain = true },
+  { src = "dynasta-hull-face.jpg", group = "dynasta", contain = true },
+]
