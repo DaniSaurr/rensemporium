@@ -1,0 +1,28 @@
+title = "chimeras"
+year = "2026"
+updated = "2026-11-03"
+made_with = ["blender 5.1", "python"]
+natural = true
+blurb = ""
+caption = ""
+thumb = "qilina-gryphia.jpg"
+hero = { type = "image", src = "qilina-gryphia.jpg", alt = "a woman on a jade-scaled deer's body with antlers, and a woman on a gold gryphon's body with open wings, both low-poly" }
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+gallery = [
+  { src = "qilina-three-quarter.jpg", group = "qilina", contain = true },
+  { src = "qilina-front.jpg", group = "qilina", contain = true },
+  { src = "qilina-side.jpg", group = "qilina", contain = true },
+  { src = "qilina-face.jpg", group = "qilina", contain = true },
+  { src = "gryphia-three-quarter.jpg", group = "gryphia", contain = true },
+  { src = "gryphia-front.jpg", group = "gryphia", contain = true },
+  { src = "gryphia-side.jpg", group = "gryphia", contain = true },
+  { src = "gryphia-face.jpg", group = "gryphia", contain = true },
+  { src = "chimaera-three-quarter.jpg", group = "chimaera", contain = true },
+  { src = "chimaera-front.jpg", group = "chimaera", contain = true },
+  { src = "chimaera-side.jpg", group = "chimaera", contain = true },
+  { src = "chimaera-face.jpg", group = "chimaera", contain = true },
+  { src = "arachne-three-quarter.jpg", group = "arachne", contain = true },
+  { src = "arachne-front.jpg", group = "arachne", contain = true },
+  { src = "arachne-back.jpg", group = "arachne", contain = true },
+  { src = "arachne-face.jpg", group = "arachne", contain = true },
+]
