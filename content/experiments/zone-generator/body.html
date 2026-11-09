@@ -1,0 +1,72 @@
+<h2>the idea</h2>
+<p>You give it a seed and it makes a map. The map is cut into rectangles using Boris the Brave's list of 5×5 rectangle subdivisions, and each rectangle becomes a zone with a law. The law decides what's floor and what's solid inside that zone, and where two zones meet their laws blend. I'm treating it as a tool for now and holding off on deciding what it's for.</p>
+<figure><img src="map-first.png" alt="a coloured map of rectangular zones with blue and green caves and halls carved through them"><figcaption>where it started</figcaption></figure>
+
+<h2>laws by seed</h2>
+<p>At first every map could use every law, and they all came out looking alike. So each seed now draws two or three laws from a longer list. One map gets rooms and chambers, the next gets maze and spine.</p>
+<p>Stairwells and glyphs only fit in big zones. Giving them a guaranteed share squeezed other laws off the map, and taking the guarantee away made them almost disappear. They ended up as accents added on top of a map's main laws, in about half of maps.</p>
+<figure><img src="map-laws.png" alt="a map whose inner zones are mostly maze and spine corridors, surrounded by solid coloured edge zones"><figcaption>seed 13, maze and spine</figcaption></figure>
+
+<h2>start and exit</h2>
+<p>The generator keeps a graph of which zones connect. I wanted to begin at the end of something, so the player starts in a dead end of that graph, or in an edge zone when the map doesn't have one. The exit uses the same rule in reverse, picking somewhere a long walk away. Walking into it drops you into the next seed.</p>
+<figure><img src="dead-end.png" alt="a map of one winding passage with the player's view cone at the bottom of a dead-end corridor"><figcaption>a dead-end start</figcaption></figure>
+<p>By this point the maps were stable enough that I got nervous about breaking them. Every version since has been frozen before changing anything.</p>
+
+<h2>surfaces</h2>
+<p>The walls only use two mesh shapes, long and short, so everything else had to come from texture. Textures tile at a fixed scale in both directions and get cut off where they reach the ceiling. Nothing stretches.</p>
+<p>Each map picks one cave type, dry, wet or overgrown, and one set of rock textures. Letting every zone choose its own would turn the whole thing into bowls of oatmeal. Built laws like halls and mazes pull from their own lists. Everything gets crushed to 128 pixels and 32 colours and drawn at about 285 lines.</p>
+<figure><img src="first-textures.jpg" alt="a low-res corridor of cobbled stone walls with a black floor patterned in gold lines"><figcaption>the first textured view of a real map</figcaption></figure>
+
+<h2>rearranging</h2>
+<p>Once I could walk around in it, the first-person view had to be the main thing on the page. I cut up a screenshot to show how I wanted the panels.</p>
+<figure><img src="layout-mockup.png" alt="a cut-up screenshot with the generator controls on the left, the view in the centre with four hand-drawn texture dropdowns below it, and the map on the right"><figcaption>the mockup</figcaption></figure>
+<figure><img src="layout-result.jpg" alt="the tool laid out in three columns matching the mockup"><figcaption>the result, with the dropdowns still empty</figcaption></figure>
+<p>The dropdowns later became one column per law, however many the map has, so I can see and override each law's wall, floor and ceiling.</p>
+
+<h2>seams</h2>
+<p>Zones used to change texture on a hard line. I added sliders for how wide the blend is, how coarse the dither is, how far the line wanders and how much it fades. Walls only blend along their own length, so a wall running beside a zone line keeps its texture.</p>
+<figure><img src="seam-hard.jpg" alt="a stone floor meeting a black patterned floor along a sharp line"><figcaption>hard line</figcaption></figure>
+<figure><img src="seam-dither.jpg" alt="the same floors breaking into scattered specks across a wide band"><figcaption>a wide dither</figcaption></figure>
+<figure><img src="seam-soft.jpg" alt="the same floors fading into each other"><figcaption>a soft fade</figcaption></figure>
+<p>After playing with them I landed on something much tighter than any of these, a 0.25 metre band with a full fade.</p>
+
+<h2>looking at real places</h2>
+<p>I collected some images of places I liked, among them a cistern of huge piers, a gothic hall with a checker floor, a rubble passage lit from slots in its wall, and a bath house with one hole in its vault. They share things the maps didn't have. The ceilings are arches. The light comes from somewhere. The spaces repeat.</p>
+<p>I wanted a lot of variety within maps and between them, so all of this is dealt by the seed. Each map gets a colour grade, a darkness, a light recipe and a small deck of vault styles for its laws to draw from. None of it can move a wall, which keeps the simple generation underneath intact.</p>
+
+<h2>mirrors</h2>
+<p>My idea was to take whole zones, draw a line down one axis, and mirror them, sparingly and at random. It suits the generator because a zone's centre line always lands exactly on the grid. The line usually becomes a walkable aisle down the middle, and sometimes a solid spine wall. Neighbouring zones and tunnels wear the symmetry away at the edges, which I like.</p>
+<figure><img src="map-mirrors.png" alt="a map where several zones are visibly symmetrical down their centre lines"><figcaption>a map with a lot of mirrors</figcaption></figure>
+<figure><img src="mirrored-aisle.jpg" alt="evenly spaced stone piers on either side of a wide grey floor"><figcaption>looking across a mirrored zone</figcaption></figure>
+
+<h2>vaults</h2>
+<p>The ceiling height comes from how far you are from the nearest wall, on a curve. Corridors become barrel vaults, and narrow openings get low arches because height follows width. There's no arch model anywhere. Columns can either count as walls, which makes the ceiling arch from column to column, or be ignored, and then the vault carries straight over them.</p>
+<figure><img src="vault.png" alt="a dark vaulted room, with a block of stone trimmed to an arch where the curved ceiling cuts it off"><figcaption>a block cut to shape by the vault passing over it</figcaption></figure>
+<p>Curved ceilings first cut sawtooth edges into diagonal walls. Keeping the ceiling level for the first 0.6 metres fixed that, and it reads like a cornice.</p>
+
+<h2>the wall that glowed</h2>
+<figure><img src="wall-glow.png" alt="a pale tan stone wall that looks lit from within, between darker grey brick walls"><figcaption>it felt like light was coming from the wall</figcaption></figure>
+<p>Light spreads through open floor so it stops at walls, but each wall was reading its brightness from solid points that had copied the brightest neighbour, including the room behind it. Walls now read light from the side they face.</p>
+
+<h2>skylights</h2>
+<p>The light shafts were my favourite thing so far, so they got more attention. They vary in size now, and high ceilings are far more likely to have one. I tried several colours per map and went straight back to one. The opening used to be a separate shape that clipped against the curve of the vault, so it's now painted onto the ceiling itself.</p>
+<figure><img src="sky-teal.jpg" alt="a teal room with a small round skylight above dark stone"><figcaption>teal</figcaption></figure>
+<figure><img src="sky-amber.jpg" alt="a long barrel-vaulted hall with a warm beam at its far end"><figcaption>amber</figcaption></figure>
+<figure><img src="sky-pale.jpg" alt="pale columns on a blue-lit floor under a skylight"><figcaption>pale moonlight</figcaption></figure>
+
+<h2>sorting textures</h2>
+<p>I'd only been using 61 of the 274 textures I'd pulled from my folders, so I added the rest and made a page to keep or cut each one by hand. My cuts weren't reaching the generator for a while. The bug only happens in Firefox, which is what I use, because Firefox keeps saved data separately for each local file. The sort page now opens from the generator and sends its choices across.</p>
+<figure><img src="sort-page.jpg" alt="a grid of texture thumbnails with keep and cut buttons under each, some already cut and faded"><figcaption>some of what the automatic sort let in</figcaption></figure>
+<p>Plenty of the overgrown tiles turned out to be vines on a pure black or green background. Used as patches they made flat blotches, so they now only hang from ceilings, with the green keyed out.</p>
+<figure><img src="curtain-purple.jpg" alt="purple strands hanging down a patchy stone wall"><figcaption>black background, purple strands</figcaption></figure>
+<figure><img src="curtain-ivy.jpg" alt="a few ivy sprigs hanging on a sandy wall"><figcaption>ivy</figcaption></figure>
+
+<h2>piping</h2>
+<p>Walking around seed 6, I noticed the line where the walls meet the vault could hold something. A band or a pipe could wrap around the room along that line and then run down to the floor before it meets the next zone.</p>
+<figure><img src="piping-idea-1.png" alt="a screenshot of panelled walls with a green line drawn along their tops"><figcaption>drawing on a screenshot</figcaption></figure>
+<figure><img src="piping-idea-2.png" alt="another screenshot with a green line along the wall top, turning straight down at the right"><figcaption>running down at the zone edge</figcaption></figure>
+<p>Piping doesn't have to mean pipes. It's one shape swept along a path, so different values give different things. It'll be spread around by seed eventually, but I need to find the limits first, so for now there's a test panel that works on one zone at a time.</p>
+<figure><img src="pipe-single.jpg" alt="a single rust-coloured pipe with collars following the top of stone walls"><figcaption>one pipe</figcaption></figure>
+<figure><img src="pipe-cables.jpg" alt="three thin parallel cables along the wall tops"><figcaption>three cables</figcaption></figure>
+<figure><img src="pipe-heavy.jpg" alt="a thick ribbed pipe running across the walls"><figcaption>heavy, with ribs</figcaption></figure>
+<figure><img src="pipe-dado.jpg" alt="a thin level rail running low along the walls"><figcaption>a low rail</figcaption></figure>
