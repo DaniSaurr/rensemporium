@@ -1,0 +1,17 @@
+title = "zone generator: before"
+year = "2026"
+updated = "2026-11-08"
+made_with = ["javascript", "python"]
+blurb = ""
+thumb = "wall-pieces.png"
+hero = { type = "image", src = "wall-pieces.png", alt = "a grid of green and sand wang tiles with every wall drawn as either a diagonal or a straight piece, coloured by type" }
+links = [
+  { label = "play the last version", href = "play/zones-props.html" },
+  { label = "wang tile playground", href = "play/wang-2edge.html" },
+  { label = "room walker", href = "play/room-pov.html" },
+  { label = "first zone generator", href = "play/zones.html" },
+  { label = "what came next", href = "../zone-generator/" },
+]
+ai = [ { tool = "claude", models = ["opus 5.5"] } ]
+credits = ["5×5 rectangle subdivisions by boris the brave"]
+tags = ["prequel"]

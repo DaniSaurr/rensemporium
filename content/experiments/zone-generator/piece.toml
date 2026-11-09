@@ -3,6 +3,8 @@ year = "2026"
 updated = "2026-11-09"
 made_with = ["javascript", "three.js", "python"]
 blurb = ""
+lead = true
+links = [ { label = "before this", href = "../zone-generator-prequel/" } ]
 thumb = "skylight.png"
 hero = { type = "image", src = "skylight.png", alt = "first-person view of a checker floor between stone columns, a pale beam falling from a bright opening in a curved ceiling" }
 ai = [ { tool = "claude", models = ["opus 5.5"] } ]

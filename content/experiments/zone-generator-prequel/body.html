@@ -1,0 +1,73 @@
+<h2>sixteen tiles</h2>
+<p>It started with a Wang tile demo that confused me, because you painted the corners of tiles instead of switching tiles on and off. So I began with the simplest version: 16 tiles where each edge is one of two colours, and a grid to put them on. Each tile's number comes from its green edges (N 1, E 2, S 4, W 8), and touching edges have to match.</p>
+<figure><img src="edge-tiles.png" alt="the sixteen two-edge wang tiles in two rows, from all sand to a green cross"><figcaption>the 2-edge set, 0 to 15</figcaption></figure>
+<figure><img src="edge-map.png" alt="a grid filled with random matching edge tiles forming green pipes"><figcaption>random but valid: pipes</figcaption></figure>
+
+<h2>the seam</h2>
+<p>Placing a tile changed its neighbours to fit, and then a faint line showed up between every tile. I drew a red line on a screenshot to point at it. Each triangle was drawn on its own with a soft edge, so the background leaked through where two met. Filling every green triangle as one shape with no outline fixed it.</p>
+<figure><img src="first-grid.jpg" alt="the first tile grid, mostly green with one sand diamond"><figcaption>the first grid</figcaption></figure>
+<figure><img src="seam-redline.jpg" alt="a close-up of two tiles with a red line drawn along the faint seam between them"><figcaption>the red line</figcaption></figure>
+
+<h2>corners</h2>
+<p>Corners use the same maths, but a corner is shared by four tiles instead of two, so painting one changes four tiles at once. That was what the confusing demo had been doing.</p>
+<figure><img src="corner-map.png" alt="a grid of corner wang tiles making green blobs and sand islands"><figcaption>corner tiles make blobs instead of pipes</figcaption></figure>
+
+<h2>512 tiles, 102 shapes</h2>
+<p>Then I wanted corners and edges on the same tile, still two colours, all adding up to one outline. Adding a centre pip made it nine slots and 512 tiles. Counting rotated and mirrored copies once brings that down to 102. With the centre pip, painting became painting pips: click any dot and every tile that shares it updates. From then on the pips were the real map, and tiles were just a way of looking at nine of them.</p>
+<figure><img src="centre-pip.jpg" alt="a strip of tiles with pips drawn as dots, two centre pips circled in red"><figcaption>asking for a pip in the middle</figcaption></figure>
+<figure><img src="pips-map.png" alt="a random map of the 512-tile set with every pip drawn"><figcaption>every pip drawn</figcaption></figure>
+<figure><img src="tiles-102.png" alt="the 102 unique tiles in rows"><figcaption>the 102 left after rotation and mirroring</figcaption></figure>
+
+<h2>two wall pieces</h2>
+<p>I sketched where walls could go on the tiles, diagonals across corners and straight runs along edges, thinking ahead to 3D walls. It works like marching squares: wherever floor meets rock between four pips, a wall goes in. Only two shapes ever come up, a diagonal and a straight, so all 102 tiles are built from those two.</p>
+<figure><img src="wall-sketch.jpg" alt="a row of tiles marked up with orange diagonal strokes and blue and purple straight strokes"><figcaption>my mark-up</figcaption></figure>
+<figure><img src="wall-pieces.png" alt="a tiled map with its walls coloured by piece type"><figcaption>walls coloured by piece</figcaption></figure>
+
+<h2>ideas for later</h2>
+<p>Two ideas got talked through and parked: areas of a set size dropped into the map that follow their own rules, and a height gradient under the walls for the floor. They came back as zones and ceilings.</p>
+<figure><img src="custom-area-sketch.jpg" alt="a tile map with a yellow region bracketed in red"><figcaption>an area with its own rules</figcaption></figure>
+<figure><img src="height-sketch.jpg" alt="a tile map shaded from pale yellow to dark red for floor height"><figcaption>floor height as a gradient</figcaption></figure>
+
+<h2>the room walker</h2>
+<p>After reading Boris the Brave's post on oatmeal and spice, I wanted something more interesting top-down before going 3D, and started a tiny new file from a sketch: map on the left, first-person view on the right. The map is a pip lattice, the walls come from the two pieces, and a raycaster draws them.</p>
+<figure><img src="walker-sketch.jpg" alt="a hand-drawn layout with a map labelled map and a corridor view labelled pov"><figcaption>the sketch</figcaption></figure>
+<figure><img src="room-walker.jpg" alt="the room walker with a green painted map and a first-person corridor"><figcaption>the room walker</figcaption></figure>
+
+<h2>zones</h2>
+<p>Next the map was cut into 5×5 blocks using Boris's 53 irreducible 5×5 rectangle subdivisions, in any of 8 orientations. Each rectangle became a zone with a law: cave, chamber, hall, rooms or maze. A pip on a shared border is floor if either law wants floor, and a blend band mixes the laws near the borders.</p>
+<figure><img src="splits.png" alt="four 5×5 blocks split into labelled rectangles: wall, hall, cave and chamber"><figcaption>four splits, one law per rectangle</figcaption></figure>
+<figure><img src="zones-first.jpg" alt="the first zone generator with coloured zones and a map of caves, chambers and mazes"><figcaption>the first zone generator</figcaption></figure>
+<p>The first maps were too spread out and full of single pillars. The world shrank to 40×40 tiles and the zones got smaller.</p>
+<figure><img src="pillars-everywhere.jpg" alt="a map with grids of single pillars filling the big rooms"><figcaption>pillars everywhere</figcaption></figure>
+<figure><img src="smaller-zones.jpg" alt="a denser map with smaller zones"><figcaption>40×40, smaller zones</figcaption></figure>
+
+<h2>ceilings</h2>
+<p>The big rooms still felt flat, so the ceiling rises with how open a space is. Pillars count as walls, so they would have pulled the ceiling down. Small free-standing pieces of rock get sorted out as columns first and ignored. The first ceilings were choppy where they met the walls.</p>
+<figure><img src="ceiling-choppy.jpg" alt="a first-person view of a chamber with jagged ceiling edges along the walls"><figcaption>choppy</figcaption></figure>
+<figure><img src="ceiling-dome.jpg" alt="a first-person view of a smooth dome over a chamber"><figcaption>after the fix</figcaption></figure>
+<figure><img src="ceiling-map.png" alt="a map with a heat overlay, dark blue in corridors and pale yellow in the open hall"><figcaption>ceiling height over the map</figcaption></figure>
+
+<h2>walls at the edges</h2>
+<p>The player was halved and the map doubled, mazes were cut, and every zone touching the edge became a wall zone so maps stopped looking square. Blending became one-way: wall zones take on their neighbours' character, but inner zones ignore walls.</p>
+<figure><img src="band-0.png" alt="a zone map with no blending, hard seams between zones"><figcaption>blend band 0</figcaption></figure>
+<figure><img src="band-3.png" alt="the same map with zones flowing into each other and ragged edges"><figcaption>blend band 3</figcaption></figure>
+
+<h2>getting everywhere</h2>
+<p>Small cut-off pockets get filled in, every other separate region gets the cheapest tunnel dug to the main one, and loops are added the Brogue way, by opening thin walls where walking around is much longer than going through. A second panel draws the zone graph.</p>
+<figure><img src="tunnels-loops.png" alt="a map with a tunnel highlighted in orange and loops in blue"><figcaption>tunnels in orange, loops in blue</figcaption></figure>
+<figure><img src="zone-graph.png" alt="a graph of numbered zone nodes linked where you can walk between them"><figcaption>the zone graph</figcaption></figure>
+<figure><img src="connectivity-panel.jpg" alt="the connectivity sliders: pocket size, tunnel winding and loops"><figcaption>starting to feel like bowls of oatmeal</figcaption></figure>
+
+<h2>seeds and ratings</h2>
+<p>To fight the oatmeal, the blend band, connectivity, ceilings and map size all came from the seed. Then I rated 30 seeds, some with the zone colours turned off. Maps with chambers averaged 3.9 and maps without averaged 2.0. Cave and chamber together got 5.0, and hall with rooms got 1.2. Those numbers became the new odds.</p>
+<figure><img src="ratings.jpg" alt="a small panel with star ratings and notes per seed"><figcaption>the rating panel</figcaption></figure>
+
+<h2>props</h2>
+<p>A fork took the new odds and turned the columns into props picked by the zone's law: stalagmites and boulders in caves, trees in halls and chambers, broken pillars in rooms. The first props were flat sprites. I didn't like them, so they became low-poly meshes with textures generated from noise, stripes and speckle.</p>
+<figure><img src="sprite-trees.jpg" alt="flat sprite trees in a first-person view"><figcaption>sprites first</figcaption></figure>
+<figure><img src="textures.png" alt="five small generated textures: bark, leaf, rock, drip-stone and cut stone"><figcaption>bark, leaf, rock, drip-stone, cut stone</figcaption></figure>
+<figure><img src="lowpoly-trees.jpg" alt="faceted low-poly trees with bark trunks and leafy canopies"><figcaption>trees</figcaption></figure>
+<figure><img src="lowpoly-pillars.jpg" alt="broken octagonal stone pillars on plinths"><figcaption>broken pillars</figcaption></figure>
+<figure><img src="lowpoly-stalagmite.jpg" alt="a ringed stalagmite in a cave"><figcaption>a stalagmite</figcaption></figure>
+<figure><img src="lowpoly-boulder.jpg" alt="a faceted boulder up close"><figcaption>a boulder</figcaption></figure>
+<p>This is where the <a href="../zone-generator/">zone generator</a> page picks up.</p>
