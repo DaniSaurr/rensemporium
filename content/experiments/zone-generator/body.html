@@ -93,3 +93,12 @@
 <figure><img src="base-glow.jpg" alt="a wooden wall in a dim cave with a bright yellow strip of light along its base"><figcaption>light running along a wall</figcaption></figure>
 <figure><img src="leaning-beams.jpg" alt="leaning beams of light falling between stone and orange columns onto a mossy floor"><figcaption>leaning beams</figcaption></figure>
 <p>I also cut the biggest maps, 60 by 60 tiles, which were too much to walk.</p>
+
+<h2>layers</h2>
+<p>For v5 I wanted another layer, literally: floor cut away so you can go lower. The question was how you'd get down there, or whether it should just be a pit.</p>
+<p>It fits the tiles the map already comes from. Every tile corner already says open or solid, and the walls follow where those meet. Now each tile also keeps its own four corner heights, so a cliff is just two tiles that disagree along the edge they share, and the same code that traces walls traces cliffs.</p>
+<p>The seed sinks a few zones, each to its own depth, and cuts a ramp in from one edge. A sunken zone with one ramp could cut off whatever lay past it, so the seed adds ramps until you can get everywhere you could before, or leaves the zone alone. You can drop off any edge, but only climb back up a ramp. On some maps it flips: the whole floor drops and the zones that would have sunk stay up as islands.</p>
+<figure><img src="sunken-edge.jpg" alt="looking from a tiled floor down into a sunken area of stone columns, a beam of light cutting off halfway down and a black wedge at the edge"><figcaption>beams stopping at the old floor, and a gap at the edge</figcaption></figure>
+<p>The first pass had a few problems. Beams stopped at the old floor height, a wall cutting across the edge left a see-through gap, and some ramps led nowhere: into a wall, or up out of one pit and straight to the edge of another.</p>
+<figure><img src="ramp-to-nowhere.jpg" alt="two stone slabs at different heights under a red vault, one sloping down towards the camera and ending at a drop"><figcaption>a ramp to nowhere</figcaption></figure>
+<p>I also got stuck in a pit by the exit, which turned out to be the exit working from the floor below it. Now it only takes you from its own floor, and sunken zones keep clear of it.</p>
