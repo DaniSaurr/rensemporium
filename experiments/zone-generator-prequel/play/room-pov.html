@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Room Walker</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#222; --panel:#fff; --wall:#e9d8a6; --floor:#2a7f62; --dark:#5e5442; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  main { display:flex; gap:16px; padding:16px; flex-wrap:wrap; align-items:flex-start; }
+  .panel { background:var(--panel); border-radius:10px; padding:10px; box-shadow:0 1px 4px #0002; }
+  h2 { font-size:1rem; margin:0 0 6px; }
+  canvas { display:block; max-width:100%; height:auto; }
+  #map { cursor:crosshair; touch-action:none; }
+  .bar { display:flex; gap:6px; align-items:center; margin-top:8px; font-size:.85rem; flex-wrap:wrap; }
+  .seg { display:flex; }
+  .seg button { font:inherit; padding:4px 10px; border:1px solid #999; background:#fff; cursor:pointer; }
+  .seg button:first-child { border-radius:6px 0 0 6px; }
+  .seg button:last-child { border-radius:0 6px 6px 0; }
+  .seg button + button { border-left:none; }
+  .seg button.on { background:var(--floor); color:#fff; border-color:var(--floor); }
+  button.plain { font:inherit; padding:4px 10px; border:1px solid #999; border-radius:6px; background:#fff; cursor:pointer; }
+  .hint { font-size:.8rem; color:#555; margin:6px 0 0; max-width:60ch; }
+</style>
+</head>
+<body>
+<main>
+  <div class="panel">
+    <h2>Map</h2>
+    <canvas id="map"></canvas>
+    <div class="bar">
+      <div class="seg" id="tool">
+        <button data-v="floor" class="on">Paint floor</button><button data-v="erase">Erase</button><button data-v="player">Place player</button>
+      </div>
+      <button class="plain" id="clear">Clear</button>
+    </div>
+    <p class="hint">Green is floor, sand is solid rock. Click or drag to paint whole tiles. Neighbouring tiles share their corner and edge pips, so the outline smooths itself.</p>
+  </div>
+  <div class="panel">
+    <h2>POV</h2>
+    <canvas id="pov" width="640" height="420" tabindex="0"></canvas>
+    <p class="hint"><b>W/S</b> or <b>↑/↓</b> move, <b>A/D</b> or <b>←/→</b> turn, <b>Q/E</b> strafe. Click the view first if keys don't respond.</p>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const css = getComputedStyle(document.documentElement);
+const C = n => css.getPropertyValue(n).trim();
+const WALL = C('--wall'), FLOOR = C('--floor'), DARK = C('--dark');
+
+// ---------- world ----------
+// The map is N×N tiles. Each tile has 9 pips (4 corners, 4 edge midpoints,
+// centre), and neighbours share their border pips. So the whole map is one
+// lattice of points at half-tile spacing: L×L points, 1 = floor, 0 = rock.
+const N = 12, L = 2*N + 1;
+let pts = new Uint8Array(L * L);
+const P = (i, j) => (i < 0 || j < 0 || i >= L || j >= L) ? 0 : pts[j*L + i];
+function setP(i, j, v) {
+  // Keep the outermost ring as rock so the map is always enclosed.
+  if (i <= 0 || j <= 0 || i >= L-1 || j >= L-1) return;
+  pts[j*L + i] = v;
+}
+function paintTile(x, y, v) {
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) setP(2*x + i, 2*y + j, v);
+  rebuild();
+}
+
+// ---------- walls: marching squares on the lattice ----------
+// Each lattice square (half a tile) gives nothing, one diagonal, one straight,
+// or two diagonals. Those segments are the walls, for the map AND the raycaster.
+let walls = [];
+function rebuild() {
+  walls = [];
+  for (let j = 0; j < L-1; j++) for (let i = 0; i < L-1; i++) {
+    const nw = P(i,j), ne = P(i+1,j), se = P(i+1,j+1), sw = P(i,j+1);
+    const x = i/2, y = j/2, h = .25;
+    const mid = { N:[x+h, y], E:[x+.5, y+h], S:[x+h, y+.5], W:[x, y+h] };
+    const cut = [];
+    if (nw !== ne) cut.push('N');
+    if (ne !== se) cut.push('E');
+    if (se !== sw) cut.push('S');
+    if (sw !== nw) cut.push('W');
+    const add = (a, b) => walls.push({ a: mid[a], b: mid[b] });
+    if (cut.length === 2) add(cut[0], cut[1]);
+    else if (cut.length === 4) {
+      // Saddle: floor joins the two "on" corners, walls cut off the "off" ones.
+      if (nw) { add('N','E'); add('S','W'); } else { add('N','W'); add('E','S'); }
+    }
+  }
+  drawMap();
+}
+
+// ---------- map view ----------
+const map = $('map'), mg = map.getContext('2d');
+const TS = 44; // pixels per tile
+map.width = map.height = N * TS;
+function drawMap() {
+  mg.fillStyle = WALL; mg.fillRect(0, 0, map.width, map.height);
+  // Floor: each lattice square filled by marching squares, all in one path.
+  mg.beginPath();
+  const s = TS/2;
+  for (let j = 0; j < L-1; j++) for (let i = 0; i < L-1; i++) {
+    const ring = [[P(i,j),0,0],[P(i+1,j),1,0],[P(i+1,j+1),1,1],[P(i,j+1),0,1]], pp = [];
+    for (let k = 0; k < 4; k++) {
+      const [b,cx,cy] = ring[k], [nb,nx,ny] = ring[(k+1)%4];
+      if (b) pp.push([cx,cy]);
+      if (b !== nb) pp.push([(cx+nx)/2,(cy+ny)/2]);
+    }
+    if (!pp.length) continue;
+    pp.forEach(([px,py],k) => mg[k ? 'lineTo' : 'moveTo']((i+px)*s, (j+py)*s));
+    mg.closePath();
+  }
+  mg.fillStyle = FLOOR; mg.fill();
+  // Tile grid
+  mg.strokeStyle = '#0002'; mg.lineWidth = 1;
+  for (let k = 0; k <= N; k++) {
+    mg.beginPath(); mg.moveTo(k*TS+.5, 0); mg.lineTo(k*TS+.5, map.height); mg.stroke();
+    mg.beginPath(); mg.moveTo(0, k*TS+.5); mg.lineTo(map.width, k*TS+.5); mg.stroke();
+  }
+  // Player and view cone
+  const px = player.x*TS, py = player.y*TS, r = 3*TS;
+  mg.fillStyle = '#e6394633';
+  mg.beginPath(); mg.moveTo(px, py);
+  mg.arc(px, py, r, player.a - FOV/2, player.a + FOV/2); mg.closePath(); mg.fill();
+  mg.strokeStyle = '#e63946'; mg.lineWidth = 2;
+  for (const d of [-FOV/2, FOV/2]) {
+    mg.beginPath(); mg.moveTo(px, py); mg.lineTo(px + Math.cos(player.a+d)*r*.6, py + Math.sin(player.a+d)*r*.6); mg.stroke();
+  }
+  mg.beginPath(); mg.arc(px, py, TS*.15, 0, Math.PI*2); mg.stroke();
+}
+
+// ---------- player ----------
+const FOV = 70 * Math.PI/180, RADIUS = 0.15;
+const player = { x: 3.5, y: 9.5, a: -Math.PI/2 };
+function distToSeg(px, py, [ax, ay], [bx, by]) {
+  const dx = bx-ax, dy = by-ay, len = dx*dx + dy*dy;
+  const t = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / len));
+  return Math.hypot(px - (ax + t*dx), py - (ay + t*dy));
+}
+const blocked = (x, y) => walls.some(w => distToSeg(x, y, w.a, w.b) < RADIUS);
+function tryMove(dx, dy) {
+  // Move each axis separately so you slide along walls instead of sticking.
+  if (!blocked(player.x + dx, player.y)) player.x += dx;
+  if (!blocked(player.x, player.y + dy)) player.y += dy;
+}
+
+// ---------- POV: raycast against the wall segments ----------
+const pov = $('pov'), pg = pov.getContext('2d');
+const W = pov.width, H = pov.height, COLS = W / 2;
+const projDist = (W/2) / Math.tan(FOV/2);
+const MAX_D = 8;
+// Colours as [r,g,b] arrays so mixes can be chained; rgb() turns one into CSS.
+const hex = c => { const n = parseInt(c.slice(1), 16); return [n>>16 & 255, n>>8 & 255, n & 255]; };
+const lerp = (a, b, t) => a.map((v, i) => v*(1-t) + b[i]*t);
+const rgb = ([r,g,b]) => `rgb(${r|0},${g|0},${b|0})`;
+const mix = (a, b, t) => rgb(lerp(hex(a), hex(b), t));
+const WALL_C = hex(WALL), DARK_C = hex(DARK), BLACK = [0,0,0];
+function castRay(ox, oy, dx, dy) {
+  let best = Infinity, hitWall = null;
+  for (const w of walls) {
+    const [ax, ay] = w.a, [bx, by] = w.b;
+    const ex = bx-ax, ey = by-ay, den = dx*ey - dy*ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((ax-ox)*ey - (ay-oy)*ex) / den;   // distance along the ray
+    const u = ((ax-ox)*dy - (ay-oy)*dx) / den;   // position along the wall
+    if (t > 0 && u >= 0 && u <= 1 && t < best) { best = t; hitWall = w; }
+  }
+  return [best, hitWall];
+}
+function drawPov() {
+  // Ceiling (dark) and floor (green), both fading into the dark with distance.
+  let gr = pg.createLinearGradient(0, 0, 0, H/2);
+  gr.addColorStop(0, mix(DARK, '#000000', .3)); gr.addColorStop(1, DARK);
+  pg.fillStyle = gr; pg.fillRect(0, 0, W, H/2);
+  gr = pg.createLinearGradient(0, H/2, 0, H);
+  gr.addColorStop(0, DARK); gr.addColorStop(1, FLOOR);
+  pg.fillStyle = gr; pg.fillRect(0, H/2, W, H/2);
+
+  const colW = W / COLS;
+  for (let c = 0; c < COLS; c++) {
+    const camX = (c + .5) / COLS * 2 - 1;                 // -1 .. 1 across the screen
+    const ang = player.a + Math.atan(camX * Math.tan(FOV/2));
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    const [d, w] = castRay(player.x, player.y, dx, dy);
+    if (!w || d > MAX_D) continue;
+    const perp = d * Math.cos(ang - player.a);            // remove fisheye
+    const h = projDist / perp;                            // walls are 1 tile tall
+    // Light walls by their angle, so diagonals and straights read differently.
+    const nx = -(w.b[1]-w.a[1]), ny = w.b[0]-w.a[0], nl = Math.hypot(nx, ny);
+    const light = .7 + .3 * Math.abs((nx*.6 + ny*.8) / nl);
+    const fog = Math.min(1, perp / MAX_D);
+    pg.fillStyle = rgb(lerp(lerp(BLACK, WALL_C, light), DARK_C, fog));
+    pg.fillRect(c*colW, H/2 - h/2, colW + 1, h);
+  }
+}
+
+// ---------- input ----------
+let tool = 'floor';
+document.querySelectorAll('#tool button').forEach(b => b.onclick = () => {
+  tool = b.dataset.v;
+  document.querySelectorAll('#tool button').forEach(o => o.classList.toggle('on', o === b));
+});
+let painting = false;
+function mapAt(e) {
+  const r = map.getBoundingClientRect(), k = map.width / r.width;
+  return [(e.clientX - r.left) * k / TS, (e.clientY - r.top) * k / TS];
+}
+function mapAct(e) {
+  const [x, y] = mapAt(e);
+  if (tool === 'player') {
+    if (!blocked(x, y)) { player.x = x; player.y = y; drawMap(); }
+    return;
+  }
+  const tx = Math.floor(x), ty = Math.floor(y);
+  if (tx < 0 || ty < 0 || tx >= N || ty >= N) return;
+  paintTile(tx, ty, tool === 'floor' && e.button !== 2 ? 1 : 0);
+}
+map.addEventListener('contextmenu', e => e.preventDefault());
+map.addEventListener('pointerdown', e => { painting = true; mapAct(e); });
+map.addEventListener('pointermove', e => { if (painting && tool !== 'player') mapAct(e); });
+window.addEventListener('pointerup', () => painting = false);
+$('clear').onclick = () => { pts.fill(0); rebuild(); };
+
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+pov.addEventListener('click', () => pov.focus());
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const k = n => keys[n];
+  const turn = (k('d') || k('arrowright') ? 1 : 0) - (k('a') || k('arrowleft') ? 1 : 0);
+  const fwd = (k('w') || k('arrowup') ? 1 : 0) - (k('s') || k('arrowdown') ? 1 : 0);
+  const side = (k('e') ? 1 : 0) - (k('q') ? 1 : 0);
+  const moved = turn || fwd || side;
+  player.a += turn * 2.4 * dt;
+  const sp = 2.2 * dt, ca = Math.cos(player.a), sa = Math.sin(player.a);
+  if (fwd || side) tryMove((ca*fwd - sa*side) * sp, (sa*fwd + ca*side) * sp);
+  if (moved) drawMap();
+  drawPov();
+  requestAnimationFrame(loop);
+}
+
+// ---------- starting layout (roughly the sketch) ----------
+const start = [
+  [2,2],[3,2],[2,3],[3,3],[4,3],[2,4],[4,4],[3,5],[4,5],[5,5],
+  [5,3],[6,3],[6,4],[5,4],[3,6],[3,7],[3,8],[3,9],[3,10],
+  [4,9],[5,9],[6,9],[7,9],[8,9],[8,8],[8,7],[2,6],[4,6]
+];
+for (const [x, y] of start) for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) setP(2*x+i, 2*y+j, 1);
+// Knock a couple of pips back to rock to make pillars inside the rooms.
+setP(2*3+1, 2*3+1, 0); setP(2*3+2, 2*3+2, 0); setP(2*3+1, 2*3+2, 0); setP(2*3+2, 2*3+1, 0);
+setP(2*5+2, 2*4, 0);
+rebuild();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

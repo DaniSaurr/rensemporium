@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>try { if (localStorage.getItem("ren-hide-ai") === "1") document.documentElement.classList.add("hide-ai"); } catch (e) {}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zone generator · ren's emporium</title>
+<meta name="description" content="">
+
+<link rel="icon" href="../../static/img/icon.png">
+<link rel="stylesheet" href="../../static/css/site.css?v=ad0321d4">
+</head>
+<body class="">
+
+
+<a class="back" href="../../" aria-label="back to the map">
+  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12 L14 7 L26 12 L35 7 L35 29 L26 34 L14 29 L5 34 Z M14 7 L14 29 M26 12 L26 34" fill="#fff6d8" stroke="#5d5f6e" stroke-width="2.6" stroke-linejoin="round"/></svg>
+  map
+</a>
+
+<main class="page">
+
+<article class="piece">
+  <header class="piece-head">
+    <h1 data-bouffont>zone generator</h1>
+    <p class="facts"><span>2026</span></p>
+    
+    
+    <div class="tags"><span class="tag">in progress</span></div>
+    
+  </header>
+
+  
+  <div class="hero">
+    <img src="skylight.png" alt="first-person view of a checker floor between stone columns, a pale beam falling from a bright opening in a curved ceiling">
+  </div>
+  
+
+  
+  <div class="actions">
+    <a class="button" href="../zone-generator-prequel/">before this</a>
+  </div>
+  
+
+  
+
+  
+  <div class="prose">
+    
+    <h2>the idea</h2>
+<p>You give it a seed and it makes a map. The map is cut into rectangles using Boris the Brave's list of 5×5 rectangle subdivisions, and each rectangle becomes a zone with a law. The law decides what's floor and what's solid inside that zone, and where two zones meet their laws blend. I'm treating it as a tool for now and holding off on deciding what it's for.</p>
+<figure><img src="map-first.png" alt="a coloured map of rectangular zones with blue and green caves and halls carved through them"><figcaption>where it started</figcaption></figure>
+
+<h2>laws by seed</h2>
+<p>At first every map could use every law, and they all came out looking alike. So each seed now draws two or three laws from a longer list. One map gets rooms and chambers, the next gets maze and spine.</p>
+<p>Stairwells and glyphs only fit in big zones. Giving them a guaranteed share squeezed other laws off the map, and taking the guarantee away made them almost disappear. They ended up as accents added on top of a map's main laws, in about half of maps.</p>
+<figure><img src="map-laws.png" alt="a map whose inner zones are mostly maze and spine corridors, surrounded by solid coloured edge zones"><figcaption>seed 13, maze and spine</figcaption></figure>
+
+<h2>start and exit</h2>
+<p>The generator keeps a graph of which zones connect. I wanted to begin at the end of something, so the player starts in a dead end of that graph, or in an edge zone when the map doesn't have one. The exit uses the same rule in reverse, picking somewhere a long walk away. Walking into it drops you into the next seed.</p>
+<figure><img src="dead-end.png" alt="a map of one winding passage with the player's view cone at the bottom of a dead-end corridor"><figcaption>a dead-end start</figcaption></figure>
+<p>By this point the maps were stable enough that I got nervous about breaking them. Every version since has been frozen before changing anything.</p>
+
+<h2>surfaces</h2>
+<p>The walls only use two mesh shapes, long and short, so everything else had to come from texture. Textures tile at a fixed scale in both directions and get cut off where they reach the ceiling. Nothing stretches.</p>
+<p>Each map picks one cave type, dry, wet or overgrown, and one set of rock textures. Letting every zone choose its own would turn the whole thing into bowls of oatmeal. Built laws like halls and mazes pull from their own lists. Everything gets crushed to 128 pixels and 32 colours and drawn at about 285 lines.</p>
+<figure><img src="first-textures.jpg" alt="a low-res corridor of cobbled stone walls with a black floor patterned in gold lines"><figcaption>the first textured view of a real map</figcaption></figure>
+
+<h2>rearranging</h2>
+<p>Once I could walk around in it, the first-person view had to be the main thing on the page. I cut up a screenshot to show how I wanted the panels.</p>
+<figure><img src="layout-mockup.png" alt="a cut-up screenshot with the generator controls on the left, the view in the centre with four hand-drawn texture dropdowns below it, and the map on the right"><figcaption>the mockup</figcaption></figure>
+<figure><img src="layout-result.jpg" alt="the tool laid out in three columns matching the mockup"><figcaption>the result, with the dropdowns still empty</figcaption></figure>
+<p>The dropdowns later became one column per law, however many the map has, so I can see and override each law's wall, floor and ceiling.</p>
+
+<h2>seams</h2>
+<p>Zones used to change texture on a hard line. I added sliders for how wide the blend is, how coarse the dither is, how far the line wanders and how much it fades. Walls only blend along their own length, so a wall running beside a zone line keeps its texture.</p>
+<figure><img src="seam-hard.jpg" alt="a stone floor meeting a black patterned floor along a sharp line"><figcaption>hard line</figcaption></figure>
+<figure><img src="seam-dither.jpg" alt="the same floors breaking into scattered specks across a wide band"><figcaption>a wide dither</figcaption></figure>
+<figure><img src="seam-soft.jpg" alt="the same floors fading into each other"><figcaption>a soft fade</figcaption></figure>
+<p>After playing with them I landed on something much tighter than any of these, a 0.25 metre band with a full fade.</p>
+
+<h2>looking at real places</h2>
+<p>I collected some images of places I liked, among them a cistern of huge piers, a gothic hall with a checker floor, a rubble passage lit from slots in its wall, and a bath house with one hole in its vault. They share things the maps didn't have. The ceilings are arches. The light comes from somewhere. The spaces repeat.</p>
+<p>I wanted a lot of variety within maps and between them, so all of this is dealt by the seed. Each map gets a colour grade, a darkness, a light recipe and a small deck of vault styles for its laws to draw from. None of it can move a wall, which keeps the simple generation underneath intact.</p>
+
+<h2>mirrors</h2>
+<p>My idea was to take whole zones, draw a line down one axis, and mirror them, sparingly and at random. It suits the generator because a zone's centre line always lands exactly on the grid. The line usually becomes a walkable aisle down the middle, and sometimes a solid spine wall. Neighbouring zones and tunnels wear the symmetry away at the edges, which I like.</p>
+<figure><img src="map-mirrors.png" alt="a map where several zones are visibly symmetrical down their centre lines"><figcaption>a map with a lot of mirrors</figcaption></figure>
+<figure><img src="mirrored-aisle.jpg" alt="evenly spaced stone piers on either side of a wide grey floor"><figcaption>looking across a mirrored zone</figcaption></figure>
+
+<h2>vaults</h2>
+<p>The ceiling height comes from how far you are from the nearest wall, on a curve. Corridors become barrel vaults, and narrow openings get low arches because height follows width. There's no arch model anywhere. Columns can either count as walls, which makes the ceiling arch from column to column, or be ignored, and then the vault carries straight over them.</p>
+<figure><img src="vault.png" alt="a dark vaulted room, with a block of stone trimmed to an arch where the curved ceiling cuts it off"><figcaption>a block cut to shape by the vault passing over it</figcaption></figure>
+<p>Curved ceilings first cut sawtooth edges into diagonal walls. Keeping the ceiling level for the first 0.6 metres fixed that, and it reads like a cornice.</p>
+
+<h2>the wall that glowed</h2>
+<figure><img src="wall-glow.png" alt="a pale tan stone wall that looks lit from within, between darker grey brick walls"><figcaption>it felt like light was coming from the wall</figcaption></figure>
+<p>Light spreads through open floor so it stops at walls, but each wall was reading its brightness from solid points that had copied the brightest neighbour, including the room behind it. Walls now read light from the side they face.</p>
+
+<h2>skylights</h2>
+<p>The light shafts were my favourite thing so far, so they got more attention. They vary in size now, and high ceilings are far more likely to have one. I tried several colours per map and went straight back to one. The opening used to be a separate shape that clipped against the curve of the vault, so it's now painted onto the ceiling itself.</p>
+<figure><img src="sky-teal.jpg" alt="a teal room with a small round skylight above dark stone"><figcaption>teal</figcaption></figure>
+<figure><img src="sky-amber.jpg" alt="a long barrel-vaulted hall with a warm beam at its far end"><figcaption>amber</figcaption></figure>
+<figure><img src="sky-pale.jpg" alt="pale columns on a blue-lit floor under a skylight"><figcaption>pale moonlight</figcaption></figure>
+
+<h2>sorting textures</h2>
+<p>I'd only been using 61 of the 274 textures I'd pulled from my folders, so I added the rest and made a page to keep or cut each one by hand. My cuts weren't reaching the generator for a while. The bug only happens in Firefox, which is what I use, because Firefox keeps saved data separately for each local file. The sort page now opens from the generator and sends its choices across.</p>
+<figure><img src="sort-page.jpg" alt="a grid of texture thumbnails with keep and cut buttons under each, some already cut and faded"><figcaption>some of what the automatic sort let in</figcaption></figure>
+<p>Plenty of the overgrown tiles turned out to be vines on a pure black or green background. Used as patches they made flat blotches, so they now only hang from ceilings, with the green keyed out.</p>
+<figure><img src="curtain-purple.jpg" alt="purple strands hanging down a patchy stone wall"><figcaption>black background, purple strands</figcaption></figure>
+<figure><img src="curtain-ivy.jpg" alt="a few ivy sprigs hanging on a sandy wall"><figcaption>ivy</figcaption></figure>
+
+<h2>piping</h2>
+<p>Walking around seed 6, I noticed the line where the walls meet the vault could hold something. A band or a pipe could wrap around the room along that line and then run down to the floor before it meets the next zone.</p>
+<figure><img src="piping-idea-1.png" alt="a screenshot of panelled walls with a green line drawn along their tops"><figcaption>drawing on a screenshot</figcaption></figure>
+<figure><img src="piping-idea-2.png" alt="another screenshot with a green line along the wall top, turning straight down at the right"><figcaption>running down at the zone edge</figcaption></figure>
+<p>Piping doesn't have to mean pipes. It's one shape swept along a path, so different values give different things. It'll be spread around by seed eventually, but I need to find the limits first, so for now there's a test panel that works on one zone at a time.</p>
+<figure><img src="pipe-single.jpg" alt="a single rust-coloured pipe with collars following the top of stone walls"><figcaption>one pipe</figcaption></figure>
+<figure><img src="pipe-cables.jpg" alt="three thin parallel cables along the wall tops"><figcaption>three cables</figcaption></figure>
+<figure><img src="pipe-heavy.jpg" alt="a thick ribbed pipe running across the walls"><figcaption>heavy, with ribs</figcaption></figure>
+<figure><img src="pipe-dado.jpg" alt="a thin level rail running low along the walls"><figcaption>a low rail</figcaption></figure>
+
+<h2>pipes by seed</h2>
+<p>Once I'd set the limits, the seed took over. It doesn't roll each slider on its own, because lots of small differences all read as the same pipe. It picks one of five kinds for a law instead: my own settings, one fat main, a bundle of five thin lines, a pair that steps with the ceiling, and a thin pair that bridges long gaps. Each one gets its own colour of metal.</p>
+<p>At first every zone of a plumbed law got pipes, so plumbed zones kept running into each other. Now pipes go in a few zones that never touch, not even at a corner, and about a quarter of maps have none at all.</p>
+<figure><img src="pipes-touching.jpg" alt="two different sets of rust pipes meeting at the corner of a pale pillar"><figcaption>two kinds meeting, before</figcaption></figure>
+<p>The joints took a few rounds. Strands swapped sides where they dropped to the floor, bridges went flat, and some pipes passed through a wall and came back out. That last one came from the grid: where two walls share a square, the check for which side is open looked too far and found the wrong floor. Now every strand has its own path and its own joints, so a collar can't drift off the pipe it belongs to.</p>
+<figure><img src="collars-adrift.jpg" alt="zigzagging rust pipes on a grey wall, with red circles around collars sitting off their pipes"><figcaption>collars off their strands</figcaption></figure>
+<p>Bridges only cross real openings, between door jambs that face each other, and they always clear the player's head.</p>
+<figure><img src="bridged-arch.jpg" alt="a bundle of thin red pipes bridging a doorway between dark stone walls in a cave"><figcaption>a bundle over a doorway</figcaption></figure>
+
+<h2>trims</h2>
+<p>The same sweep makes the rest: moulding, cornice, dado rail, skirting, ledge, cables and ribs, each with its own outline. I tuned each one in the test panel. Moulding, cornice, dado, skirting and ledge belong to a law, so a kind of place keeps its own decoration, and caves never get any. Cables and ribs are rare, like pipes. Each map picks one look per trim and keeps it everywhere.</p>
+<p>The side panel now shows what's in the zone I'm standing in, and I can change, take out or add trims right there.</p>
+
+<h2>light</h2>
+<p>The skylight beams all pointed straight down. I drew what I was after: light coming in from the opening at an angle.</p>
+<figure><img src="light-sketch.jpg" alt="a corridor between two pillars with red lines and arrows drawn fanning out from a bright opening"><figcaption>drawing on a screenshot</figcaption></figure>
+<p>The first try swapped the beams for soft cones. That lost the blocky look I liked, and they still pointed down.</p>
+<figure><img src="soft-cone.jpg" alt="a soft pale cone of light under an opening, falling straight down onto a checker floor"><figcaption>soft cones, not it</figcaption></figure>
+<p>Now each map has one sun. Every beam leans the same way and stops where it hits a wall. Light also travels in straight lines from the opening now, so walls throw shadows and the pool on the floor lands where the beam does. One bug on the way: light ran along the foot of the walls, because the band that traces each wall filled itself from its own neighbours.</p>
+<figure><img src="base-glow.jpg" alt="a wooden wall in a dim cave with a bright yellow strip of light along its base"><figcaption>light running along a wall</figcaption></figure>
+<figure><img src="leaning-beams.jpg" alt="leaning beams of light falling between stone and orange columns onto a mossy floor"><figcaption>leaning beams</figcaption></figure>
+<p>I also cut the biggest maps, 60 by 60 tiles, which were too much to walk.</p>
+
+<h2>layers</h2>
+<p>For v5 I wanted another layer, literally: floor cut away so you can go lower. The question was how you'd get down there, or whether it should just be a pit.</p>
+<p>It fits the tiles the map already comes from. Every tile corner already says open or solid, and the walls follow where those meet. Now each tile also keeps its own four corner heights, so a cliff is just two tiles that disagree along the edge they share, and the same code that traces walls traces cliffs.</p>
+<p>The seed sinks a few zones, each to its own depth, and cuts a ramp in from one edge. A sunken zone with one ramp could cut off whatever lay past it, so the seed adds ramps until you can get everywhere you could before, or leaves the zone alone. You can drop off any edge, but only climb back up a ramp. On some maps it flips: the whole floor drops and the zones that would have sunk stay up as islands.</p>
+<figure><img src="sunken-edge.jpg" alt="looking from a tiled floor down into a sunken area of stone columns, a beam of light cutting off halfway down and a black wedge at the edge"><figcaption>beams stopping at the old floor, and a gap at the edge</figcaption></figure>
+<p>The first pass had a few problems. Beams stopped at the old floor height, a wall cutting across the edge left a see-through gap, and some ramps led nowhere: into a wall, or up out of one pit and straight to the edge of another.</p>
+<figure><img src="ramp-to-nowhere.jpg" alt="two stone slabs at different heights under a red vault, one sloping down towards the camera and ending at a drop"><figcaption>a ramp to nowhere</figcaption></figure>
+<p>I also got stuck in a pit by the exit, which turned out to be the exit working from the floor below it. Now it only takes you from its own floor, and sunken zones keep clear of it.</p>
+
+<h2>levels on the tile grid</h2>
+<p>Sinking whole zones worked, but I wanted elevation to come from the same tiles the walls come from. The walls are drawn from corner tiles: each corner is open or solid. So the corners got more colours instead, one per level, with the seed choosing how many, and each law on a map dealt a level.</p>
+<p>Every level is a storey, about one and a half metres. You can drop down any cliff but not climb one, so the hard part is getting back up. I drew what I wanted on a few seeds by hand, and the generator learned from those drawings.</p>
+<figure><img src="causeway-sketch.jpg" alt="a map of coloured levels with yellow strips drawn crossing from one area to another over lower ground"><figcaption>causeways, drawn by hand</figcaption></figure>
+<p>Causeways come first: a flat strip between two areas at the same level, across lower ground. One level up, a causeway is filled in solid underneath. Two levels up, the fill gets a doorway so the floor below runs through it.</p>
+<figure><img src="causeway-fill.jpg" alt="a side-on diagram of a yellow causeway over blue fill on green floor, with an orange doorway through the fill"><figcaption>fill under a causeway</figcaption></figure>
+<figure><img src="causeway-doorway.jpg" alt="the same diagram two levels up, the doorway cut through blue and green fill down to tan floor"><figcaption>two levels up, with a doorway</figcaption></figure>
+<p>Stairs come next. They climb one storey, are always a tile long, and need floor behind them to walk up to. Most of the work was in everything they mustn't do: hang over rock, sit in pockets you can't leave, or fill a narrow strip so you can't walk past.</p>
+<figure><img src="pockets.jpg" alt="a level map with orange circles around two small tan pockets below a blue area"><figcaption>pockets you could fall into and never leave</figcaption></figure>
+<figure><img src="stairs-blocking.jpg" alt="a level map with orange circles around stairs that block narrow strips of floor"><figcaption>stairs cutting off the floor they stand on</figcaption></figure>
+<p>Small pockets now get filled in. Where a stair still can't fit cleanly, it becomes a ladder flat against the cliff. And getting back to everywhere isn't enough, because falling off near a ledge could mean a long walk round. A few stairs go in where the walk back would be longest.</p>
+<figure><img src="long-walk.jpg" alt="a level map with a long orange line traced from a ledge all the way round the map and back up"><figcaption>the walk back after falling off</figcaption></figure>
+
+<h2>v6: levels in the game</h2>
+<p>v6 takes the levels off the drawing page and into the game itself. Floors stand at their level, cliffs run along the lines where levels meet, and the stairs, ladders and causeways from the drawings are built in 3D. You walk up stairs, climb ladders, cross a causeway or walk under it through its doorway, and drop off any edge.</p>
+<p>Ladders first came out side-on, facing the way the grid ran instead of the cliff they were on, with rails sticking up past the top. Now each one faces its cliff, diagonal ones included, stops at the top edge, and you climb it at walking pace.</p>
+<figure><img src="ladder-sideways.jpg" alt="a wooden ladder standing out from a dark stone block, its rungs running into the wall"><figcaption>a ladder side-on to its wall</figcaption></figure>
+<p>Where a full ladder would hang off a corner, there's a half-width one. Ladders take the metal of the area too, the same metal as the pipes where there are any.</p>
+<figure><img src="ladder-half.jpg" alt="a narrow ladder against a short step of brick beside a raised stone floor"><figcaption>a spot that wanted a half ladder</figcaption></figure>
+<p>On some maps the start was walled in. The edge zones' floor ran right out to the border, and the game treated the outer tile as out of bounds, so the only way out wasn't walkable. The outer ring is always rock now, and a test walks every map from the start with the real movement rules to make sure nothing is shut off.</p>
+
+<h2>v7: a second layer</h2>
+<p>The rock round the outside of a map was dead space. So the generator runs again on another seed, keeps only the floor that lands on that outer rock, and stands it a storey or two above the highest floor. Thin walls and pillars inside the map stay rock and just get taller, and the ceilings rise over everything. Where the second layer meets the first it ends in an open cliff, and the same stairs, ladders and causeways join the two.</p>
+<figure><img src="deck-planes.jpg" alt="a stone causeway with flat dark panels of wall standing up out of it"><figcaption>rock walls coming up through a causeway</figcaption></figure>
+<p>Causeways crossing the second layer had walls standing up through them, where the fill under the deck met plain rock. Those walls now step down to the deck.</p>
+<p>The skylight beams didn't reach their openings any more once the ceilings rose. Now each beam is one long prism along the sun's angle, starting well above the opening and running straight through the level.</p>
+<figure><img src="beam-halfway.jpg" alt="a green-lit room of stone walls with a light beam that starts halfway down, the missing part scribbled in orange"><figcaption>a beam stopping short of its opening</figcaption></figure>
+<p>The map changed too. I wanted it like the level pages: dark rock and one flat colour per level.</p>
+<figure><img src="level-colours.jpg" alt="two level maps on dark brown, floors in tan, green and blue"><figcaption>the look I was after</figcaption></figure>
+<figure><img src="v7-map.png" alt="a v7 map: dark rock, tan, green and blue floors, small stair icons, a gold diamond exit and a light line where the player walked"><figcaption>the v7 map, with the path walked so far</figcaption></figure>
+<p>There's a fog of war option that reveals the map in a circle round wherever you've been, and a path option that draws a line behind you. The exit is gold and always shows through the fog.</p>
+<figure><img src="v7-fog.png" alt="the same map almost all dark, a small revealed patch round the player and a gold diamond far off"><figcaption>fog of war</figcaption></figure>
+
+  </div>
+  
+
+  
+
+  
+
+  
+  <section class="made-with" aria-label="made with">
+    <span class="mw-label">made with</span>
+    <ul><li title="javascript"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0V0zm22.034 18.276c-.175-1.095-.888-2.015-3.003-2.873-.736-.345-1.554-.585-1.797-1.14-.091-.33-.105-.51-.046-.705.15-.646.915-.84 1.515-.66.39.12.75.42.976.9 1.034-.676 1.034-.676 1.755-1.125-.27-.42-.404-.601-.586-.78-.63-.705-1.469-1.065-2.834-1.034l-.705.089c-.676.165-1.32.525-1.71 1.005-1.14 1.291-.811 3.541.569 4.471 1.365 1.02 3.361 1.244 3.616 2.205.24 1.17-.87 1.545-1.966 1.41-.811-.18-1.26-.586-1.755-1.336l-1.83 1.051c.21.48.45.689.81 1.109 1.74 1.756 6.09 1.666 6.871-1.004.029-.09.24-.705.074-1.65l.046.067zm-8.983-7.245h-2.248c0 1.938-.009 3.864-.009 5.805 0 1.232.063 2.363-.138 2.711-.33.689-1.18.601-1.566.48-.396-.196-.597-.466-.83-.855-.063-.105-.11-.196-.127-.196l-1.825 1.125c.305.63.75 1.172 1.324 1.517.855.51 2.004.675 3.207.405.783-.226 1.458-.691 1.811-1.411.51-.93.402-2.07.397-3.346.012-2.054 0-4.109 0-6.179l.004-.056z"/></svg><span>javascript</span></li><li title="three.js"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M.38 0a.268.268 0 0 0-.256.332l2.894 11.716a.268.268 0 0 0 .01.04l2.89 11.708a.268.268 0 0 0 .447.128L23.802 7.15a.268.268 0 0 0-.112-.45l-5.784-1.667a.268.268 0 0 0-.123-.035L6.38 1.715a.268.268 0 0 0-.144-.04L.456.01A.268.268 0 0 0 .38 0zm.374.654L5.71 2.08 1.99 5.664zM6.61 2.34l4.864 1.4-3.65 3.515zm-.522.12l1.217 4.926-4.877-1.4zm6.28 1.538l4.878 1.404-3.662 3.53zm-.52.13l1.208 4.9-4.853-1.392zm6.3 1.534l4.947 1.424-3.715 3.574zm-.524.12l1.215 4.926-4.876-1.398zm-15.432.696l4.964 1.424-3.726 3.586zM8.047 8.15l4.877 1.4-3.66 3.527zm-.518.137l1.236 5.017-4.963-1.432zm6.274 1.535l4.965 1.425-3.73 3.586zm-.52.127l1.235 5.012-4.958-1.43zm-9.63 2.438l4.873 1.406-3.656 3.523zm5.854 1.687l4.863 1.403-3.648 3.51zm-.54.04l1.214 4.927-4.875-1.4zm-3.896 4.02l5.037 1.442-3.782 3.638z"/></svg><span>three.js</span></li><li title="python"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/></svg><span>python</span></li><li title="claude: opus 5.5"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span>claude</span></li></ul>
+  </section>
+  
+
+  
+  <p class="credits">5×5 rectangle subdivisions by boris the brave<br>textures from quixel megascans and other collected libraries</p>
+  
+</article>
+<script src="../../static/js/lightbox.js" defer></script>
+
+</main>
+<footer class="footer">
+  <p><a href="../">back to experiments</a></p>
+  <p><a href="../../about/">about</a> · <a href="../../gazetteer/">gazetteer</a></p>
+</footer>
+<script type="module" src="../../static/js/bouffont-title.js"></script>
+</body>
+</html>

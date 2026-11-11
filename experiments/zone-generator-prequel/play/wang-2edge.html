@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wang Tile Playground</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#222; --panel:#fff; --a:#e9d8a6; --b:#2a7f62; --c:#7a4e2d; --bad:#e63946; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  main { display:flex; gap:12px; padding:12px; height:100vh; }
+  .side { display:flex; flex-direction:column; gap:8px; width:290px; flex-shrink:0; overflow-y:auto; }
+  h1 { font-size:1.1rem; margin:0; }
+  .hint { font-size:.78rem; line-height:1.35; margin:0; color:#555; }
+  .panel { background:var(--panel); border-radius:10px; padding:10px; box-shadow:0 1px 4px #0002; }
+  .gridwrap { flex:1; display:flex; align-items:center; justify-content:center; min-width:0; }
+  .povwrap { width:500px; flex-shrink:1; min-width:0; align-self:flex-start; }
+  .povwrap canvas { width:100%; height:auto; display:block; border-radius:6px; }
+  #palette { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+  #palette.big { grid-template-columns:repeat(16,1fr); gap:1px; }
+  #palette canvas { cursor:pointer; border:3px solid transparent; border-radius:4px; width:100%; height:auto; display:block; }
+  #palette.big canvas { border-width:1px; border-radius:0; }
+  #palette canvas.sel { border-color:var(--bad); }
+  .lbl { font:10px monospace; text-align:center; }
+  #selName { font:11px monospace; }
+  #palette.mid { grid-template-columns:repeat(8,1fr); gap:2px; }
+  #palette.mid canvas { border-width:2px; border-radius:2px; }
+  .selrow { display:flex; gap:8px; align-items:center; margin-top:8px; }
+  #preview { border:1px solid #0003; flex-shrink:0; }
+  #grid { cursor:crosshair; touch-action:none; display:block; }
+  .controls { display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:.85rem; }
+  .controls .full { grid-column:1 / -1; }
+  button, select { font:inherit; padding:4px 8px; border-radius:6px; border:1px solid #999; background:#fff; cursor:pointer; width:100%; }
+  label { display:block; }
+  .seg { display:flex; margin-top:2px; }
+  .seg button { border-radius:0; flex:1; }
+  .seg button:first-child { border-radius:6px 0 0 6px; }
+  .seg button:last-child { border-radius:0 6px 6px 0; }
+  .seg button + button { border-left:none; }
+  .seg button.on { background:var(--b); color:#fff; border-color:var(--b); }
+  @media (max-width:700px) { main { flex-direction:column; height:auto; } .side { width:100%; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="side">
+    <h1 id="title">Wang Tiles</h1>
+    <label>Tileset<select id="set">
+      <option value="edge">2-edge (colour on edges)</option>
+      <option value="corner">2-corner (colour on corners)</option>
+      <option value="mixed">Corners + edges + centre (512 tiles)</option></select></label>
+    <p class="hint" id="hint"></p>
+    <div class="panel">
+      <label style="font-size:.85rem"><input type="checkbox" id="reduce"> Reduce by rotation &amp; mirroring</label>
+      <div class="hint" id="setCount" style="margin:2px 0 6px"></div>
+      <div id="palette"></div>
+      <div class="selrow">
+        <canvas id="preview" width="40" height="40"></canvas>
+        <div style="flex:1"><div id="selName"></div>
+          <div class="seg" style="margin-top:4px"><button id="rotBtn" title="R">↻ Rotate (R)</button><button id="flipBtn" title="F">⇋ Flip (F)</button></div></div>
+      </div>
+    </div>
+    <div class="panel controls">
+      <div class="full">Mode<div class="seg" id="mode">
+        <button data-v="tile" class="on">Place tiles</button><button data-v="paint" id="paintOpt">Paint pips</button><button data-v="binary" title="Tap a tile to swap it between all-sand and all-green; neighbours follow">Binary</button><button data-v="player" title="Click the grid to place the first-person player">Player</button></div></div>
+      <div class="full">Style<div class="seg" id="style">
+        <button data-v="smooth" id="smoothOpt" class="on"></button><button data-v="raw" id="rawOpt"></button></div></div>
+      <button id="random">Random valid</button>
+      <button id="randomAny">Random any</button>
+      <button id="clear">Clear</button>
+      <label>Size <input type="range" id="size" min="4" max="20" value="10" style="width:100%"></label>
+      <label class="full"><input type="checkbox" id="adapt" checked> Neighbours adapt to placed tile</label>
+      <label><input type="checkbox" id="showBad" checked> Mismatches</label>
+      <label><input type="checkbox" id="lines" checked> Grid lines</label>
+      <label><input type="checkbox" id="edges"> Show pips</label>
+      <label><input type="checkbox" id="walls"> Walls</label>
+      <label class="full"><input type="checkbox" id="wallColours"> Colour wall pieces by type</label>
+      <div id="wallInfo" class="full hint"></div>
+      <div id="status" class="full"></div>
+    </div>
+    <p class="hint" id="help"></p>
+  </div>
+  <div class="gridwrap panel"><canvas id="grid"></canvas></div>
+  <div class="panel povwrap">
+    <h1>POV</h1>
+    <canvas id="pov" width="480" height="340" tabindex="0"></canvas>
+    <p class="hint">Green is floor, sand is rock. Walls come from the tile outlines, so use <b>2-corner</b> or <b>corners + edges + centre</b>. Mode <b>Player</b>: click the grid to stand there.<br><b>W/S</b> or <b>↑/↓</b> move, <b>A/D</b> or <b>←/→</b> turn, <b>Q/E</b> strafe. Click the view if keys don't respond.</p>
+  </div>
+</main>
+
+<script>
+const css = getComputedStyle(document.documentElement);
+const cssVar = n => css.getPropertyValue(n).trim();
+const COL = [cssVar('--a'), cssVar('--b'), cssVar('--c')];
+const BAD = cssVar('--bad');
+const $ = id => document.getElementById(id);
+// Two-button toggles that behave like a <select>: .value, and .onchange on click.
+document.querySelectorAll('.seg').forEach(seg => {
+  const btns = [...seg.querySelectorAll('button')];
+  Object.defineProperty(seg, 'value', {
+    get: () => btns.find(b => b.classList.contains('on')).dataset.v,
+    set: v => btns.forEach(b => b.classList.toggle('on', b.dataset.v === v)),
+  });
+  btns.forEach(b => b.addEventListener('click', () => {
+    if (seg.value === b.dataset.v) return;
+    seg.value = b.dataset.v;
+    seg.onchange && seg.onchange({ target: seg });
+  }));
+});
+
+// Every tileset is just "some on/off slots per tile". Slot i is bit 1<<i.
+//   slots: where each slot sits in the tile (0..1 coords)
+//   links: [dx, dy, myBit, neighbourBit]: which of my slots touch which of a
+//          neighbour's slots. An edge touches 1 neighbour; a corner touches 3.
+const CORNER_SLOTS = [[1,0],[1,1],[0,1],[0,0]];            // NE SE SW NW
+const EDGE_SLOTS   = [[.5,0],[1,.5],[.5,1],[0,.5]];         // N E S W
+const CORNER_LINKS = [[1,0,1,8],[1,0,2,4],[0,1,2,1],[0,1,4,8],[1,1,2,8],[-1,1,4,1]];
+const EDGE_LINKS   = [[1,0,2,8],[0,1,4,1]];
+const shift = (links, k) => links.map(([dx,dy,m,o]) => [dx,dy,m<<k,o<<k]);
+const SETS = {
+  edge: {
+    title: '2-Edge Wang Tiles', thing: 'edge',
+    hint: '4 edges &times; 2 colours = 16 tiles. Index = N1 + E2 + S4 + W8. Touching edges must match.',
+    names: ['N','E','S','W'], slots: EDGE_SLOTS, links: EDGE_LINKS,
+    styles: ['Pipes','Triangles'],
+  },
+  corner: {
+    title: '2-Corner Wang Tiles', thing: 'corner',
+    hint: '4 corners &times; 2 colours = 16 tiles. Index = NE1 + SE2 + SW4 + NW8. Each corner is shared by 4 tiles, and all of them must agree.',
+    names: ['NE','SE','SW','NW'], slots: CORNER_SLOTS, links: CORNER_LINKS,
+    styles: ['Blob','Quadrants'],
+  },
+  mixed: {
+    title: 'Corner + Edge Wang Tiles', thing: 'corner or edge',
+    hint: '4 corners + 4 edges + centre = 9 slots, 2<sup>9</sup> = 512 tiles, one colour. Together they shape a single outline. The centre isn\'t shared with neighbours: painting an edge sets it automatically (on when 2+ edges are on), and you can paint it yourself to override. Index = NE1 SE2 SW4 NW8 + N16 E32 S64 W128 + C256.',
+    names: ['NE','SE','SW','NW','N','E','S','W','C'],
+    slots: [...CORNER_SLOTS, ...EDGE_SLOTS, [.5,.5]],
+    autoCentre: true,
+    links: [...CORNER_LINKS, ...shift(EDGE_LINKS, 4)],
+    styles: ['Blob','3×3 blocks'],
+  },
+};
+let set, allLinks, BITS, COUNT;
+let style = 'smooth', size = 10, cell = 48, grid = [], selected = 15, hover = null;
+const gridEl = $('grid'), g = gridEl.getContext('2d');
+const isEdgeSlot = i => { const [sx, sy] = set.slots[i]; return (sx === .5) !== (sy === .5); };
+const EDGE_BITS_MIXED = [16,32,64,128], CENTRE = 256;
+
+function useSet(name) {
+  set = SETS[name];
+  BITS = set.slots.map((_, i) => 1 << i);
+  COUNT = 1 << set.slots.length;
+  computeSymmetry();
+  COUNT = 1 << set.slots.length;
+  selected = Math.min(selected, COUNT - 1);
+  // Every link also works backwards from the neighbour's side.
+  allLinks = [...set.links, ...set.links.map(([dx,dy,m,o]) => [-dx,-dy,o,m])];
+  $('title').textContent = set.title; document.title = set.title;
+  $('hint').innerHTML = set.hint;
+  $('smoothOpt').textContent = set.styles[0]; $('rawOpt').textContent = set.styles[1];
+  $('help').innerHTML = `<b>Place</b>: pick a tile, click/drag; right-click erases. <b>Paint pips</b>: click near a pip (${set.thing}${set.autoCentre ? ' or centre' : ''}) to flip it; every tile sharing it updates (autotiling). <b>Binary</b>: tap a tile to swap its colour.`;
+  buildPalette();
+  if (grid.length) { grid = grid.map(r => r.map(() => -1)); hover = null; draw(); }
+}
+
+// ---------- drawing ----------
+// Corner part: terrain fill (blob or quadrants).
+function drawCorners(ctx, x, y, s, c) {
+  if (!c) return;
+  ctx.beginPath();
+  if (style === 'raw') {
+    const h = Math.round(s/2);
+    if (c & 8) ctx.rect(x, y, h, h);
+    if (c & 1) ctx.rect(x+h, y, s-h, h);
+    if (c & 2) ctx.rect(x+h, y+h, s-h, s-h);
+    if (c & 4) ctx.rect(x, y+h, h, s-h);
+  } else {
+    // Blob (marching squares): walk round the tile clockwise. Keep each "on"
+    // corner, and cut across the edge midpoint wherever the colour changes.
+    const ring = [[8,0,0],[1,1,0],[2,1,1],[4,0,1]], pts = [];
+    for (let i = 0; i < 4; i++) {
+      const [b, cx, cy] = ring[i], [nb, nx, ny] = ring[(i+1) % 4];
+      if (c & b) pts.push([cx, cy]);
+      if (!!(c & b) !== !!(c & nb)) pts.push([(cx+nx)/2, (cy+ny)/2]);
+    }
+    pts.forEach(([px,py], i) => ctx[i ? 'lineTo' : 'moveTo'](x + px*s, y + py*s));
+    ctx.closePath();
+  }
+  ctx.fillStyle = COL[1]; ctx.fill();
+}
+// Edge part: pipes / triangles (edge set) or paths / tabs (mixed set).
+function drawEdges(ctx, x, y, s, e, color, thin) {
+  if (!e) return;
+  ctx.fillStyle = color;
+  if (style === 'smooth') {
+    const o = Math.round(s * (thin ? 0.38 : 0.3)), w = s - 2*o;
+    ctx.fillRect(x+o, y+o, w, w);
+    if (e & 1) ctx.fillRect(x+o, y, w, o+w);
+    if (e & 4) ctx.fillRect(x+o, y+o, w, s-o);
+    if (e & 8) ctx.fillRect(x, y+o, o+w, w);
+    if (e & 2) ctx.fillRect(x+o, y+o, s-o, w);
+  } else if (thin) {
+    // Tabs: a short bar sitting on each "on" edge.
+    const w = Math.round(s*0.3), d = Math.round(s*0.12), o = Math.round((s-w)/2);
+    if (e & 1) ctx.fillRect(x+o, y, w, d);
+    if (e & 4) ctx.fillRect(x+o, y+s-d, w, d);
+    if (e & 8) ctx.fillRect(x, y+o, d, w);
+    if (e & 2) ctx.fillRect(x+s-d, y+o, d, w);
+  } else {
+    // Triangles from each edge to the centre, in one fill so there are no seams.
+    const cx = x + s/2, cy = y + s/2;
+    const tris = [[1,[x,y],[x+s,y]], [2,[x+s,y],[x+s,y+s]], [4,[x+s,y+s],[x,y+s]], [8,[x,y+s],[x,y]]];
+    ctx.beginPath();
+    for (const [bit,a,b] of tris) if (e & bit) { ctx.moveTo(cx,cy); ctx.lineTo(...a); ctx.lineTo(...b); ctx.closePath(); }
+    ctx.fill();
+  }
+}
+function drawTile(ctx, x, y, s, t) {
+  ctx.fillStyle = COL[0]; ctx.fillRect(x, y, s, s);
+  if (set === SETS.edge)        drawEdges(ctx, x, y, s, t, COL[1], false);
+  else if (set === SETS.corner) drawCorners(ctx, x, y, s, t);
+  else drawCombined(ctx, x, y, s, t);
+}
+// Marching squares for one square: corner samples [nw, ne, se, sw].
+// Adds a polygon (as a sub-path) covering the "on" part of the square.
+function msPoly(ctx, x, y, w, [nw, ne, se, sw]) {
+  const ring = [[nw,0,0],[ne,1,0],[se,1,1],[sw,0,1]], pts = [];
+  for (let i = 0; i < 4; i++) {
+    const [b, cx, cy] = ring[i], [nb, nx, ny] = ring[(i+1) % 4];
+    if (b) pts.push([cx, cy]);
+    if (!!b !== !!nb) pts.push([(cx+nx)/2, (cy+ny)/2]);
+  }
+  if (!pts.length) return;
+  pts.forEach(([px,py], i) => ctx[i ? 'lineTo' : 'moveTo'](x + px*w, y + py*w));
+  ctx.closePath();
+}
+// Corners + edges, ONE colour. The 8 slots plus a centre make a 3x3 grid of
+// samples; the centre is on when at least 2 edges are on. Corners and edges
+// together decide one shape.
+function drawCombined(ctx, x, y, s, t) {
+  const c = b => (t & b) ? 1 : 0;
+  const nEdges = c(16) + c(32) + c(64) + c(128);
+  const S = [ [c(8),  c(16), c(1)],
+              [c(128), c(CENTRE), c(32)],
+              [c(4),  c(64), c(2)] ];
+  ctx.beginPath();
+  if (style === 'raw') {
+    // 3x3 blocks: see each of the 9 slots' raw value.
+    const k = [0, Math.round(s/3), Math.round(2*s/3), s];
+    for (let r = 0; r < 3; r++) for (let q = 0; q < 3; q++)
+      if (S[r][q]) ctx.rect(x + k[q], y + k[r], k[q+1]-k[q], k[r+1]-k[r]);
+  } else {
+    // Marching squares on the 4 quarter-squares, each with 4 of the samples.
+    const h = s/2;
+    for (let r = 0; r < 2; r++) for (let q = 0; q < 2; q++)
+      msPoly(ctx, x + q*h, y + r*h, h, [S[r][q], S[r][q+1], S[r+1][q+1], S[r+1][q]]);
+  }
+  ctx.fillStyle = COL[1]; ctx.fill();
+}
+
+const pal = $('palette');
+const tileName = t => t + ' ' + (BITS.map((b,i) => t & b ? set.names[i] : '').join('') || '-');
+// ---------- symmetry ----------
+// A rotation or mirror just moves slots around, so it's a permutation of bits.
+// Tiles that are rotations/mirrors of each other form one "orbit"; we keep the
+// smallest index of each orbit as its base tile and draw the rest by transforming it.
+let ROT, MIR, base = [], xform = [], orbitSize = [], bases = [];
+const reduced = () => $('reduce').checked;
+function applyPerm(t, p) { let r = 0; p.forEach((to, i) => { if (t & (1 << i)) r |= 1 << to; }); return r; }
+function computeSymmetry() {
+  const permFor = fn => set.slots.map(([x, y]) => {
+    const [nx, ny] = fn(x, y);
+    return set.slots.findIndex(([a, b]) => a === nx && b === ny);
+  });
+  ROT = permFor((x, y) => [1 - y, x]);   // 90° clockwise
+  MIR = permFor((x, y) => [1 - x, y]);   // mirror left-right
+  // The 8 transforms of a tile, each with a short label.
+  const variants = t => {
+    const out = [];
+    for (const m of [0, 1]) {
+      let c = m ? applyPerm(t, MIR) : t;
+      for (let k = 0; k < 4; k++) { out.push([c, (m ? 'F' : '') + (k ? '↻' + k*90 : '')]); c = applyPerm(c, ROT); }
+    }
+    return out;
+  };
+  base = []; xform = []; orbitSize = []; bases = [];
+  for (let t = 0; t < COUNT; t++) {
+    if (base[t] !== undefined) continue;
+    bases.push(t);
+    const seen = new Set();
+    for (const [u, label] of variants(t)) {
+      if (base[u] === undefined) { base[u] = t; xform[u] = label; }
+      seen.add(u);
+    }
+    orbitSize[t] = seen.size;
+  }
+}
+function transformSelected(p) {
+  selected = applyPerm(selected, p);
+  $('mode').value = 'tile'; refreshPalette();
+}
+
+function buildPalette() {
+  pal.innerHTML = '';
+  const list = reduced() ? bases : [...Array(COUNT).keys()];
+  const big = list.length > 16, px = big ? 40 : 58;
+  pal.classList.toggle('big', list.length > 64);
+  pal.classList.toggle('mid', big && list.length <= 64);
+  for (const t of list) {
+    const wrap = document.createElement('div');
+    const c = document.createElement('canvas'); c.width = c.height = px;
+    drawTile(c.getContext('2d'), 0, 0, px, t);
+    c.onclick = () => { selected = t; refreshPalette(); $('mode').value = 'tile'; hover = null; draw(); };
+    c.title = tileName(t) + (reduced() ? `  (×${orbitSize[t]} orientations)` : '');
+    c.dataset.t = t;
+    wrap.append(c);
+    if (!big) {
+      const l = document.createElement('div'); l.className = 'lbl';
+      l.textContent = reduced() ? `${t} ×${orbitSize[t]}` : tileName(t);
+      wrap.append(l);
+    }
+    pal.append(wrap);
+  }
+  $('setCount').textContent = reduced()
+    ? `${bases.length} base tiles (from ${COUNT}). Rotate/flip to get the rest.`
+    : `${COUNT} tiles.`;
+  refreshPalette();
+}
+function refreshPalette() {
+  const shown = reduced() ? base[selected] : selected;
+  pal.querySelectorAll('canvas').forEach(c => c.classList.toggle('sel', +c.dataset.t === shown));
+  let txt = 'Selected: ' + tileName(selected);
+  if (reduced()) txt += ` = base ${base[selected]} ${xform[selected] || '(as is)'}`;
+  $('selName').textContent = txt;
+  const p = $('preview').getContext('2d'); drawTile(p, 0, 0, 40, selected);
+}
+
+function reset() {
+  size = +$('size').value;
+  const wrap = document.querySelector('.gridwrap');
+  cell = Math.max(8, Math.floor(((innerWidth <= 700 ? wrap.clientWidth : Math.min(wrap.clientWidth, wrap.clientHeight)) - 24) / size));
+  gridEl.width = gridEl.height = cell * size;
+  grid = Array.from({length:size}, () => Array(size).fill(-1));
+  draw();
+}
+const inside = (x,y) => x>=0 && y>=0 && x<size && y<size;
+const get = (x,y) => inside(x,y) ? grid[y][x] : -1;
+
+// Mark a slot: a line along an edge, or a ring around a corner.
+function markSlot(x, y, bit, color, width) {
+  const i = BITS.indexOf(bit), [sx, sy] = set.slots[i], px = (x+sx)*cell, py = (y+sy)*cell;
+  g.strokeStyle = color; g.lineWidth = width; g.lineCap = 'round';
+  if (isEdgeSlot(i)) {
+    const inset = set === SETS.mixed ? cell*0.25 : 0; // leave the corners free for corner rings
+    if (sx === .5) line(x*cell+inset, py, (x+1)*cell-inset, py); else line(px, y*cell+inset, px, (y+1)*cell-inset);
+  } else {
+    g.beginPath(); g.arc(px, py, cell*0.18, 0, Math.PI*2); g.stroke();
+  }
+  g.lineWidth = 1; g.lineCap = 'butt';
+}
+
+function draw() {
+  g.fillStyle = '#ddd'; g.fillRect(0,0,gridEl.width,gridEl.height);
+  let bad = 0, filled = 0;
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const t = grid[y][x];
+    if (t >= 0) { drawTile(g, x*cell, y*cell, cell, t); filled++; }
+    if ($('lines').checked) { g.strokeStyle = '#0003'; g.lineWidth = 1; g.strokeRect(x*cell+.5, y*cell+.5, cell, cell); }
+  }
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const t = grid[y][x]; if (t < 0) continue;
+    for (const [dx,dy,m,o] of set.links) {
+      const n = get(x+dx, y+dy);
+      if (n >= 0 && !!(t & m) !== !!(n & o)) { bad++; if ($('showBad').checked) markSlot(x, y, m, BAD, 4); }
+    }
+  }
+  drawWalls();
+  if ($('edges').checked) drawPips();
+  if (hover && $('mode').value === 'paint') markSlot(hover[0], hover[1], hover[2], '#ff9f1c', Math.max(3, cell*0.1));
+  worldWalls = buildWorldWalls();
+  drawPlayer();
+  $('status').textContent = `${filled}/${size*size} filled, ${bad} mismatch${bad===1?'':'es'}`;
+}
+// A small dot inside each tile near each slot, showing that tile's own colour
+// there. Tiles that agree show matching dots around the shared edge/corner.
+function drawPips() {
+  const r = Math.max(2.5, cell * 0.07);
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const t = grid[y][x];
+    BITS.forEach((bit, i) => {
+      const [sx, sy] = set.slots[i];
+      const px = (x + sx + (.5-sx)*.34) * cell, py = (y + sy + (.5-sy)*.34) * cell;
+      g.beginPath(); g.arc(px, py, r, 0, Math.PI*2);
+      if (t >= 0) { g.fillStyle = COL[t & bit ? 1 : 0]; g.fill(); }
+      g.strokeStyle = t < 0 ? '#0003' : '#000a'; g.lineWidth = 1.5; g.stroke();
+    });
+  }
+  g.lineWidth = 1;
+}
+// ---------- modular walls ----------
+// The outline is built square by square with marching squares (the whole tile
+// for 2-corner, each quarter for corners+edges). In any square the outline is
+// either nothing, one DIAGONAL (cuts a corner), one STRAIGHT (crosses the
+// square), or two diagonals (opposite corners on). So two wall pieces, each
+// rotated in 90° steps, build every outline: two meshes for 3D later.
+function squareWalls([nw, ne, se, sw], ox, oy, w, out) {
+  const mid = { N:[ox+w/2, oy], E:[ox+w, oy+w/2], S:[ox+w/2, oy+w], W:[ox, oy+w/2] };
+  const cut = [];                       // sides where the colour changes
+  if (!!nw !== !!ne) cut.push('N');
+  if (!!ne !== !!se) cut.push('E');
+  if (!!se !== !!sw) cut.push('S');
+  if (!!sw !== !!nw) cut.push('W');
+  if (cut.length === 2) {
+    const straight = (cut[0] === 'N' && cut[1] === 'S') || (cut[0] === 'E' && cut[1] === 'W');
+    out.push({ kind: straight ? 'straight' : 'diag', a: mid[cut[0]], b: mid[cut[1]] });
+  } else if (cut.length === 4) {
+    // Saddle: the fill joins the two "on" corners, so the walls cut off the "off" ones.
+    if (nw) out.push({kind:'diag', a:mid.N, b:mid.E}, {kind:'diag', a:mid.S, b:mid.W});
+    else    out.push({kind:'diag', a:mid.N, b:mid.W}, {kind:'diag', a:mid.E, b:mid.S});
+  }
+}
+// Blocky styles (Quadrants / 3x3 blocks): walls run along the edges between
+// blocks of different colour. Shared slots match across tile borders, so only
+// edges inside the tile can ever need a wall.
+function blockWalls(S, k, out) {
+  const n = S.length;
+  for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) {
+    if (q+1 < n && S[r][q] !== S[r][q+1]) out.push({kind:'straight', a:[k[q+1], k[r]], b:[k[q+1], k[r+1]]});
+    if (r+1 < n && S[r][q] !== S[r+1][q]) out.push({kind:'straight', a:[k[q], k[r+1]], b:[k[q+1], k[r+1]]});
+  }
+}
+function tileWalls(t) {
+  const out = [], c = b => (t & b) ? 1 : 0;
+  if (style === 'raw') {
+    if (set === SETS.corner) blockWalls([[c(8), c(1)], [c(4), c(2)]], [0, .5, 1], out);
+    else if (set === SETS.mixed) blockWalls([[c(8), c(16), c(1)], [c(128), c(CENTRE), c(32)], [c(4), c(64), c(2)]], [0, 1/3, 2/3, 1], out);
+    return out;
+  }
+  if (set === SETS.corner) squareWalls([c(8), c(1), c(2), c(4)], 0, 0, 1, out);
+  else if (set === SETS.mixed) {
+    const S = [[c(8), c(16), c(1)], [c(128), c(CENTRE), c(32)], [c(4), c(64), c(2)]];
+    for (let r = 0; r < 2; r++) for (let q = 0; q < 2; q++)
+      squareWalls([S[r][q], S[r][q+1], S[r+1][q+1], S[r+1][q]], q/2, r/2, .5, out);
+  }
+  return out;
+}
+function drawWalls() {
+  const info = $('wallInfo');
+  if (!$('walls').checked) { info.textContent = ''; return; }
+  if (set === SETS.edge) { info.textContent = 'Walls follow area outlines, so they need the 2-corner or corners + edges set.'; return; }
+  const segs = [], count = { diag: 0, straight: 0 };
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const t = grid[y][x]; if (t < 0) continue;
+    for (const s of tileWalls(t)) { segs.push([x, y, s]); count[s.kind]++; }
+  }
+  const P = (x, y, [px, py]) => [(x+px)*cell, (y+py)*cell];
+  const w = Math.max(3, cell * (set === SETS.corner ? 0.14 : 0.09));
+  const colours = $('wallColours').checked;
+  g.lineCap = 'round';
+  // Three passes give each piece a simple raised look: shadow, body, highlight.
+  for (const [pass, lw, dy] of [['shadow', w, w*0.35], ['body', w, 0], ['top', w*0.35, -w*0.15]]) {
+    for (const [x, y, s] of segs) {
+      const [ax, ay] = P(x, y, s.a), [bx, by] = P(x, y, s.b);
+      g.strokeStyle = pass === 'shadow' ? '#0005'
+        : pass === 'top' ? '#fff6'
+        : colours ? (s.kind === 'diag' ? '#f28c28' : '#3d5ad6') : '#5b4636';
+      g.lineWidth = lw;
+      line(ax, ay + dy, bx, by + dy);
+    }
+  }
+  g.lineCap = 'butt'; g.lineWidth = 1;
+  info.innerHTML = style === 'raw'
+    ? `Block walls: <b>${count.straight}</b> straight pieces. Only <b>1 unique piece</b>, used in 2 rotations.`
+    : `Walls: <b>${count.diag}</b> diagonal + <b>${count.straight}</b> straight pieces. `
+      + `Only <b>2 unique pieces</b>, each used in 4 rotations.`;
+}
+function line(a,b,c,d){ g.beginPath(); g.moveTo(a,b); g.lineTo(c,d); g.stroke(); }
+
+// ---------- rules ----------
+function fits(t, x, y) {
+  for (const [dx,dy,m,o] of allLinks) {
+    const n = get(x+dx, y+dy);
+    if (n >= 0 && !!(t & m) !== !!(n & o)) return false;
+  }
+  return true;
+}
+// Scan left-to-right, top-to-bottom, picking any tile that fits the tiles
+// already placed. With a complete set there is always one that fits.
+function randomValid() {
+  grid = grid.map(r => r.map(() => -1));
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const ok = [];
+    for (let t=0;t<COUNT;t++) if (fits(t, x, y)) ok.push(t);
+    grid[y][x] = ok[Math.random()*ok.length|0];
+    if (set.autoCentre) { // centre follows the edge rule rather than being random
+      const n = EDGE_BITS_MIXED.filter(e => grid[y][x] & e).length;
+      grid[y][x] = n >= 2 ? grid[y][x] | CENTRE : grid[y][x] & ~CENTRE;
+    }
+  }
+  draw();
+}
+// Set one slot of a tile, and make every neighbour that shares it agree.
+function setSlot(x, y, bit, on, fillEmpty) {
+  const put = (cx, cy, b) => {
+    if (!inside(cx,cy)) return;
+    if (grid[cy][cx] < 0) { if (!fillEmpty) return; grid[cy][cx] = 0; }
+    grid[cy][cx] = on ? grid[cy][cx] | b : grid[cy][cx] & ~b;
+    // Changing an edge re-derives the centre (on when 2+ edges are on).
+    // Painting the centre itself is a manual override that sticks until an edge changes.
+    if (set.autoCentre && EDGE_BITS_MIXED.includes(b)) {
+      const n = EDGE_BITS_MIXED.filter(e => grid[cy][cx] & e).length;
+      grid[cy][cx] = n >= 2 ? grid[cy][cx] | CENTRE : grid[cy][cx] & ~CENTRE;
+    }
+  };
+  put(x, y, bit);
+  for (const [dx,dy,m,o] of allLinks) if (m === bit) put(x+dx, y+dy, o);
+}
+// Your placed tile wins: neighbours flip their shared slots to match it.
+function adaptNeighbours(x, y) {
+  const t = grid[y][x];
+  for (const bit of BITS) setSlot(x, y, bit, !!(t & bit), false);
+}
+
+// ---------- input ----------
+function nearestSlot(px, py) {
+  const x = Math.floor(px/cell), y = Math.floor(py/cell);
+  if (!inside(x,y)) return null;
+  const fx = px/cell - x, fy = py/cell - y;
+  let best = null, bd = 9;
+  BITS.forEach((bit, i) => {
+    const [sx, sy] = set.slots[i], d = (fx-sx)**2 + (fy-sy)**2;
+    if (d < bd) { bd = d; best = [x, y, bit]; }
+  });
+  return best;
+}
+function paint(px, py) {
+  const h = nearestSlot(px, py); if (!h) return;
+  const [x, y, bit] = h;
+  const on = grid[y][x] < 0 ? true : !(grid[y][x] & bit);
+  setSlot(x, y, bit, on, true);
+  draw();
+}
+
+let dragging = false, erase = false;
+function cellAt(e) {
+  const r = gridEl.getBoundingClientRect(), k = gridEl.width / r.width;
+  return [(e.clientX - r.left)*k, (e.clientY - r.top)*k];
+}
+let binaryOn = null;
+function act(e) {
+  const [px,py] = cellAt(e);
+  const x = Math.floor(px/cell), y = Math.floor(py/cell);
+  if (!inside(x,y)) return;
+  if ($('mode').value === 'player') {
+    if (!playerBlocked(px/cell, py/cell)) { player.x = px/cell; player.y = py/cell; draw(); }
+    return;
+  }
+  if ($('mode').value === 'binary') {
+    // Binary paint: the whole tile becomes one colour (every slot on, or every
+    // slot off), and all neighbours sharing those slots follow. The colour is
+    // decided by the first tap of a drag: a full tile turns off, anything else on.
+    const full = COUNT - 1;
+    if (binaryOn === null) binaryOn = grid[y][x] !== full;
+    for (const bit of BITS) setSlot(x, y, bit, binaryOn, true);
+    draw();
+    return;
+  }
+  grid[y][x] = erase ? -1 : selected;
+  if (!erase && $('adapt').checked) adaptNeighbours(x, y);
+  draw();
+}
+gridEl.addEventListener('contextmenu', e => e.preventDefault());
+gridEl.addEventListener('pointerdown', e => {
+  if ($('mode').value === 'paint') { paint(...cellAt(e)); return; }
+  dragging = true; erase = e.button === 2; binaryOn = null; act(e);
+});
+gridEl.addEventListener('pointermove', e => {
+  if (dragging) act(e);
+  if ($('mode').value === 'paint') {
+    const h = nearestSlot(...cellAt(e));
+    if (String(h) !== String(hover)) { hover = h; draw(); }
+  }
+});
+gridEl.addEventListener('pointerleave', () => { hover = null; draw(); });
+window.addEventListener('pointerup', () => dragging = false);
+
+$('set').onchange = e => useSet(e.target.value);
+$('mode').onchange = () => { hover = null; draw(); };
+$('style').onchange = e => { style = e.target.value; buildPalette(); draw(); };
+$('random').onclick = randomValid;
+$('randomAny').onclick = () => { grid = grid.map(r => r.map(() => Math.random()*COUNT|0)); draw(); };
+$('clear').onclick = () => { grid = grid.map(r => r.map(() => -1)); draw(); };
+$('size').oninput = reset;
+$('showBad').onchange = draw; $('lines').onchange = draw; $('edges').onchange = draw;
+$('walls').onchange = draw; $('wallColours').onchange = draw;
+$('reduce').onchange = buildPalette;
+$('rotBtn').onclick = () => transformSelected(ROT);
+$('flipBtn').onclick = () => transformSelected(MIR);
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'r' || e.key === 'R') transformSelected(ROT);
+  if (e.key === 'f' || e.key === 'F') transformSelected(MIR);
+});
+window.addEventListener('resize', () => { const old = grid; reset(); old.forEach((r,y)=>r.forEach((t,x)=>{ if (y<size&&x<size) grid[y][x]=t; })); draw(); });
+
+// ---------- first-person view ----------
+// Walls for the POV are the same wall pieces as the Walls overlay, moved into
+// world coordinates (1 unit = 1 tile). Map, view and collision share them.
+let worldWalls = [];
+const player = { x: 1.5, y: 1.5, a: 0 };
+const FOV = 70 * Math.PI/180, RADIUS = 0.15, MAX_D = 8;
+function buildWorldWalls() {
+  const out = [];
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) {
+    const t = grid[y][x]; if (t < 0) continue;
+    for (const s of tileWalls(t)) out.push({ a:[x+s.a[0], y+s.a[1]], b:[x+s.b[0], y+s.b[1]] });
+  }
+  return out;
+}
+function drawPlayer() {
+  const px = player.x*cell, py = player.y*cell, r = cell*2.5;
+  g.fillStyle = '#e6394633';
+  g.beginPath(); g.moveTo(px, py); g.arc(px, py, r, player.a - FOV/2, player.a + FOV/2); g.closePath(); g.fill();
+  g.strokeStyle = '#e63946'; g.lineWidth = 2;
+  g.beginPath(); g.arc(px, py, Math.max(3, cell*.15), 0, Math.PI*2); g.stroke();
+  g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(player.a)*cell*.45, py + Math.sin(player.a)*cell*.45); g.stroke();
+  g.lineWidth = 1;
+}
+function distToSeg(px, py, [ax, ay], [bx, by]) {
+  const dx = bx-ax, dy = by-ay, len = dx*dx + dy*dy || 1;
+  const t = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / len));
+  return Math.hypot(px - (ax + t*dx), py - (ay + t*dy));
+}
+const playerBlocked = (x, y) =>
+  x < RADIUS || y < RADIUS || x > size-RADIUS || y > size-RADIUS ||
+  worldWalls.some(w => distToSeg(x, y, w.a, w.b) < RADIUS);
+function tryMove(dx, dy) {
+  // Each axis separately, so you slide along walls instead of sticking.
+  if (!playerBlocked(player.x + dx, player.y)) player.x += dx;
+  if (!playerBlocked(player.x, player.y + dy)) player.y += dy;
+}
+
+const pov = $('pov'), pg = pov.getContext('2d');
+const PW = pov.width, PH = pov.height, COLS = PW / 2, projDist = (PW/2) / Math.tan(FOV/2);
+const hexC = c => { const n = parseInt(c.slice(1), 16); return [n>>16 & 255, n>>8 & 255, n & 255]; };
+const lerpC = (a, b, t) => a.map((v, i) => v*(1-t) + b[i]*t);
+const rgbC = ([r,gg,b]) => `rgb(${r|0},${gg|0},${b|0})`;
+const WALL_C = hexC(COL[0]), FLOOR_C = hexC(COL[1]), DARK_C = [94,84,66], BLACK = [0,0,0];
+function castRay(ox, oy, dx, dy) {
+  let best = Infinity, hit = null;
+  for (const w of worldWalls) {
+    const [ax, ay] = w.a, [bx, by] = w.b;
+    const ex = bx-ax, ey = by-ay, den = dx*ey - dy*ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((ax-ox)*ey - (ay-oy)*ex) / den;   // distance along the ray
+    const u = ((ax-ox)*dy - (ay-oy)*dx) / den;   // position along the wall
+    if (t > 0 && u >= 0 && u <= 1 && t < best) { best = t; hit = w; }
+  }
+  return [best, hit];
+}
+function drawPov() {
+  let gr = pg.createLinearGradient(0, 0, 0, PH/2);
+  gr.addColorStop(0, rgbC(lerpC(DARK_C, BLACK, .3))); gr.addColorStop(1, rgbC(DARK_C));
+  pg.fillStyle = gr; pg.fillRect(0, 0, PW, PH/2);
+  gr = pg.createLinearGradient(0, PH/2, 0, PH);
+  gr.addColorStop(0, rgbC(DARK_C)); gr.addColorStop(1, rgbC(FLOOR_C));
+  pg.fillStyle = gr; pg.fillRect(0, PH/2, PW, PH/2);
+  const colW = PW / COLS;
+  for (let c = 0; c < COLS; c++) {
+    const camX = (c + .5) / COLS * 2 - 1;
+    const ang = player.a + Math.atan(camX * Math.tan(FOV/2));
+    const [d, w] = castRay(player.x, player.y, Math.cos(ang), Math.sin(ang));
+    if (!w || d > MAX_D) continue;
+    const perp = d * Math.cos(ang - player.a);       // remove fisheye
+    const h = projDist / perp;                       // walls are 1 tile tall
+    const nx = -(w.b[1]-w.a[1]), ny = w.b[0]-w.a[0], nl = Math.hypot(nx, ny);
+    const light = .7 + .3 * Math.abs((nx*.6 + ny*.8) / nl);
+    pg.fillStyle = rgbC(lerpC(lerpC(BLACK, WALL_C, light), DARK_C, Math.min(1, perp / MAX_D)));
+    pg.fillRect(c*colW, PH/2 - h/2, colW + 1, h);
+  }
+}
+
+const keys = {};
+const MOVE_KEYS = ['w','a','s','d','q','e','arrowup','arrowdown','arrowleft','arrowright'];
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const k = e.key.toLowerCase();
+  if (MOVE_KEYS.includes(k)) { keys[k] = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+pov.addEventListener('click', () => pov.focus());
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const k = n => keys[n];
+  const turn = (k('d') || k('arrowright') ? 1 : 0) - (k('a') || k('arrowleft') ? 1 : 0);
+  const fwd = (k('w') || k('arrowup') ? 1 : 0) - (k('s') || k('arrowdown') ? 1 : 0);
+  const side = (k('e') ? 1 : 0) - (k('q') ? 1 : 0);
+  player.a += turn * 2.4 * dt;
+  if (fwd || side) {
+    const sp = 2.2 * dt, ca = Math.cos(player.a), sa = Math.sin(player.a);
+    tryMove((ca*fwd - sa*side) * sp, (sa*fwd + ca*side) * sp);
+  }
+  if (turn || fwd || side) draw();
+  drawPov();
+  requestAnimationFrame(loop);
+}
+
+useSet('edge'); reset();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

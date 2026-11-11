@@ -1,0 +1,3180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rooms and creatures</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        background: #f7f4fb;
+      }
+
+      #controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        color: #333;
+      }
+
+      #controls .seed-controls {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      #controls button,
+      #controls select,
+      #controls input {
+        font-size: 14px;
+      }
+
+      button {
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+
+      canvas {
+        border: 1px solid #d3d3d3;
+        background: #fcfbff;
+        margin: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <label>
+        mode
+        <select id="viewModeInput">
+          <option value="grid" selected>grid</option>
+          <option value="single">single</option>
+        </select>
+      </label>
+
+      <label>
+        cols
+        <input id="colsInput" type="number" min="1" max="12" value="1" style="width:60px;">
+      </label>
+
+      <label>
+        rows
+        <input id="rowsInput" type="number" min="1" max="12" value="1" style="width:60px;">
+      </label>
+
+      <span class="seed-controls">
+        <label>
+          creature #
+          <input id="seedInput" type="number" min="1" step="1" value="1" style="width:90px;">
+        </label>
+        <button id="prevSeedBtn" type="button">previous</button>
+        <button id="nextSeedBtn" type="button">next</button>
+        <button id="randomSeedBtn" type="button">random</button>
+      </span>
+
+      <label><input id="randomB" type="checkbox" checked> random B</label>
+      <label><input id="randomE" type="checkbox" checked> random E</label>
+      <label><input id="randomN" type="checkbox" checked> random N</label>
+      <label><input id="randomM" type="checkbox" checked> random M</label>
+      <label><input id="bodyConstellation" type="checkbox" checked> body constellation</label>
+    </div>
+
+    <canvas id="myCanvas" width="1024" height="1024">
+      Your browser does not support the HTML canvas tag.
+    </canvas>
+
+    <script>
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const viewModeInput = document.getElementById("viewModeInput");
+      const roomOverlayImg = new Image();
+      roomOverlayImg.src = "../play/roomoverlay.png";
+      const colsInput = document.getElementById("colsInput");
+      const rowsInput = document.getElementById("rowsInput");
+      const seedInput = document.getElementById("seedInput");
+      const prevSeedBtn = document.getElementById("prevSeedBtn");
+      const nextSeedBtn = document.getElementById("nextSeedBtn");
+      const randomSeedBtn = document.getElementById("randomSeedBtn");
+      const randomBInput = document.getElementById("randomB");
+      const randomEInput = document.getElementById("randomE");
+      const randomNInput = document.getElementById("randomN");
+      const randomMInput = document.getElementById("randomM");
+      const bodyConstellationInput = document.getElementById("bodyConstellation");
+
+      const DEFAULT_FEATURES = {
+        B: "triangle",
+        E: "square",
+        N: "circle",
+        M: "v"
+      };
+
+      const backgroundImages = [];
+      for (let i = 0; i < 300; i++) {
+        const img = new Image();
+        img.src = `../play/300PlusRepeatBackgrounds/bg${i}.png`;
+        backgroundImages.push(img);
+      }
+
+      function mulberry32(seed) {
+        let a = seed >>> 0;
+        return function () {
+          a |= 0;
+          a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function getControls() {
+        return {
+          viewMode: viewModeInput.value,
+          cols: parseInt(colsInput.value, 10),
+          rows: parseInt(rowsInput.value, 10),
+          selectedSeed: getSafeSeedValue(),
+          bodyConstellation: bodyConstellationInput.checked,
+          randomize: {
+            B: randomBInput.checked,
+            E: randomEInput.checked,
+            N: randomNInput.checked,
+            M: randomMInput.checked
+          }
+        };
+      }
+
+      function getSafeSeedValue() {
+        const raw = parseInt(seedInput.value, 10);
+        if (!Number.isFinite(raw) || raw < 1) return 1;
+        return raw;
+      }
+
+      function setSeedValue(seed) {
+        seedInput.value = Math.max(1, Math.floor(seed));
+      }
+
+      function createRNG(seed) {
+        let s = seed;
+        return function() {
+          s = Math.sin(s * 9999) * 10000;
+          return s - Math.floor(s);
+        };
+      }
+
+      function range(rng, min, max) {
+        return min + rng() * (max - min);
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function deriveCreatureSpace(cx, cy, headRadius) {
+        return {
+          head: { x: cx, y: cy },
+          browBandY: cy - headRadius * 0.42,
+          faceCenter: { x: cx, y: cy },
+          bodyAnchor: { x: cx, y: cy + headRadius * 1.15 }
+        };
+      }
+
+      function weightedChoice(pool, rng) {
+        const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+        let roll = rng() * totalWeight;
+        for (const item of pool) {
+          if (roll < item.weight) return item.name;
+          roll -= item.weight;
+        }
+        return pool[pool.length - 1].name;
+      }
+
+      function chooseOne(array, rng) {
+        return array[Math.floor(rng() * array.length)];
+      }
+
+      function parseHslString(hsl) {
+        const match = /hsl\((\d+),\s*([\d.]+)%,\s*([\d.]+)%\)/.exec(hsl);
+        if (!match) return null;
+        return { h: Number(match[1]), s: Number(match[2]), l: Number(match[3]) };
+      }
+
+      function darkerColour(hsl, amount = 12) {
+        const parsed = parseHslString(hsl);
+        if (!parsed) return hsl;
+        const l = clamp(parsed.l - amount, 0, 100);
+        return `hsl(${parsed.h}, ${parsed.s}%, ${l}%)`;
+      }
+
+      function lighterColour(hsl, amount = 12) {
+        const parsed = parseHslString(hsl);
+        if (!parsed) return hsl;
+        const l = clamp(parsed.l + amount, 0, 100);
+        return `hsl(${parsed.h}, ${parsed.s}%, ${l}%)`;
+      }
+
+      function shiftedColour(hsl, hueShift = 0, satShift = 0, lightShift = 0) {
+        const parsed = parseHslString(hsl);
+        if (!parsed) return hsl;
+        const h = (parsed.h + hueShift + 360) % 360;
+        const s = clamp(parsed.s + satShift, 0, 100);
+        const l = clamp(parsed.l + lightShift, 0, 100);
+        return `hsl(${h}, ${s}%, ${l}%)`;
+      }
+
+      function pastelColour(rng) {
+        const hue = Math.floor(rng() * 360);
+        const sat = 55 + rng() * 20;
+        const light = 78 + rng() * 10;
+        return `hsl(${hue}, ${sat}%, ${light}%)`;
+      }
+
+      function jitterBlendValue(baseTime, speed, amount, waveFn, cadence = 1.1, hold = 0.68) {
+        const cycleTime = baseTime * cadence;
+        const cycleIndex = Math.floor(cycleTime);
+        const phase = cycleTime - cycleIndex;
+        const t0 = cycleIndex / cadence;
+        const t1 = (cycleIndex + 1) / cadence;
+        const v0 = waveFn(t0 * speed) * amount;
+        const v1 = waveFn(t1 * speed) * amount;
+        if (phase <= hold) return v0;
+        const u = (phase - hold) / (1 - hold);
+        const eased = u * u * (3 - 2 * u);
+        return v0 + (v1 - v0) * eased;
+      }
+
+      function makeRegularPolygonPoints(sides, radius, rotation = 0) {
+        const points = [];
+        for (let i = 0; i < sides; i++) {
+          const angle = rotation + (Math.PI * 2 * i) / sides - Math.PI / 2;
+          points.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        }
+        return points;
+      }
+
+      function drawRoundedPolygonPath(points, cornerRadius) {
+        if (!points || points.length < 3) return;
+
+        const radius = Math.max(0, cornerRadius);
+        const getPoint = (index) => points[(index + points.length) % points.length];
+
+        ctx.beginPath();
+
+        for (let i = 0; i < points.length; i++) {
+          const prev = getPoint(i - 1);
+          const curr = getPoint(i);
+          const next = getPoint(i + 1);
+
+          const vx1 = prev.x - curr.x;
+          const vy1 = prev.y - curr.y;
+          const len1 = Math.hypot(vx1, vy1) || 1;
+
+          const vx2 = next.x - curr.x;
+          const vy2 = next.y - curr.y;
+          const len2 = Math.hypot(vx2, vy2) || 1;
+
+          const usableRadius = Math.min(radius, len1 * 0.45, len2 * 0.45);
+
+          const startX = curr.x + (vx1 / len1) * usableRadius;
+          const startY = curr.y + (vy1 / len1) * usableRadius;
+          const endX = curr.x + (vx2 / len2) * usableRadius;
+          const endY = curr.y + (vy2 / len2) * usableRadius;
+
+          if (i === 0) ctx.moveTo(startX, startY);
+          else ctx.lineTo(startX, startY);
+
+          ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+        }
+
+        ctx.closePath();
+      }
+
+      function lineThickness(baseSize, style, multiplier = 1) {
+        const base = Math.max(2, baseSize * 0.06);
+        const styleBoost = style && style.thicknessMode === "double" ? 1.6 : 1;
+        return base * styleBoost * multiplier;
+      }
+
+      function pointOnCircle(radius, angle) {
+        return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+      }
+
+      function varyAroundBase(rng, base, spread = 0.2, min = 0) {
+        return Math.max(min, base * range(rng, 1 - spread, 1 + spread));
+      }
+
+      function buildAnchorAngleSequence(rng, count, looseness) {
+        const angles = [];
+        const slots = [];
+        for (let i = 0; i < count; i++) {
+          const baseAngle = (Math.PI * 2 * i) / count;
+          const evenJitter = range(rng, -0.15, 0.15) * (1 - looseness);
+          const looseJitter = range(rng, -Math.PI / 2.2, Math.PI / 2.2) * looseness;
+          slots.push(baseAngle + evenJitter + looseJitter);
+        }
+        slots.sort((a, b) => a - b);
+        for (let i = 0; i < slots.length; i++) angles.push(slots[i]);
+        return angles;
+      }
+
+      function samplePerimeterAnchors(rng, radius, count, looseness) {
+        return buildAnchorAngleSequence(rng, count, looseness).map((angle, index) => {
+          const p = pointOnCircle(radius, angle);
+          return { index, angle, x: p.x, y: p.y };
+        });
+      }
+
+      function samplePerimeterAnchorsNormalized(rng, count, looseness) {
+        return buildAnchorAngleSequence(rng, count, looseness).map((angle, index) => ({
+          index,
+          angle,
+          x: Math.cos(angle),
+          y: Math.sin(angle)
+        }));
+      }
+
+      function drawSoftCurlPath(size) {
+        ctx.beginPath();
+        ctx.moveTo(size * 0.28, -size * 0.48);
+        ctx.quadraticCurveTo(-size * 0.16, -size * 0.62, -size * 0.34, -size * 0.16);
+        ctx.quadraticCurveTo(-size * 0.45, size * 0.2, -size * 0.1, size * 0.28);
+        ctx.quadraticCurveTo(size * 0.22, size * 0.34, size * 0.28, 0);
+      }
+
+      function makeRoomVector(n) {
+        const seed = n * 7919 + 17;
+        const rng = mulberry32(seed);
+
+        const bgIndex = Math.floor(rng() * 300);
+        const scale = Math.max(1, Math.floor(rng() * 32) + 1);
+        const tint = {
+          r: Math.floor((rng() * 2 - 1) * 65),
+          g: Math.floor((rng() * 2 - 1) * 65),
+          b: Math.floor((rng() * 2 - 1) * 65)
+        };
+
+        const breaker = rng() < 0.02
+          ? pickWeightedRoom(rng, [
+              { name: "spiral", weight: 1 },
+              { name: "whirlpool", weight: 1.2 },
+              { name: "vortexIn", weight: 0.8 },
+              { name: "vortexOut", weight: 0.8 }
+            ])
+          : "none";
+
+        return { bgIndex, scale, tint, breaker };
+      }
+
+      function pickWeightedRoom(rng, pool) {
+        const total = pool.reduce((sum, item) => sum + item.weight, 0);
+        let roll = rng() * total;
+        for (const item of pool) {
+          if (roll < item.weight) return item.name;
+          roll -= item.weight;
+        }
+        return pool[pool.length - 1].name;
+      }
+
+      function buildSquareSpiralPositions(count) {
+        const positions = [];
+        let x = 0, y = 0;
+        let dx = 1, dy = 0;
+        let segmentLength = 1;
+        let segmentPassed = 0;
+        let segmentCount = 0;
+
+        for (let i = 0; i < count; i++) {
+          positions.push({ x, y });
+          x += dx;
+          y += dy;
+          segmentPassed++;
+
+          if (segmentPassed === segmentLength) {
+            segmentPassed = 0;
+            const temp = dx;
+            dx = -dy;
+            dy = temp;
+            segmentCount++;
+            if (segmentCount % 2 === 0) segmentLength++;
+          }
+        }
+        return positions;
+      }
+
+      function withViewport(view, fn) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(view.x, view.y, view.width, view.height);
+        ctx.clip();
+        fn();
+        ctx.restore();
+      }
+
+      function drawFlatRoom(img, scale, view) {
+        const tileW = view.width / scale;
+        const tileH = view.height / scale;
+        ctx.imageSmoothingEnabled = false;
+        for (let y = 0; y < scale; y++) {
+          for (let x = 0; x < scale; x++) {
+            ctx.drawImage(img, view.x + x * tileW, view.y + y * tileH, tileW, tileH);
+          }
+        }
+        ctx.imageSmoothingEnabled = true;
+      }
+
+      function drawSpiralRoom(img, scale, view) {
+        const count = Math.max(16, scale * scale);
+        const tileSize = Math.max(8, Math.min(view.width, view.height) / Math.max(4, scale * 0.85));
+        const positions = buildSquareSpiralPositions(count);
+
+        ctx.imageSmoothingEnabled = false;
+        for (let i = 0; i < positions.length; i++) {
+          const p = positions[i];
+          const drawX = view.x + view.width / 2 + p.x * tileSize - tileSize / 2;
+          const drawY = view.y + view.height / 2 + p.y * tileSize - tileSize / 2;
+          if (drawX > view.x + view.width || drawY > view.y + view.height || drawX + tileSize < view.x || drawY + tileSize < view.y) continue;
+
+          ctx.save();
+          ctx.translate(drawX + tileSize / 2, drawY + tileSize / 2);
+          ctx.rotate((i % 4) * Math.PI / 2);
+          ctx.drawImage(img, -tileSize / 2, -tileSize / 2, tileSize, tileSize);
+          ctx.restore();
+        }
+        ctx.imageSmoothingEnabled = true;
+      }
+
+      function drawWhirlpoolRoom(img, scale, view) {
+        const count = Math.max(40, scale * scale * 2);
+        const maxRadius = Math.min(view.width, view.height) * 0.65;
+        const tileSize = Math.max(10, Math.min(view.width, view.height) / Math.max(5, scale * 0.8));
+
+        ctx.imageSmoothingEnabled = false;
+        for (let i = 0; i < count; i++) {
+          const t = i * 0.33;
+          const r = maxRadius * Math.sqrt(i / count);
+          const x = view.x + view.width / 2 + Math.cos(t) * r;
+          const y = view.y + view.height / 2 + Math.sin(t) * r;
+
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(t);
+          ctx.drawImage(img, -tileSize / 2, -tileSize / 2, tileSize, tileSize);
+          ctx.restore();
+        }
+        ctx.imageSmoothingEnabled = true;
+      }
+
+      function drawVortexRoom(img, scale, view, inward = true) {
+        const count = Math.max(60, scale * scale * 2);
+        const maxRadius = Math.min(view.width, view.height) * 0.72;
+        const minBase = Math.max(4, Math.min(view.width, view.height) / (scale * 8 + 12));
+        const maxBase = Math.max(18, Math.min(view.width, view.height) / (scale * 1.8));
+
+        ctx.imageSmoothingEnabled = false;
+        for (let i = 0; i < count; i++) {
+          const t = i * 0.38;
+          const progress = i / (count - 1 || 1);
+          const r = inward ? maxRadius * (1 - progress) : maxRadius * progress;
+          const size = inward
+            ? minBase + (maxBase - minBase) * progress
+            : maxBase - (maxBase - minBase) * progress;
+
+          const x = view.x + view.width / 2 + Math.cos(t) * r;
+          const y = view.y + view.height / 2 + Math.sin(t) * r;
+
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(t * 1.1);
+          ctx.drawImage(img, -size / 2, -size / 2, size, size);
+          ctx.restore();
+        }
+        ctx.imageSmoothingEnabled = true;
+      }
+
+      function drawTintOverlayRoom(tint, view) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(view.x, view.y, view.width, view.height);
+        ctx.clip();
+
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.fillStyle = `rgba(${Math.max(0, tint.r)}, ${Math.max(0, tint.g)}, ${Math.max(0, tint.b)}, 0.18)`;
+        ctx.fillRect(view.x, view.y, view.width, view.height);
+
+        ctx.fillStyle = `rgba(${Math.max(0, -tint.r)}, ${Math.max(0, -tint.g)}, ${Math.max(0, -tint.b)}, 0.14)`;
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillRect(view.x, view.y, view.width, view.height);
+        ctx.restore();
+      }
+
+function drawRoomForSeed(seed, view) {
+  const vector = makeRoomVector(seed);
+  const img = backgroundImages[vector.bgIndex];
+
+  ctx.save();
+  ctx.fillStyle = "#fcfbff";
+  ctx.fillRect(view.x, view.y, view.width, view.height);
+  ctx.restore();
+
+  if (!img || !img.complete || img.naturalWidth === 0) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(0,0,0,0.08)";
+    ctx.strokeRect(view.x, view.y, view.width, view.height);
+    ctx.restore();
+    return;
+  }
+
+  withViewport(view, () => {
+    if (vector.breaker === "none") {
+      drawFlatRoom(img, vector.scale, view);
+    } else if (vector.breaker === "spiral") {
+      drawSpiralRoom(img, vector.scale, view);
+    } else if (vector.breaker === "whirlpool") {
+      drawWhirlpoolRoom(img, vector.scale, view);
+    } else if (vector.breaker === "vortexIn") {
+      drawVortexRoom(img, vector.scale, view, true);
+    } else if (vector.breaker === "vortexOut") {
+      drawVortexRoom(img, vector.scale, view, false);
+    }
+  });
+
+  drawTintOverlayRoom(vector.tint, view);
+
+  if (roomOverlayImg.complete && roomOverlayImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "multiply";
+    ctx.drawImage(roomOverlayImg, view.x, view.y, view.width, view.height);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  ctx.strokeRect(view.x, view.y, view.width, view.height);
+  ctx.restore();
+}
+
+      class DriftyShape {
+        constructor(x, y, colour) {
+          this.baseX = x;
+          this.baseY = y;
+          this.x = x;
+          this.y = y;
+          this.colour = colour;
+          this.rotation = 0;
+          this.scaleX = 1;
+          this.scaleY = 1;
+          this.driftAmountX = 0;
+          this.driftAmountY = 0;
+          this.driftSpeedX = 0;
+          this.driftSpeedY = 0;
+          this.timeOffset = 0;
+          this.shimmerStrength = 0;
+          this.shimmerRate = 5;
+          this.localPhaseOffset = 0;
+          this.driftGroup = null;
+          this.profile = null;
+          this.motionLayer = "feature";
+        }
+
+        update(time) {
+          if (this.driftGroup) {
+            this.x = this.baseX + this.driftGroup.x;
+            this.y = this.baseY + this.driftGroup.y;
+            return;
+          }
+          const t = time * 0.001 + this.timeOffset;
+          this.x = this.baseX + Math.sin(t * this.driftSpeedX) * this.driftAmountX;
+          this.y = this.baseY + Math.cos(t * this.driftSpeedY) * this.driftAmountY;
+        }
+
+        draw() {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.rotation);
+          ctx.scale(this.scaleX, this.scaleY);
+          this.drawSelf();
+          ctx.restore();
+        }
+
+        drawSelf() {}
+      }
+
+      let driftGroups = [];
+      let shapes = [];
+      let roomViews = [];
+
+      class TaurusHornShape extends DriftyShape {
+        constructor(x, y, length, width, colour, side) {
+          super(x, y, colour);
+          this.length = length;
+          this.width = width;
+          this.side = side;
+        }
+
+        drawSelf() {
+          const halfW = this.width / 2;
+          const r = halfW;
+          const shaft = Math.max(0, this.length - r);
+          ctx.fillStyle = this.colour;
+          ctx.beginPath();
+          ctx.moveTo(-halfW, 0);
+          ctx.lineTo(-halfW, -shaft);
+          ctx.arc(0, -shaft, r, Math.PI, 0, false);
+          ctx.lineTo(halfW, 0);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      class CapriHornShape extends DriftyShape {
+        constructor(x, y, length, width, colour, side) {
+          super(x, y, colour);
+          this.length = length;
+          this.width = width;
+          this.side = side;
+        }
+
+        drawSelf() {
+          const dir = this.side === "left" ? -1 : 1;
+          const stroke = this.width;
+
+          ctx.strokeStyle = this.colour;
+          ctx.lineWidth = stroke;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+
+          ctx.bezierCurveTo(
+            dir * this.length * 0.18, -this.length * 0.18,
+            dir * this.length * 0.34, -this.length * 0.48,
+            dir * this.length * 0.18, -this.length * 0.72
+          );
+
+          ctx.bezierCurveTo(
+            dir * this.length * 0.02, -this.length * 0.96,
+            -dir * this.length * 0.18, -this.length * 0.92,
+            -dir * this.length * 0.12, -this.length * 0.68
+          );
+
+          ctx.stroke();
+        }
+      }
+
+      const MOTION_PRESETS = {
+        creature: {
+          amountXMin: 2.5, amountXMax: 7.5,
+          amountYMin: 2.0, amountYMax: 6.5,
+          speedXMin: 0.08, speedXMax: 0.16,
+          speedYMin: 0.08, speedYMax: 0.16,
+          shimmerStrength: 0
+        },
+        faceGroup: {
+          amountXMin: 2.2, amountXMax: 4.8,
+          amountYMin: 0.4, amountYMax: 1.3,
+          speedXMin: 0.18, speedXMax: 0.32,
+          speedYMin: 0.12, speedYMax: 0.2,
+          shimmerStrength: 0.15,
+          jitterHold: 0.68,
+          jitterBurst: 3.3
+        }
+      };
+
+      function getAmplitudeClass(rng) {
+        const roll = rng();
+        if (roll < 0.5) return { name: "tiny", multiplier: 0.75 };
+        if (roll < 0.82) return { name: "medium", multiplier: 1.0 };
+        if (roll < 0.95) return { name: "loose", multiplier: 1.35 };
+        return { name: "galaxy", multiplier: 1.8 };
+      }
+
+      function getActivityType(rng) {
+        const roll = rng();
+        if (roll < 0.35) return "hover";
+        if (roll < 0.62) return "scan";
+        if (roll < 0.82) return "sine";
+        if (roll < 0.92) return "float";
+        return "still";
+      }
+
+      function getShimmerStrength(rng) {
+        const roll = rng();
+        if (roll < 0.58) return 0;
+        if (roll < 0.86) return 0.45;
+        return 0.9;
+      }
+
+      function buildMotionProfile(seed) {
+        const rng = createRNG(seed * 13.17 + 91);
+        const amplitudeClass = getAmplitudeClass(rng);
+        const wobbleType = rng() < 0.28 ? "jittery" : "normal";
+        const shimmerStrength = getShimmerStrength(rng);
+        const calmness = range(rng, 0.15, 0.92);
+        const elasticity = range(rng, 0.25, 1.8);
+        const activityType = getActivityType(rng);
+        const activityLevel = Math.pow(range(rng, 0.05, 0.7), 1.4);
+        const axisBias = range(rng, -1, 1);
+        const speedMultiplier = range(rng, 0.7, 1.35);
+        const masterFrequency = range(rng, 0.65, 1.25);
+        const masterPhase = rng() * Math.PI * 2;
+
+        return {
+          seed,
+          amplitudeClass,
+          wobbleType,
+          shimmerStrength,
+          calmness,
+          elasticity,
+          activityType,
+          activityLevel,
+          axisBias,
+          speedMultiplier,
+          amplitudeMultiplier: amplitudeClass.multiplier,
+          masterFrequency,
+          masterPhase,
+
+          getPulseTime(time, localPhaseOffset = 0) {
+            return time * 0.001 * this.masterFrequency + this.masterPhase + localPhaseOffset * (1 - this.calmness) * 2.6;
+          },
+
+          getActivityVector(time, localPhaseOffset = 0) {
+            const t = time * 0.001 * this.masterFrequency + this.masterPhase + localPhaseOffset;
+            const level = this.activityLevel;
+            const stillness = 1 - level;
+            const horizontalFavor = 1 + Math.max(0, this.axisBias) * 0.85;
+            const verticalFavor = 1 + Math.max(0, -this.axisBias) * 0.85;
+
+            if (this.activityType === "still") {
+              return { xScale: 0.5 + level * 0.4, yScale: 0.5 + level * 0.35, speedScaleX: 0.9, speedScaleY: 0.9 };
+            }
+            if (this.activityType === "scan") {
+              return {
+                xScale: (0.72 + level * 0.9) * horizontalFavor,
+                yScale: 0.3 + level * 0.18,
+                speedScaleX: 1.08 + level * 0.34,
+                speedScaleY: 0.82 + level * 0.12
+              };
+            }
+            if (this.activityType === "sine") {
+              return {
+                xScale: 0.68 + level * 0.5,
+                yScale: (0.58 + level * 0.65) * verticalFavor,
+                speedScaleX: 0.92 + level * 0.18,
+                speedScaleY: 1.08 + level * 0.28
+              };
+            }
+            if (this.activityType === "float") {
+              return {
+                xScale: 0.6 + level * 0.48,
+                yScale: 0.6 + level * 0.52,
+                speedScaleX: 0.85 + Math.sin(t * 0.7) * 0.08,
+                speedScaleY: 0.88 + Math.cos(t * 0.76) * 0.08
+              };
+            }
+            return {
+              xScale: 0.55 + level * 0.32 + (1 - stillness) * Math.max(0, this.axisBias) * 0.15,
+              yScale: 0.55 + level * 0.32 + (1 - stillness) * Math.max(0, -this.axisBias) * 0.15,
+              speedScaleX: 0.95 + level * 0.12,
+              speedScaleY: 0.95 + level * 0.12
+            };
+          },
+
+          getLayerSync(layerName) {
+            const calm = this.calmness;
+            const axisX = this.axisBias >= 0 ? 1 + this.axisBias * 0.4 : 1 + this.axisBias * 0.12;
+            const axisY = this.axisBias <= 0 ? 1 + (-this.axisBias) * 0.22 : 0.75;
+            const loose = 1 + this.elasticity * 0.34;
+
+            if (layerName === "head") return { x: 0.12, y: 0.12, speedX: 0.92, speedY: 0.92 };
+            if (layerName === "creature") {
+              return {
+                x: 0.48 * axisX,
+                y: 0.38 * (axisY + 0.25),
+                speedX: 0.82 + calm * 0.18,
+                speedY: 0.82 + calm * 0.18
+              };
+            }
+            if (layerName === "faceGroup") {
+              return {
+                x: 1.08 * axisX,
+                y: 0.36 + Math.max(0, -this.axisBias) * 0.1,
+                speedX: 0.94 + (1 - calm) * 0.16,
+                speedY: 0.88 + (1 - calm) * 0.08
+              };
+            }
+            if (layerName === "faceFeature") {
+              return {
+                x: 0.18 + (1 - calm) * 0.14,
+                y: 0.08 + (1 - calm) * 0.06,
+                speedX: 0.96,
+                speedY: 0.96
+              };
+            }
+            if (layerName === "bodyNode") {
+              return {
+                x: 0.82 * loose,
+                y: 0.82 * loose,
+                speedX: 0.92 + (1 - calm) * 0.14,
+                speedY: 0.92 + (1 - calm) * 0.14
+              };
+            }
+            if (layerName === "connector") {
+              return {
+                x: 1.1 * loose,
+                y: 1.1 * loose,
+                speedX: 1 + (1 - calm) * 0.22,
+                speedY: 1 + (1 - calm) * 0.22
+              };
+            }
+            return { x: 1, y: 1, speedX: 1, speedY: 1 };
+          }
+        };
+      }
+
+      class DriftGroup {
+        constructor(config = {}) {
+          this.kind = config.kind || "group";
+          this.profile = config.profile || null;
+          this.baseAmountX = config.baseAmountX || 0;
+          this.baseAmountY = config.baseAmountY || 0;
+          this.amountX = this.baseAmountX;
+          this.amountY = this.baseAmountY;
+          this.baseSpeedX = config.baseSpeedX || 0.2;
+          this.baseSpeedY = config.baseSpeedY || 0.2;
+          this.speedX = this.baseSpeedX;
+          this.speedY = this.baseSpeedY;
+          this.timeOffset = config.timeOffset || 0;
+          this.localPhaseOffset = config.localPhaseOffset || 0;
+          this.x = 0;
+          this.y = 0;
+          this.shimmerStrength = config.shimmerStrength || 0;
+          this.shimmerRate = config.shimmerRate || 4;
+          this.jitterHold = config.jitterHold || 0.55;
+          this.jitterBurst = config.jitterBurst || 3.8;
+          this.layerName = config.layerName || "group";
+          this.parentGroup = config.parentGroup || null;
+        }
+
+        update(time) {
+          const profile = this.profile;
+          if (!profile) {
+            const t = time * 0.001 + this.timeOffset;
+            this.x = Math.sin(t * this.speedX) * this.amountX;
+            this.y = Math.cos(t * this.speedY) * this.amountY;
+            return;
+          }
+
+          const pulseT = profile.getPulseTime(time, this.localPhaseOffset);
+          const activity = profile.getActivityVector(time, this.localPhaseOffset);
+          const sync = profile.getLayerSync(this.layerName);
+
+          this.amountX = this.baseAmountX * profile.amplitudeMultiplier * activity.xScale * sync.x;
+          this.amountY = this.baseAmountY * profile.amplitudeMultiplier * activity.yScale * sync.y;
+          this.speedX = this.baseSpeedX * profile.speedMultiplier * activity.speedScaleX * sync.speedX;
+          this.speedY = this.baseSpeedY * profile.speedMultiplier * activity.speedScaleY * sync.speedY;
+
+          let sx = Math.sin(pulseT * this.speedX) * this.amountX;
+          let sy = Math.cos(pulseT * this.speedY) * this.amountY;
+
+          if (profile.wobbleType === "jittery") {
+            const cadence = 0.75 * this.jitterBurst;
+            sx = jitterBlendValue(pulseT, this.speedX, this.amountX, Math.sin, cadence, this.jitterHold);
+            sy = jitterBlendValue(pulseT, this.speedY, this.amountY, Math.cos, cadence, this.jitterHold);
+          }
+
+          if (profile.shimmerStrength > 0 && this.shimmerStrength > 0) {
+            const shimmerT = time * 0.001 * (profile.speedMultiplier * this.shimmerRate) + this.timeOffset + this.localPhaseOffset * 4;
+            sx += Math.sin(shimmerT) * this.shimmerStrength * profile.shimmerStrength;
+            sy += Math.cos(shimmerT * 1.13) * this.shimmerStrength * profile.shimmerStrength;
+          }
+
+          const parentX = this.parentGroup ? this.parentGroup.x : 0;
+          const parentY = this.parentGroup ? this.parentGroup.y : 0;
+          this.x = parentX + sx;
+          this.y = parentY + sy;
+        }
+      }
+
+      function createDriftGroup(config) {
+        const group = new DriftGroup(config);
+        driftGroups.push(group);
+        return group;
+      }
+
+      function createCreatureDriftGroup(rng, profile, presetName, layerName) {
+        const preset = MOTION_PRESETS[presetName];
+        return createDriftGroup({
+          kind: presetName,
+          profile,
+          baseAmountX: range(rng, preset.amountXMin, preset.amountXMax),
+          baseAmountY: range(rng, preset.amountYMin, preset.amountYMax),
+          baseSpeedX: range(rng, preset.speedXMin, preset.speedXMax),
+          baseSpeedY: range(rng, preset.speedYMin, preset.speedYMax),
+          timeOffset: rng() * 1000,
+          localPhaseOffset: range(rng, 0, 1),
+          shimmerStrength: preset.shimmerStrength || 0,
+          shimmerRate: preset.shimmerRate || 4,
+          jitterHold: preset.jitterHold || 0.55,
+          jitterBurst: preset.jitterBurst || 3.8,
+          layerName,
+          parentGroup: null
+        });
+      }
+
+      function applyMotionToPart(part, config, indexOffset = 0, rng) {
+        part.driftAmountX = range(rng, config.amountXMin, config.amountXMax);
+        part.driftAmountY = range(rng, config.amountYMin, config.amountYMax);
+        part.driftSpeedX = range(rng, config.speedXMin, config.speedXMax);
+        part.driftSpeedY = range(rng, config.speedYMin, config.speedYMax);
+        part.timeOffset = rng() * 1000 + indexOffset * 30;
+        part.shimmerStrength = config.shimmerStrength || 0;
+        part.shimmerRate = config.shimmerRate || 5;
+        part.localPhaseOffset = range(rng, 0, 1);
+        part.driftGroup = config.driftGroup || null;
+        part.profile = config.profile || null;
+        part.motionLayer = config.layerName || "feature";
+      }
+
+      function addParts(parts, rng, config) {
+        parts.forEach((part, index) => {
+          applyMotionToPart(part, config, index, rng);
+          shapes.push(part);
+        });
+      }
+
+      // A child trait may inherit from its parent creation event.
+      // Sibling traits may not influence one another directly.
+      function getGeminiGeometry(radius, spec) {
+        const r1 = radius;
+        const r2 = r1 * (spec.geminiRadiusScale || 0.8);
+        let d = r1 * (spec.geminiOffsetScale || 0.5);
+        const maxSafeDistance = (r1 + r2) * 0.82;
+        d = Math.min(d, maxSafeDistance);
+        const angle = spec.geminiAngle || 0;
+        const dx = Math.cos(angle) * d;
+        const dy = Math.sin(angle) * d;
+        const len = Math.hypot(dx, dy) || 1;
+
+        return {
+          r1, r2, d, angle, dx, dy,
+          x2: dx, y2: dy,
+          inwardX: -dx / len,
+          inwardY: -dy / len
+        };
+      }
+
+      // Non-mutant body nodes inherit from the creature's zodiac law.
+      // Mutant body nodes inherit from the mutation rule instead.
+      // For zodiac heads, the seed selects the head law.
+      // After that, all visible variation is parameter drift within that law, not further categorical branching.
+      function deriveTaurusHornQuality(rng) {
+        return {
+          hornLengthBase: range(rng, 0.5, 2),
+          hornWidthBase: range(rng, 0.1, 0.4),
+          sinkBase: range(rng, 0.1, 0.3),
+          outwardBase: range(rng, 0.1, 0.4),
+          angleVarianceDeg: 15
+        };
+      }
+
+      function deriveCapriHornQuality(rng) {
+        return {
+          hornLengthBase: range(rng, 0.5, 2),
+          hornWidthBase: range(rng, 0.1, 0.4),
+          sinkBase: range(rng, 0.1, 0.3),
+          outwardBase: range(rng, 0.1, 0.4),
+          angleVarianceDeg: 15
+        };
+      }
+
+      function deriveLeoManeQuality(rng) {
+        return {
+          shape: weightedChoice([
+            { name: "triangle", weight: 8 },
+            { name: "circle", weight: 7 },
+            { name: "curlC", weight: 4 }
+          ], rng),
+          pointCount: Math.floor(range(rng, 10, 21)),
+          anchorLooseness: range(rng, 0.04, 0.48),
+          sizeBase: range(rng, 0.12, 0.22),
+          overlapBase: range(rng, -0.02, 0.08),
+          colourLift: range(rng, 6, 14)
+        };
+      }
+
+      function deriveCancerCoronaQuality(rng) {
+        return {
+          tipShape: weightedChoice([
+            { name: "circle", weight: 7 },
+            { name: "roundedTriangle", weight: 4 },
+            { name: "roundedSquare", weight: 4 }
+          ], rng),
+          pointCount: Math.floor(range(rng, 3, 10)),
+          anchorLooseness: range(rng, 0.02, 0.95),
+          stemLengthBase: range(rng, 0.18, 0.44),
+          stemThicknessBase: range(rng, 0.022, 0.06),
+          tipSizeBase: range(rng, 0.08, 0.16),
+          stemHueShift: range(rng, -8, 8),
+          stemSatShift: range(rng, -6, 4),
+          stemLightShift: range(rng, -2, 8)
+        };
+      }
+
+      function getSeededHeadSpec(seed) {
+        const rng = createRNG(seed * 101.73 + 7.19);
+        const law = weightedChoice([
+          { name: "standard", weight: 89 },
+          { name: "gemini", weight: 2 },
+          { name: "leo", weight: 2 },
+          { name: "cancer", weight: 2 },
+          { name: "libra", weight: 4 },
+          { name: "taurus", weight: 3 },
+          { name: "capricorn", weight: 3 },
+        ], rng);
+
+        if (law === "gemini") {
+          return {
+            headLaw: "gemini",
+            bucket: "zodiac",
+            type: "circle",
+            circleVariant: "gemini",
+            geminiAngle: rng() * Math.PI * 2,
+            geminiRadiusScale: range(rng, 0.6, 1.0),
+            geminiOffsetScale: range(rng, 0.38, 0.58),
+            localRotation: 0
+          };
+        }
+
+        if (law === "leo") {
+          return {
+            headLaw: "leo",
+            bucket: "zodiac",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            maneQuality: deriveLeoManeQuality(rng)
+          };
+        }
+
+        if (law === "cancer") {
+          return {
+            headLaw: "cancer",
+            bucket: "zodiac",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            coronaQuality: deriveCancerCoronaQuality(rng)
+          };
+        }
+
+        if (law === "libra") {
+          return {
+            headLaw: "libra",
+            bucket: "zodiac",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            libraScale: range(rng, 1.08, 1.22)
+          };
+        }
+
+        if (law === "capricorn") {
+          return {
+            headLaw: "capricorn",
+            bucket: "zodiac",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            hornQuality: deriveCapriHornQuality(rng)
+          };
+        }
+
+        if (law === "taurus") {
+          return {
+            headLaw: "taurus",
+            bucket: "zodiac",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            hornQuality: deriveTaurusHornQuality(rng)
+          };
+        }
+
+        const roll = rng();
+        if (roll < 0.8) {
+          return {
+            headLaw: "standard",
+            bucket: "common",
+            type: "circle",
+            circleVariant: weightedChoice([
+              { name: "trueCircle", weight: 12 },
+              { name: "ellipseHorizontal", weight: 8 },
+              { name: "ellipseVertical", weight: 8 },
+              { name: "doubleLump", weight: 1.2 }
+            ], rng),
+            circleRotation: range(rng, -Math.PI / 7, Math.PI / 7),
+            lumpOffsetX: range(rng, -3, 3),
+            lumpOffsetY: range(rng, -3, 3),
+            localRotation: 0
+          };
+        }
+
+        if (roll < 0.95) {
+          return {
+            headLaw: "standard",
+            bucket: "uncommon",
+            type: chooseOne(["roundedSquare", "roundedTriangle", "roundedDiamond"], rng),
+            localRotation: 0
+          };
+        }
+
+        const type = chooseOne(["pentagon", "invertedRoundedTriangle", "rotatedSquare"], rng);
+        let localRotation = 0;
+        if (type === "rotatedSquare") {
+          const sign = rng() < 0.5 ? -1 : 1;
+          localRotation = sign * range(rng, Math.PI / 18, Math.PI / 7);
+        }
+        return { headLaw: "standard", bucket: "rare", type, localRotation };
+      }
+
+      class MorphShape extends DriftyShape {
+        constructor(x, y, radius, colour, spec) {
+          super(x, y, colour);
+          this.radius = radius;
+          this.spec = spec;
+          this.bodyExtras = null;
+        }
+
+        drawSelf() {
+          ctx.fillStyle = this.colour;
+
+          if (this.spec.headLaw === "leo") {
+            this.drawLeoHead();
+            return;
+          }
+
+          if (this.spec.headLaw === "cancer") {
+            this.drawCancerHead();
+            return;
+          }
+
+          if (this.spec.type === "circle") {
+            this.drawCircleFamily();
+            this.drawBodyExtras();
+            return;
+          }
+
+          if (this.spec.type === "roundedSquare" || this.spec.type === "rotatedSquare") {
+            const size = this.radius * 1.82;
+            const corner = this.radius * 0.28;
+            ctx.save();
+            ctx.rotate(this.spec.localRotation || 0);
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(-size / 2, -size / 2, size, size, corner);
+            } else {
+              drawRoundedPolygonPath([
+                { x: -size / 2, y: -size / 2 },
+                { x:  size / 2, y: -size / 2 },
+                { x:  size / 2, y:  size / 2 },
+                { x: -size / 2, y:  size / 2 }
+              ], corner);
+            }
+            ctx.fill();
+            ctx.restore();
+            this.drawBodyExtras();
+            return;
+          }
+
+          if (this.spec.type === "roundedDiamond") {
+            drawRoundedPolygonPath([
+              { x: 0, y: -this.radius * 1.2 },
+              { x: this.radius * 1.3, y: 0 },
+              { x: 0, y: this.radius * 1.2 },
+              { x: -this.radius * 1.3, y: 0 }
+            ], this.radius * 0.22);
+            ctx.fill();
+            this.drawBodyExtras();
+            return;
+          }
+
+          if (this.spec.type === "roundedTriangle") {
+            drawRoundedPolygonPath(makeRegularPolygonPoints(3, this.radius * 1.3, 0), this.radius * 0.24);
+            ctx.fill();
+            this.drawBodyExtras();
+            return;
+          }
+
+          if (this.spec.type === "invertedRoundedTriangle") {
+            drawRoundedPolygonPath(makeRegularPolygonPoints(3, this.radius * 1.3, Math.PI), this.radius * 0.24);
+            ctx.fill();
+            this.drawBodyExtras();
+            return;
+          }
+
+          if (this.spec.type === "pentagon") {
+            drawRoundedPolygonPath(makeRegularPolygonPoints(5, this.radius * 1.1, 0), this.radius * 0.16);
+            ctx.fill();
+            this.drawBodyExtras();
+            return;
+          }
+
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+          this.drawBodyExtras();
+        }
+
+        drawCircleFamily() {
+          const variant = this.spec.circleVariant || "trueCircle";
+          let r = this.radius;
+
+          if (this.spec.headLaw === "libra" || this.spec.zodiacBodyLaw === "libra") {
+            r *= this.spec.libraScale || 1.12;
+          }
+          if (variant === "gemini") {
+            const g = getGeminiGeometry(this.radius, this.spec);
+            ctx.beginPath();
+            ctx.arc(0, 0, g.r1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(g.x2, g.y2, g.r2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+          }
+
+          if (variant === "trueCircle") {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+          }
+
+          if (variant === "ellipseHorizontal") {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 1.1, r * 0.92, 0, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+          }
+
+          if (variant === "ellipseVertical") {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 0.92, r * 1.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+          }
+
+          if (variant === "doubleLump") {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 1.03, r * 0.98, this.spec.circleRotation || 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.save();
+            ctx.globalAlpha = 0.96;
+            ctx.beginPath();
+            ctx.ellipse(
+              this.spec.lumpOffsetX || 0,
+              this.spec.lumpOffsetY || 0,
+              r * 1.0,
+              r * 1.02,
+              (this.spec.circleRotation || 0) * 0.7,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+            ctx.restore();
+            return;
+          }
+
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        drawLeoHead() {
+          const q = this.spec.maneQuality;
+          const maneColour = lighterColour(this.colour, q.colourLift);
+          const anchors = samplePerimeterAnchors(createRNG((q.pointCount + this.radius) * 12.7), this.radius, q.pointCount, q.anchorLooseness);
+
+          ctx.fillStyle = maneColour;
+          ctx.strokeStyle = maneColour;
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+
+          for (const anchor of anchors) {
+            const angle = anchor.angle;
+            const size = this.radius * q.sizeBase * range(createRNG(angle * 999 + this.radius), 0.8, 1.22);
+            const overlap = this.radius * q.overlapBase * range(createRNG(angle * 833 + this.radius), 0.8, 1.2);
+            const pos = pointOnCircle(this.radius + overlap, angle);
+
+            ctx.save();
+            ctx.translate(pos.x, pos.y);
+            ctx.rotate(angle + Math.PI / 2);
+
+            if (q.shape === "triangle") {
+              drawRoundedPolygonPath(makeRegularPolygonPoints(3, size * 1.2, 0), size * 0.22);
+              ctx.fill();
+            } else if (q.shape === "circle") {
+              ctx.beginPath();
+              ctx.arc(0, 0, size, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              ctx.lineWidth = Math.max(2, size * 0.34);
+              drawSoftCurlPath(size * 1.15);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          ctx.fillStyle = this.colour;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        drawCancerHead() {
+          const q = this.spec.coronaQuality;
+          const anchors = samplePerimeterAnchors(createRNG((q.pointCount + this.radius) * 15.3), this.radius, q.pointCount, q.anchorLooseness);
+          const stemColour = shiftedColour(this.colour, q.stemHueShift, q.stemSatShift, q.stemLightShift);
+
+          ctx.strokeStyle = stemColour;
+          ctx.fillStyle = stemColour;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          for (const anchor of anchors) {
+            const localRng = createRNG(anchor.angle * 777 + this.radius * 13.1);
+            const stemLength = this.radius * varyAroundBase(localRng, q.stemLengthBase, 0.32, 0.06);
+            const stemThickness = this.radius * varyAroundBase(localRng, q.stemThicknessBase, 0.28, 0.01);
+            const tipSize = this.radius * varyAroundBase(localRng, q.tipSizeBase, 0.28, 0.03);
+            const startX = anchor.x;
+            const startY = anchor.y;
+            const end = pointOnCircle(this.radius + stemLength, anchor.angle);
+
+            ctx.lineWidth = stemThickness;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(end.x, end.y);
+            ctx.rotate(anchor.angle + Math.PI / 2);
+
+            if (q.tipShape === "circle") {
+              ctx.beginPath();
+              ctx.arc(0, 0, tipSize, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (q.tipShape === "roundedTriangle") {
+              drawRoundedPolygonPath(makeRegularPolygonPoints(3, tipSize * 1.18, 0), tipSize * 0.26);
+              ctx.fill();
+            } else {
+              const size = tipSize * 1.8;
+              const corner = tipSize * 0.5;
+              if (typeof ctx.roundRect === "function") {
+                ctx.beginPath();
+                ctx.roundRect(-size / 2, -size / 2, size, size, corner);
+              } else {
+                drawRoundedPolygonPath([
+                  { x: -size / 2, y: -size / 2 },
+                  { x: size / 2, y: -size / 2 },
+                  { x: size / 2, y: size / 2 },
+                  { x: -size / 2, y: size / 2 }
+                ], corner);
+              }
+              ctx.fill();
+            }
+            ctx.restore();
+          }
+
+          ctx.fillStyle = this.colour;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        drawBodyExtras() {
+          if (!this.bodyExtras) return;
+
+          if (this.bodyExtras.kind === "leoBodyExtras") {
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
+            for (const part of this.bodyExtras.parts) {
+              ctx.fillStyle = part.colour;
+              ctx.strokeStyle = part.colour;
+              const pos = pointOnCircle(part.distance, part.angle);
+              ctx.save();
+              ctx.translate(pos.x, pos.y);
+              ctx.rotate(part.angle + Math.PI / 2);
+              if (part.shape === "triangle") {
+                drawRoundedPolygonPath(makeRegularPolygonPoints(3, part.size * 1.2, 0), part.size * 0.22);
+                ctx.fill();
+              } else if (part.shape === "circle") {
+                ctx.beginPath();
+                ctx.arc(0, 0, part.size, 0, Math.PI * 2);
+                ctx.fill();
+              } else {
+                ctx.lineWidth = Math.max(2, part.size * 0.34);
+                drawSoftCurlPath(part.size * 1.15);
+                ctx.stroke();
+              }
+              ctx.restore();
+            }
+          }
+
+          if (this.bodyExtras.kind === "cancerBodyExtras") {
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            for (const part of this.bodyExtras.parts) {
+              const start = pointOnCircle(this.radius, part.angle);
+              const end = pointOnCircle(this.radius + part.stemLength, part.angle);
+              ctx.strokeStyle = part.stemColour;
+              ctx.fillStyle = part.tipColour;
+              ctx.lineWidth = part.stemThickness;
+              ctx.beginPath();
+              ctx.moveTo(start.x, start.y);
+              ctx.lineTo(end.x, end.y);
+              ctx.stroke();
+              ctx.save();
+              ctx.translate(end.x, end.y);
+              ctx.rotate(part.angle + Math.PI / 2);
+              if (part.tipShape === "circle") {
+                ctx.beginPath();
+                ctx.arc(0, 0, part.tipSize, 0, Math.PI * 2);
+                ctx.fill();
+              } else if (part.tipShape === "roundedTriangle") {
+                drawRoundedPolygonPath(makeRegularPolygonPoints(3, part.tipSize * 1.18, 0), part.tipSize * 0.26);
+                ctx.fill();
+              } else {
+                const size = part.tipSize * 1.8;
+                const corner = part.tipSize * 0.5;
+                if (typeof ctx.roundRect === "function") {
+                  ctx.beginPath();
+                  ctx.roundRect(-size / 2, -size / 2, size, size, corner);
+                } else {
+                  drawRoundedPolygonPath([
+                    { x: -size / 2, y: -size / 2 },
+                    { x: size / 2, y: -size / 2 },
+                    { x: size / 2, y: size / 2 },
+                    { x: -size / 2, y: size / 2 }
+                  ], corner);
+                }
+                ctx.fill();
+              }
+              ctx.restore();
+            }
+          }
+        }
+      }
+
+      const FACE_LAYOUT_RANGES = {
+        eyeSpacing: [0.32, 0.42],
+        browSpacing: [0.30, 0.42],
+        browHeight: [-0.48, -0.34],
+        eyeHeight: [-0.12, -0.02],
+        noseHeight: [0.14, 0.22],
+        mouthHeight: [0.43, 0.55],
+        catBrowLift: [0.00, 0.08]
+      };
+
+      function rangeFromPair(rng, pair) {
+        return range(rng, pair[0], pair[1]);
+      }
+
+      function getSeededFaceLayoutSpec(seed) {
+        const rng = createRNG(seed * 149.21 + 41.7);
+
+        function getEyeTilt(localRng) {
+          const roll = localRng();
+          if (roll < 0.75) return 0;
+          if (roll < 0.95) return range(localRng, -0.2, 0.2);
+          return range(localRng, -0.6, 0.6);
+        }
+
+        return {
+          eyeSpacing: rangeFromPair(rng, FACE_LAYOUT_RANGES.eyeSpacing),
+          browSpacing: rangeFromPair(rng, FACE_LAYOUT_RANGES.browSpacing),
+          browHeight: rangeFromPair(rng, FACE_LAYOUT_RANGES.browHeight),
+          eyeHeight: rangeFromPair(rng, FACE_LAYOUT_RANGES.eyeHeight),
+          noseHeight: rangeFromPair(rng, FACE_LAYOUT_RANGES.noseHeight),
+          mouthHeight: rangeFromPair(rng, FACE_LAYOUT_RANGES.mouthHeight),
+          catBrowLift: rangeFromPair(rng, FACE_LAYOUT_RANGES.catBrowLift),
+          eyeTilt: getEyeTilt(rng)
+        };
+      }
+
+      function getHeadLayoutProfile(headSpec) {
+        const profiles = {
+          circle: { browXScale: 1, eyeXScale: 1, noseYShift: 0, mouthYShift: 0 },
+          roundedSquare: { browXScale: 1.08, eyeXScale: 1.06, noseYShift: 0, mouthYShift: 0.01 },
+          roundedTriangle: { browXScale: 0.88, eyeXScale: 0.92, noseYShift: 0.03, mouthYShift: 0.03 },
+          roundedDiamond: { browXScale: 0.9, eyeXScale: 0.94, noseYShift: -0.01, mouthYShift: -0.015 },
+          pentagon: { browXScale: 0.95, eyeXScale: 0.97, noseYShift: 0.015, mouthYShift: 0.01 },
+          invertedRoundedTriangle: { browXScale: 1.05, eyeXScale: 1.02, noseYShift: -0.015, mouthYShift: -0.03 },
+          rotatedSquare: { browXScale: 1.03, eyeXScale: 1.03, noseYShift: 0, mouthYShift: 0.005 }
+        };
+        return profiles[headSpec.type] || profiles.circle;
+      }
+
+      function getFaceLayout(cx, cy, headRadius, headSpec, faceLayoutSpec) {
+        const p = getHeadLayoutProfile(headSpec);
+        const spec = faceLayoutSpec || {
+          eyeSpacing: 0.36,
+          browSpacing: 0.36,
+          browHeight: -0.42,
+          eyeHeight: -0.08,
+          noseHeight: 0.18,
+          mouthHeight: 0.48,
+          catBrowLift: 0,
+          eyeTilt: 0
+        };
+
+        return {
+          B: {
+            left: { x: cx - headRadius * spec.browSpacing * p.browXScale, y: cy + headRadius * spec.browHeight },
+            right: { x: cx + headRadius * spec.browSpacing * p.browXScale, y: cy + headRadius * spec.browHeight }
+          },
+          E: {
+            left: { x: cx - headRadius * spec.eyeSpacing * p.eyeXScale, y: cy + headRadius * spec.eyeHeight },
+            right: { x: cx + headRadius * spec.eyeSpacing * p.eyeXScale, y: cy + headRadius * spec.eyeHeight }
+          },
+          N: { center: { x: cx, y: cy + headRadius * (spec.noseHeight + p.noseYShift) } },
+          M: { center: { x: cx, y: cy + headRadius * (spec.mouthHeight + p.mouthYShift) } }
+        };
+      }
+
+      class Square extends DriftyShape {
+        constructor(x, y, width, height, colour, renderMode = "fill") {
+          super(x, y, colour);
+          this.width = width;
+          this.height = height;
+          this.renderMode = renderMode;
+          this.strokeWidth = 4;
+        }
+
+        drawSelf() {
+          if (this.renderMode === "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.lineWidth = this.strokeWidth;
+            ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
+          } else {
+            ctx.fillStyle = this.colour;
+            ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+          }
+        }
+      }
+
+      class Triangle extends DriftyShape {
+        constructor(x, y, size, colour, renderMode = "fill") {
+          super(x, y, colour);
+          this.size = size;
+          this.renderMode = renderMode;
+          this.strokeWidth = 4;
+        }
+
+        drawSelf() {
+          const half = this.size / 2;
+          ctx.beginPath();
+          ctx.moveTo(0, -half);
+          ctx.lineTo(-half, half);
+          ctx.lineTo(half, half);
+          ctx.closePath();
+
+          if (this.renderMode === "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.lineWidth = this.strokeWidth;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = this.colour;
+            ctx.fill();
+          }
+        }
+      }
+
+      class Circle extends DriftyShape {
+        constructor(x, y, radius, colour, renderMode = "fill") {
+          super(x, y, colour);
+          this.radius = radius;
+          this.renderMode = renderMode;
+          this.strokeWidth = 4;
+        }
+
+        drawSelf() {
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          if (this.renderMode === "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.lineWidth = this.strokeWidth;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = this.colour;
+            ctx.fill();
+          }
+        }
+      }
+
+      class LineShape extends DriftyShape {
+        constructor(x, y, segments, thickness, colour) {
+          super(x, y, colour);
+          this.segments = segments;
+          this.thickness = thickness;
+        }
+
+        drawSelf() {
+          ctx.strokeStyle = this.colour;
+          ctx.lineWidth = this.thickness;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          this.segments.forEach(segment => {
+            if (segment.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(segment[0][0], segment[0][1]);
+            for (let i = 1; i < segment.length; i++) ctx.lineTo(segment[i][0], segment[i][1]);
+            ctx.stroke();
+          });
+        }
+      }
+
+      class ArcShape extends DriftyShape {
+        constructor(x, y, radiusX, radiusY, startAngle, endAngle, thickness, colour) {
+          super(x, y, colour);
+          this.radiusX = radiusX;
+          this.radiusY = radiusY;
+          this.startAngle = startAngle;
+          this.endAngle = endAngle;
+          this.thickness = thickness;
+        }
+
+        drawSelf() {
+          ctx.strokeStyle = this.colour;
+          ctx.lineWidth = this.thickness;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.radiusX, this.radiusY, 0, this.startAngle, this.endAngle, false);
+          ctx.stroke();
+        }
+      }
+
+      function createTaurusHorns(layout, headRadius, headColour, headSpec) {
+        const q = headSpec.hornQuality;
+        const hornLength = headRadius * q.hornLengthBase;
+        const hornWidth = headRadius * q.hornWidthBase;
+        const sink = headRadius * q.sinkBase + hornLength * 0.08;
+        const outward = headRadius * q.outwardBase * (0.3 + 0.4 / q.hornLengthBase);
+        const angleVar = (q.angleVarianceDeg * Math.PI) / 180;
+
+        const leftRng = createRNG(layout.B.left.x * 7.13 + layout.B.left.y * 3.71 + headRadius);
+        const rightRng = createRNG(layout.B.right.x * 7.13 + layout.B.right.y * 3.71 + headRadius);
+
+        const leftHorn = new TaurusHornShape(
+          layout.B.left.x - outward,
+          layout.B.left.y - sink,
+          hornLength,
+          hornWidth,
+          headColour,
+          "left"
+        );
+        leftHorn.rotation = -Math.PI / 10 - range(leftRng, 0, angleVar);
+
+        const rightHorn = new TaurusHornShape(
+          layout.B.right.x + outward,
+          layout.B.right.y - sink,
+          hornLength,
+          hornWidth,
+          headColour,
+          "right"
+        );
+        rightHorn.rotation = Math.PI / 10 + range(rightRng, 0, angleVar);
+
+        return [leftHorn, rightHorn];
+      }
+
+      function createCapriHorns(layout, headRadius, headColour, headSpec) {
+        const q = headSpec.hornQuality;
+        const hornLength = headRadius * q.hornLengthBase;
+        const hornWidth = headRadius * q.hornWidthBase;
+        const sink = headRadius * q.sinkBase;
+        const outward = headRadius * q.outwardBase;
+        const angleVar = (q.angleVarianceDeg * Math.PI) / 180;
+
+        const leftRng = createRNG(layout.B.left.x * 7.13 + layout.B.left.y * 3.71 + headRadius);
+        const rightRng = createRNG(layout.B.right.x * 7.13 + layout.B.right.y * 3.71 + headRadius);
+
+        const leftHorn = new CapriHornShape(
+          layout.B.left.x - outward,
+          layout.B.left.y - sink,
+          hornLength,
+          hornWidth,
+          headColour,
+          "left"
+        );
+        leftHorn.rotation = -Math.PI / 10 - range(leftRng, 0, angleVar);
+
+        const rightHorn = new CapriHornShape(
+          layout.B.right.x + outward,
+          layout.B.right.y - sink,
+          hornLength,
+          hornWidth,
+          headColour,
+          "right"
+        );
+        rightHorn.rotation = Math.PI / 10 + range(rightRng, 0, angleVar);
+
+        return [leftHorn, rightHorn];
+      }
+
+      const COMMON_WEIGHT = 10;
+      const UNCOMMON_WEIGHT = 4;
+      const FEATURE_POOLS = {
+        B: [
+          { name: "triangle", weight: COMMON_WEIGHT },
+          { name: "invertedTriangle", weight: COMMON_WEIGHT },
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "diamond", weight: COMMON_WEIGHT },
+          { name: "thickHorizontalLine", weight: COMMON_WEIGHT },
+          { name: "v", weight: COMMON_WEIGHT },
+          { name: "invertedV", weight: COMMON_WEIGHT },
+          { name: "doubleCircle", weight: UNCOMMON_WEIGHT },
+          { name: "cShape", weight: UNCOMMON_WEIGHT },
+          { name: "uBrow", weight: UNCOMMON_WEIGHT },
+          { name: "leftSlant", weight: UNCOMMON_WEIGHT },
+          { name: "rightSlant", weight: UNCOMMON_WEIGHT },
+          { name: "straightAcross", weight: UNCOMMON_WEIGHT },
+          { name: "catEarBrows", weight: UNCOMMON_WEIGHT }
+        ],
+        E: [
+          { name: "square", weight: COMMON_WEIGHT },
+          { name: "circle", weight: COMMON_WEIGHT },
+          { name: "invertedTriangle", weight: COMMON_WEIGHT },
+          { name: "triangle", weight: COMMON_WEIGHT },
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "verticalLine", weight: COMMON_WEIGHT },
+          { name: "v", weight: COMMON_WEIGHT },
+          { name: "invertedV", weight: COMMON_WEIGHT },
+          { name: "snakeEye", weight: UNCOMMON_WEIGHT },
+          { name: "catEye", weight: UNCOMMON_WEIGHT },
+          { name: "plusEye", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeHorizontalDot", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeVerticalDot", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeHorizontal", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeVertical", weight: UNCOMMON_WEIGHT },
+          { name: "cartoonHighlightEye", weight: UNCOMMON_WEIGHT },
+          { name: "bracketEye", weight: UNCOMMON_WEIGHT },
+          { name: "almondEye", weight: 3.5 },
+          { name: "almondEyeDot", weight: 2.5 },
+          { name: "alienAlmond", weight: 1.5 }
+        ],
+        N: [
+          { name: "circle", weight: COMMON_WEIGHT },
+          { name: "triangle", weight: COMMON_WEIGHT },
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "invertedTriangle", weight: COMMON_WEIGHT },
+          { name: "verticalLine", weight: COMMON_WEIGHT },
+          { name: "wideV", weight: COMMON_WEIGHT },
+          { name: "sideTriangle", weight: COMMON_WEIGHT },
+          { name: "uNose", weight: UNCOMMON_WEIGHT },
+          { name: "wideUNose", weight: UNCOMMON_WEIGHT },
+          { name: "cNoseLeft", weight: UNCOMMON_WEIGHT },
+          { name: "closedCNose", weight: UNCOMMON_WEIGHT },
+          { name: "pillNoseHorizontal", weight: UNCOMMON_WEIGHT },
+          { name: "pillNoseVertical", weight: UNCOMMON_WEIGHT },
+          { name: "pigNose", weight: UNCOMMON_WEIGHT },
+          { name: "dotNose", weight: UNCOMMON_WEIGHT }
+        ],
+        M: [
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "doublePeak", weight: COMMON_WEIGHT },
+          { name: "doubleTrough", weight: COMMON_WEIGHT },
+          { name: "v", weight: COMMON_WEIGHT },
+          { name: "invertedV", weight: COMMON_WEIGHT },
+          { name: "circle", weight: COMMON_WEIGHT },
+          { name: "vWithTail", weight: COMMON_WEIGHT },
+          { name: "frogSmile", weight: UNCOMMON_WEIGHT },
+          { name: "frogFrown", weight: UNCOMMON_WEIGHT },
+          { name: "fangLine", weight: UNCOMMON_WEIGHT },
+          { name: "doubleFang", weight: UNCOMMON_WEIGHT },
+          { name: "cheekMouth", weight: UNCOMMON_WEIGHT }
+        ],
+        connector: [
+          { name: "circle", weight: 6 },
+          { name: "diamond", weight: 6 },
+          { name: "triangle", weight: 6 },
+          { name: "horizontalLine", weight: 5 },
+          { name: "verticalLine", weight: 5 },
+          { name: "v", weight: 4 },
+          { name: "invertedV", weight: 4 },
+          { name: "cShape", weight: 3 },
+          { name: "uBrow", weight: 3 },
+          { name: "doubleCircle", weight: 2 },
+          { name: "straightAcross", weight: 2 }
+        ]
+      };
+
+      function isLineGlyph(glyphName) {
+        return [
+          "horizontalLine", "thickHorizontalLine", "verticalLine", "v", "invertedV", "wideV",
+          "doublePeak", "doubleTrough", "vWithTail", "cShape", "uBrow", "leftSlant", "rightSlant",
+          "straightAcross", "bracketEye", "uNose", "wideUNose", "cNoseLeft", "closedCNose",
+          "frogSmile", "frogFrown", "cheekMouth", "almondEye", "almondEyeDot", "alienAlmond"
+        ].includes(glyphName);
+      }
+
+      function chooseStyleForGlyph(glyphName, rng) {
+        if (isLineGlyph(glyphName)) {
+          return {
+            thicknessMode: rng() < 0.5 ? "regular" : "double",
+            renderMode: "stroke"
+          };
+        }
+        return { renderMode: rng() < 0.5 ? "fill" : "stroke", thicknessMode: "regular" };
+      }
+
+      function drawAlmondShape(x, y, headRadius, s, colour, style, withDot = false, alien = false) {
+        const part = new DriftyShape(x, y, colour);
+        part.drawSelf = function() {
+          const width = headRadius * (alien ? 0.36 : 0.3) * s;
+          const height = headRadius * (alien ? 0.16 : 0.13) * s;
+          ctx.lineWidth = style.renderMode === "stroke" ? lineThickness(headRadius * s, style, alien ? 1.25 : 1) : 2;
+          ctx.strokeStyle = colour;
+          ctx.fillStyle = colour;
+          ctx.beginPath();
+          ctx.moveTo(-width, 0);
+          ctx.quadraticCurveTo(0, -height, width, 0);
+          ctx.quadraticCurveTo(0, height, -width, 0);
+          ctx.closePath();
+          if (style.renderMode === "stroke") ctx.stroke();
+          else ctx.fill();
+          if (withDot) {
+            ctx.beginPath();
+            ctx.arc(0, 0, headRadius * 0.03 * s, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        };
+        return part;
+      }
+
+      function createGlyphAt(glyphName, x, y, headRadius, colour, style, context = {}) {
+        const parts = [];
+        const s = context.featureScale || 1;
+        const rowName = context.rowName || null;
+        const slotSide = context.slotSide || "center";
+        const thickness = lineThickness(headRadius * s, style, context.baseMultiplier || 1);
+
+        if (glyphName === "triangle") parts.push(new Triangle(x, y, headRadius * 0.28 * s, colour, style.renderMode));
+        if (glyphName === "invertedTriangle") {
+          const triangle = new Triangle(x, y, headRadius * 0.28 * s, colour, style.renderMode);
+          triangle.rotation = Math.PI;
+          parts.push(triangle);
+        }
+        if (glyphName === "sideTriangle") {
+          const triangle = new Triangle(x, y, headRadius * 0.26 * s, colour, style.renderMode);
+          triangle.rotation = Math.PI / 2;
+          parts.push(triangle);
+        }
+        if (glyphName === "square") parts.push(new Square(x, y, headRadius * 0.28 * s, headRadius * 0.28 * s, colour, style.renderMode));
+        if (glyphName === "diamond") {
+          const square = new Square(x, y, headRadius * 0.28 * s, headRadius * 0.28 * s, colour, style.renderMode);
+          square.rotation = Math.PI / 4;
+          parts.push(square);
+        }
+        if (glyphName === "circle") {
+          const circle = new Circle(x, y, headRadius * 0.12 * s, colour, style.renderMode);
+          if (rowName === "E") circle.radius = headRadius * 0.13 * s;
+          if (rowName === "M") {
+            circle.radius = headRadius * 0.15 * s;
+            circle.scaleX = 1.15;
+            circle.scaleY = 0.9;
+          }
+          parts.push(circle);
+        }
+        if (glyphName === "horizontalLine") parts.push(new LineShape(x, y, [[[-headRadius * 0.18 * s, 0], [headRadius * 0.18 * s, 0]]], thickness, colour));
+        if (glyphName === "thickHorizontalLine") parts.push(new LineShape(x, y, [[[-headRadius * 0.2 * s, 0], [headRadius * 0.2 * s, 0]]], lineThickness(headRadius * s, style, 1.6), colour));
+        if (glyphName === "verticalLine") parts.push(new LineShape(x, y, [[[0, -headRadius * 0.18 * s], [0, headRadius * 0.18 * s]]], thickness, colour));
+        if (glyphName === "v") parts.push(new LineShape(x, y, [[[-headRadius * 0.18 * s, -headRadius * 0.08 * s], [0, headRadius * 0.16 * s], [headRadius * 0.18 * s, -headRadius * 0.08 * s]]], thickness, colour));
+        if (glyphName === "invertedV") parts.push(new LineShape(x, y, [[[-headRadius * 0.18 * s, headRadius * 0.08 * s], [0, -headRadius * 0.16 * s], [headRadius * 0.18 * s, headRadius * 0.08 * s]]], thickness, colour));
+        if (glyphName === "wideV") parts.push(new LineShape(x, y, [[[-headRadius * 0.28 * s, -headRadius * 0.05 * s], [0, headRadius * 0.16 * s], [headRadius * 0.28 * s, -headRadius * 0.05 * s]]], thickness, colour));
+
+        if (glyphName === "doublePeak") {
+          parts.push(new LineShape(x, y, [[
+            [-headRadius * 0.26 * s, headRadius * 0.1 * s],
+            [-headRadius * 0.12 * s, -headRadius * 0.14 * s],
+            [0, headRadius * 0.08 * s],
+            [headRadius * 0.12 * s, -headRadius * 0.14 * s],
+            [headRadius * 0.26 * s, headRadius * 0.1 * s]
+          ]], thickness, colour));
+        }
+
+        if (glyphName === "doubleTrough") {
+          parts.push(new LineShape(x, y, [[
+            [-headRadius * 0.26 * s, -headRadius * 0.1 * s],
+            [-headRadius * 0.12 * s, headRadius * 0.14 * s],
+            [0, -headRadius * 0.08 * s],
+            [headRadius * 0.12 * s, headRadius * 0.14 * s],
+            [headRadius * 0.26 * s, -headRadius * 0.1 * s]
+          ]], thickness, colour));
+        }
+
+        if (glyphName === "vWithTail") {
+          parts.push(new LineShape(x, y, [
+            [[-headRadius * 0.18 * s, -headRadius * 0.08 * s], [0, headRadius * 0.12 * s], [headRadius * 0.18 * s, -headRadius * 0.08 * s]],
+            [[0, headRadius * 0.12 * s], [0, headRadius * 0.28 * s]]
+          ], thickness, colour));
+        }
+
+        if (glyphName === "doubleCircle") {
+          parts.push(new Circle(x - headRadius * 0.08 * s, y, headRadius * 0.07 * s, colour, style.renderMode));
+          parts.push(new Circle(x + headRadius * 0.08 * s, y, headRadius * 0.07 * s, colour, style.renderMode));
+        }
+
+        if (glyphName === "cShape") {
+          const arc = new ArcShape(x, y, headRadius * 0.09 * s, headRadius * 0.14 * s, Math.PI / 2, Math.PI * 1.5, thickness, colour);
+          arc.rotation = Math.PI / 2;
+          parts.push(arc);
+        }
+
+        if (glyphName === "uBrow") parts.push(new ArcShape(x, y, headRadius * 0.13 * s, headRadius * 0.08 * s, 0, Math.PI, thickness, colour));
+
+        if (glyphName === "leftSlant") {
+          const seg = slotSide === "left"
+            ? [[[-headRadius * 0.14 * s, headRadius * 0.08 * s], [headRadius * 0.14 * s, -headRadius * 0.08 * s]]]
+            : [[[-headRadius * 0.14 * s, -headRadius * 0.08 * s], [headRadius * 0.14 * s, headRadius * 0.08 * s]]];
+          parts.push(new LineShape(x, y, seg, thickness, colour));
+        }
+
+        if (glyphName === "rightSlant") {
+          const seg = slotSide === "left"
+            ? [[[-headRadius * 0.14 * s, -headRadius * 0.08 * s], [headRadius * 0.14 * s, headRadius * 0.08 * s]]]
+            : [[[-headRadius * 0.14 * s, headRadius * 0.08 * s], [headRadius * 0.14 * s, -headRadius * 0.08 * s]]];
+          parts.push(new LineShape(x, y, seg, thickness, colour));
+        }
+
+        if (glyphName === "straightAcross") parts.push(new LineShape(x, y, [[[-headRadius * 0.22 * s, 0], [headRadius * 0.22 * s, 0]]], thickness, colour));
+
+        if (glyphName === "catEarBrows") {
+          const tri = new Triangle(x, y, headRadius * 0.34 * s, colour, style.renderMode);
+          tri.rotation = slotSide === "left" ? -Math.PI / 10 : Math.PI / 10;
+          parts.push(tri);
+        }
+
+        if (glyphName === "snakeEye") {
+          parts.push(new Circle(x, y, headRadius * 0.14 * s, colour, style.renderMode));
+          parts.push(new LineShape(x, y, [[[0, -headRadius * 0.14 * s], [0, headRadius * 0.14 * s]]], Math.max(2, thickness * 0.75), colour));
+        }
+
+        if (glyphName === "catEye") {
+          parts.push(new Circle(x, y, headRadius * 0.14 * s, colour, style.renderMode));
+          const pupil = new Circle(x, y, headRadius * 0.055 * s, colour, "stroke");
+          pupil.scaleY = 1.8;
+          parts.push(pupil);
+        }
+
+        if (glyphName === "plusEye") {
+          parts.push(new LineShape(x, y, [
+            [[-headRadius * 0.12 * s, 0], [headRadius * 0.12 * s, 0]],
+            [[0, -headRadius * 0.12 * s], [0, headRadius * 0.12 * s]]
+          ], lineThickness(headRadius * s, style, 1.5), colour));
+        }
+
+        if (glyphName === "ellipseEyeHorizontalDot" || glyphName === "ellipseEyeVerticalDot" || glyphName === "ellipseEyeHorizontal" || glyphName === "ellipseEyeVertical") {
+          const eye = new Circle(x, y, headRadius * 0.12 * s, colour, style.renderMode);
+          if (glyphName.includes("Horizontal")) {
+            eye.scaleX = 1.7;
+            eye.scaleY = 0.95;
+          } else {
+            eye.scaleX = 0.95;
+            eye.scaleY = 1.55;
+          }
+          parts.push(eye);
+          if (glyphName.includes("Dot")) parts.push(new Circle(x, y, headRadius * 0.03 * s, colour, "fill"));
+        }
+
+        if (glyphName === "cartoonHighlightEye") {
+          parts.push(new Circle(x, y, headRadius * 0.14 * s, colour, "fill"));
+          parts.push(new Circle(x - headRadius * 0.045 * s, y - headRadius * 0.045 * s, headRadius * 0.045 * s, "#ffffff", "fill"));
+        }
+
+        if (glyphName === "bracketEye") {
+          const arc = new ArcShape(x, y, headRadius * 0.06 * s, headRadius * 0.14 * s, Math.PI / 2, Math.PI * 1.5, thickness, colour);
+          arc.rotation = slotSide === "left" ? 0 : Math.PI;
+          parts.push(arc);
+        }
+
+        if (glyphName === "almondEye") parts.push(drawAlmondShape(x, y, headRadius, s, colour, style, false, false));
+        if (glyphName === "almondEyeDot") parts.push(drawAlmondShape(x, y, headRadius, s, colour, style, true, false));
+        if (glyphName === "alienAlmond") parts.push(drawAlmondShape(x, y, headRadius, s, colour, style, false, true));
+
+        if (glyphName === "uNose") parts.push(new ArcShape(x, y, headRadius * 0.1 * s, headRadius * 0.07 * s, 0, Math.PI, thickness, colour));
+        if (glyphName === "wideUNose") parts.push(new ArcShape(x, y, headRadius * 0.15 * s, headRadius * 0.065 * s, 0, Math.PI, thickness, colour));
+
+        if (glyphName === "cNoseLeft") {
+          const arc = new ArcShape(x, y, headRadius * 0.07 * s, headRadius * 0.11 * s, Math.PI / 2, Math.PI * 1.5, thickness, colour);
+          arc.rotation = -Math.PI / 2;
+          parts.push(arc);
+        }
+
+        if (glyphName === "closedCNose") {
+          const arc = new ArcShape(x, y, headRadius * 0.07 * s, headRadius * 0.11 * s, Math.PI / 2, Math.PI * 1.5, thickness, colour);
+          arc.rotation = -Math.PI / 2;
+          parts.push(arc);
+          parts.push(new LineShape(x - headRadius * 0.04 * s, y, [[[0, -headRadius * 0.08 * s], [0, headRadius * 0.08 * s]]], Math.max(2, thickness * 0.7), colour));
+        }
+
+        if (glyphName === "pillNoseHorizontal" || glyphName === "pillNoseVertical") {
+          const pill = new Circle(x, y, headRadius * 0.08 * s, colour, style.renderMode);
+          if (glyphName === "pillNoseHorizontal") {
+            pill.scaleX = 1.8;
+            pill.scaleY = 0.9;
+          } else {
+            pill.scaleX = 0.9;
+            pill.scaleY = 1.8;
+          }
+          parts.push(pill);
+        }
+
+        if (glyphName === "pigNose") {
+          parts.push(new Circle(x - headRadius * 0.06 * s, y, headRadius * 0.032 * s, colour, "fill"));
+          parts.push(new Circle(x + headRadius * 0.06 * s, y, headRadius * 0.032 * s, colour, "fill"));
+          parts.push(new Circle(x, y, headRadius * 0.12 * s, colour, "stroke"));
+        }
+
+        if (glyphName === "dotNose") {
+          parts.push(new Circle(x - headRadius * 0.04 * s, y, headRadius * 0.022 * s, colour, "fill"));
+          parts.push(new Circle(x + headRadius * 0.04 * s, y, headRadius * 0.022 * s, colour, "fill"));
+        }
+
+        if (glyphName === "frogSmile") parts.push(new ArcShape(x, y, headRadius * 0.18 * s, headRadius * 0.08 * s, 0, Math.PI, thickness, colour));
+        if (glyphName === "frogFrown") parts.push(new ArcShape(x, y, headRadius * 0.18 * s, headRadius * 0.08 * s, Math.PI, Math.PI * 2, thickness, colour));
+
+        if (glyphName === "fangLine") {
+          parts.push(new LineShape(x, y, [[[-headRadius * 0.16 * s, 0], [headRadius * 0.16 * s, 0]]], thickness, colour));
+          const leftFang = new Triangle(x - headRadius * 0.14 * s, y + headRadius * 0.06 * s, headRadius * 0.08 * s, colour, "fill");
+          leftFang.rotation = Math.PI;
+          const rightFang = new Triangle(x + headRadius * 0.14 * s, y + headRadius * 0.06 * s, headRadius * 0.08 * s, colour, "fill");
+          rightFang.rotation = Math.PI;
+          parts.push(leftFang, rightFang);
+        }
+
+        if (glyphName === "doubleFang") {
+          const leftFang = new Triangle(x - headRadius * 0.05 * s, y + headRadius * 0.04 * s, headRadius * 0.1 * s, colour, "fill");
+          leftFang.rotation = Math.PI;
+          const rightFang = new Triangle(x + headRadius * 0.05 * s, y + headRadius * 0.04 * s, headRadius * 0.1 * s, colour, "fill");
+          rightFang.rotation = Math.PI;
+          parts.push(leftFang, rightFang);
+        }
+
+        if (glyphName === "cheekMouth") {
+          parts.push(new LineShape(x, y, [[[-headRadius * 0.11 * s, 0], [headRadius * 0.11 * s, 0]]], thickness, colour));
+          const leftCheek = new ArcShape(x - headRadius * 0.17 * s, y, headRadius * 0.035 * s, headRadius * 0.07 * s, Math.PI / 2, Math.PI * 1.5, Math.max(2, thickness * 0.8), colour);
+          const rightCheek = new ArcShape(x + headRadius * 0.17 * s, y, headRadius * 0.035 * s, headRadius * 0.07 * s, Math.PI / 2, Math.PI * 1.5, Math.max(2, thickness * 0.8), colour);
+          rightCheek.rotation = Math.PI;
+          parts.push(leftCheek, rightCheek);
+        }
+
+        return parts;
+      }
+
+      function applyRotationToParts(parts, rotationDelta) {
+        parts.forEach(part => {
+          part.rotation += rotationDelta;
+        });
+        return parts;
+      }
+
+      function buildFaceGlyphs(cx, cy, headRadius, featureScale, faceColour, controls, rng, faceGroup, profile, headSpec, faceLayoutSpec, headColour) {
+        const layout = getFaceLayout(cx, cy, headRadius, headSpec, faceLayoutSpec);
+        const faceConfig = {
+          amountXMin: 0.02, amountXMax: 0.09,
+          amountYMin: 0.006, amountYMax: 0.03,
+          speedXMin: 0.08, speedXMax: 0.14,
+          speedYMin: 0.08, speedYMax: 0.14,
+          shimmerStrength: 0.08,
+          shimmerRate: 6,
+          driftGroup: faceGroup,
+          profile,
+          layerName: "faceFeature"
+        };
+
+        const eyeTilt = faceLayoutSpec ? faceLayoutSpec.eyeTilt || 0 : 0;
+
+        if (headSpec.headLaw === "taurus") {
+          addParts(createTaurusHorns(layout, headRadius, headColour, headSpec), rng, faceConfig);
+        } else if (headSpec.headLaw === "capricorn") {
+          addParts(createCapriHorns(layout, headRadius, headColour, headSpec), rng, faceConfig);
+        } else {
+          const bFeature = controls.randomize.B ? weightedChoice(FEATURE_POOLS.B, rng) : DEFAULT_FEATURES.B;
+          const bStyle = chooseStyleForGlyph(bFeature, rng);
+          const catLift = bFeature === "catEarBrows"
+            ? headRadius * (faceLayoutSpec ? faceLayoutSpec.catBrowLift || 0 : 0)
+            : 0;
+
+          addParts(
+            createGlyphAt(bFeature, layout.B.left.x, layout.B.left.y - catLift, headRadius, faceColour, bStyle, {
+              rowName: "B",
+              featureScale,
+              slotSide: "left"
+            }),
+            rng,
+            faceConfig
+          );
+
+          addParts(
+            createGlyphAt(bFeature, layout.B.right.x, layout.B.right.y - catLift, headRadius, faceColour, bStyle, {
+              rowName: "B",
+              featureScale,
+              slotSide: "right"
+            }),
+            rng,
+            faceConfig
+          );
+        }
+
+        const eFeature = controls.randomize.E ? weightedChoice(FEATURE_POOLS.E, rng) : DEFAULT_FEATURES.E;
+        const eStyle = chooseStyleForGlyph(eFeature, rng);
+
+        const leftEyeParts = applyRotationToParts(
+          createGlyphAt(eFeature, layout.E.left.x, layout.E.left.y, headRadius, faceColour, eStyle, {
+            rowName: "E", featureScale, slotSide: "left"
+          }),
+          -eyeTilt
+        );
+
+        const rightEyeParts = applyRotationToParts(
+          createGlyphAt(eFeature, layout.E.right.x, layout.E.right.y, headRadius, faceColour, eStyle, {
+            rowName: "E", featureScale, slotSide: "right"
+          }),
+          eyeTilt
+        );
+
+        addParts(leftEyeParts, rng, faceConfig);
+        addParts(rightEyeParts, rng, faceConfig);
+
+        const nFeature = controls.randomize.N ? weightedChoice(FEATURE_POOLS.N, rng) : DEFAULT_FEATURES.N;
+        const nStyle = chooseStyleForGlyph(nFeature, rng);
+        addParts(
+          createGlyphAt(nFeature, layout.N.center.x, layout.N.center.y, headRadius, faceColour, nStyle, {
+            rowName: "N", featureScale, slotSide: "center"
+          }),
+          rng,
+          faceConfig
+        );
+
+        const mFeature = controls.randomize.M ? weightedChoice(FEATURE_POOLS.M, rng) : DEFAULT_FEATURES.M;
+        const mStyle = chooseStyleForGlyph(mFeature, rng);
+        addParts(
+          createGlyphAt(mFeature, layout.M.center.x, layout.M.center.y, headRadius, faceColour, mStyle, {
+            rowName: "M", featureScale, slotSide: "center"
+          }),
+          rng,
+          faceConfig
+        );
+
+        if (headSpec.type === "circle" && headSpec.circleVariant === "gemini") {
+          const g = getGeminiGeometry(headRadius, headSpec);
+          const gx = cx + g.x2;
+          const gy = cy + g.y2;
+          const eyeScale = featureScale * (g.r2 / g.r1) * range(rng, 0.80, 1.5);
+          const extraEyePos = {
+            x: gx + g.inwardX * g.r2 * 0.10,
+            y: gy - g.r2 * 0.20 + g.inwardY * g.r2 * 0.04
+          };
+
+          addParts(
+            createGlyphAt(eFeature, extraEyePos.x, extraEyePos.y, g.r2, faceColour, eStyle, {
+              rowName: "E",
+              featureScale: eyeScale,
+              slotSide: "center"
+            }),
+            rng,
+            {
+              amountXMin: 0.02, amountXMax: 0.07,
+              amountYMin: 0.006, amountYMax: 0.026,
+              speedXMin: 0.08, speedXMax: 0.14,
+              speedYMin: 0.08, speedYMax: 0.14,
+              shimmerStrength: 0.08,
+              shimmerRate: 6,
+              driftGroup: faceGroup,
+              profile,
+              layerName: "faceFeature"
+            }
+          );
+        }
+      }
+
+      function getSeededBodyMutationSpec(seed) {
+        const rng = createRNG(seed * 211.13 + 3.9);
+        const choice = weightedChoice([
+          { name: "triangle", weight: 7 },
+          { name: "roundedTriangle", weight: 4 },
+          { name: "roundedSquare", weight: 4 },
+          { name: "roundedDiamond", weight: 4 },
+          { name: "pentagon", weight: 2 },
+          { name: "ellipseHorizontal", weight: 2 },
+          { name: "ellipseVertical", weight: 2 },
+          { name: "doubleLump", weight: 0.5 },
+          { name: "gemini", weight: 0.15 }
+        ], rng);
+
+        if (choice === "triangle" || choice === "roundedTriangle") return { type: "roundedTriangle", localRotation: 0 };
+        if (choice === "roundedSquare") return { type: "roundedSquare", localRotation: 0 };
+        if (choice === "roundedDiamond") return { type: "roundedDiamond", localRotation: 0 };
+        if (choice === "pentagon") return { type: "pentagon", localRotation: 0 };
+        if (choice === "ellipseHorizontal") return { type: "circle", circleVariant: "ellipseHorizontal", localRotation: 0 };
+        if (choice === "ellipseVertical") return { type: "circle", circleVariant: "ellipseVertical", localRotation: 0 };
+        if (choice === "doubleLump") {
+          return {
+            type: "circle",
+            circleVariant: "doubleLump",
+            circleRotation: range(rng, -Math.PI / 7, Math.PI / 7),
+            lumpOffsetX: range(rng, -3, 3),
+            lumpOffsetY: range(rng, -3, 3),
+            localRotation: 0
+          };
+        }
+
+        return {
+          type: "circle",
+          circleVariant: "gemini",
+          geminiAngle: rng() * Math.PI * 2,
+          geminiRadiusScale: range(rng, 0.6, 1.0),
+          geminiOffsetScale: range(rng, 0.38, 0.58),
+          localRotation: 0
+        };
+      }
+
+      function getSeededBodySequenceRule(seed) {
+        const rng = createRNG(seed * 317.77 + 19.2);
+        const sequenceName = weightedChoice([
+          { name: "every2", weight: 2.5 },
+          { name: "every3", weight: 5 },
+          { name: "every4", weight: 2 },
+          { name: "CCM", weight: 5 },
+          { name: "MMC", weight: 2.5 },
+          { name: "CCMM", weight: 4 },
+          { name: "CCCM", weight: 1.5 },
+          { name: "MMMC", weight: 0.8 },
+          { name: "prime", weight: 0.6 },
+          { name: "fibonacci", weight: 0.35 }
+        ], rng);
+
+        const checkPrime = (n) => {
+          if (n < 2) return false;
+          for (let i = 2; i * i <= n; i++) if (n % i === 0) return false;
+          return true;
+        };
+        const checkFibonacci = (n) => {
+          if (n < 0) return false;
+          let a = 0, b = 1;
+          while (a < n) {
+            const next = a + b;
+            a = b;
+            b = next;
+          }
+          return a === n;
+        };
+        const checkPeriodic = (index, every, phase = 0) => ((index - phase) % every + every) % every === 0;
+        const checkGroupedPattern = (index, pattern) => pattern[index % pattern.length] === "M";
+
+        if (sequenceName === "every2") return { label: "every2", kind: "periodic", isMutationTrigger(index) { return checkPeriodic(index, 2, 1); } };
+        if (sequenceName === "every3") return { label: "every3", kind: "periodic", isMutationTrigger(index) { return checkPeriodic(index, 3, 2); } };
+        if (sequenceName === "every4") return { label: "every4", kind: "periodic", isMutationTrigger(index) { return checkPeriodic(index, 4, 3); } };
+        if (sequenceName === "CCM") return { label: "CCM", kind: "grouped", isMutationTrigger(index) { return checkGroupedPattern(index, ["C", "C", "M"]); } };
+        if (sequenceName === "MMC") return { label: "MMC", kind: "grouped", isMutationTrigger(index) { return checkGroupedPattern(index, ["M", "M", "C"]); } };
+        if (sequenceName === "CCMM") return { label: "CCMM", kind: "grouped", isMutationTrigger(index) { return checkGroupedPattern(index, ["C", "C", "M", "M"]); } };
+        if (sequenceName === "CCCM") return { label: "CCCM", kind: "grouped", isMutationTrigger(index) { return checkGroupedPattern(index, ["C", "C", "C", "M"]); } };
+        if (sequenceName === "MMMC") return { label: "MMMC", kind: "grouped", isMutationTrigger(index) { return checkGroupedPattern(index, ["M", "M", "M", "C"]); } };
+        if (sequenceName === "prime") return { label: "prime", kind: "prime", isMutationTrigger(index) { return checkPrime(index); } };
+        return { label: "fibonacci", kind: "fibonacci", isMutationTrigger(index) { return checkFibonacci(index); } };
+      }
+
+      function getSeededPrimaryBodySpec(seed, headSpec) {
+        const rng = createRNG(seed * 457.91 + 23.4);
+        const law = headSpec && headSpec.headLaw ? headSpec.headLaw : "standard";
+
+        if (law === "gemini") {
+          return {
+            headLaw: "gemini",
+            type: "circle",
+            circleVariant: "gemini",
+            geminiAngle: rng() * Math.PI * 2,
+            geminiRadiusScale: range(rng, 0.62, 0.94),
+            geminiOffsetScale: range(rng, 0.34, 0.52),
+            localRotation: 0
+          };
+        }
+        if (law === "leo") {
+          return {
+            headLaw: "standard",
+            zodiacBodyLaw: "leo",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            leoBodyQuality: {
+              pointCount: Math.floor(range(rng, 6, 13)),
+              anchorLooseness: range(rng, 0.05, 0.36),
+              shape: weightedChoice([
+                { name: "triangle", weight: 6 },
+                { name: "circle", weight: 5 },
+                { name: "curlC", weight: 2 }
+              ], rng),
+              sizeBase: range(rng, 0.09, 0.16),
+              overlapBase: range(rng, -0.03, 0.05),
+              colourLift: range(rng, 4, 12)
+            }
+          };
+        }
+        if (law === "cancer") {
+          return {
+            headLaw: "standard",
+            zodiacBodyLaw: "cancer",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            cancerBodyQuality: {
+              pointCount: Math.floor(range(rng, 2, 6)),
+              anchorLooseness: range(rng, 0.08, 0.9),
+              tipShape: weightedChoice([
+                { name: "circle", weight: 6 },
+                { name: "roundedTriangle", weight: 4 },
+                { name: "roundedSquare", weight: 4 }
+              ], rng),
+              stemLengthBase: range(rng, 0.14, 0.28),
+              stemThicknessBase: range(rng, 0.04, 0.09),
+              tipSizeBase: range(rng, 0.06, 0.13),
+              stemLightShift: range(rng, -8, 6)
+            }
+          };
+        }
+        if (law === "libra") {
+          return {
+            headLaw: "standard",
+            zodiacBodyLaw: "libra",
+            type: "circle",
+            circleVariant: "trueCircle",
+            localRotation: 0,
+            libraScale: range(rng, 1.05, 1.16)
+          };
+        }
+        return { headLaw: "standard", type: "circle", circleVariant: "trueCircle", localRotation: 0 };
+      }
+
+      function getSeededBodyPlan(seed, headSpec) {
+        return {
+          zodiacLaw: headSpec && headSpec.headLaw ? headSpec.headLaw : "standard",
+          primarySpec: getSeededPrimaryBodySpec(seed, headSpec),
+          mutationSpec: getSeededBodyMutationSpec(seed),
+          sequenceRule: getSeededBodySequenceRule(seed)
+        };
+      }
+
+      function buildLeoBodyExtras(leoBodyQuality, nodeRadius, nodeColour, rng) {
+        const anchors = samplePerimeterAnchorsNormalized(rng, leoBodyQuality.pointCount, leoBodyQuality.anchorLooseness);
+        return {
+          kind: "leoBodyExtras",
+          parts: anchors.map(anchor => ({
+            shape: leoBodyQuality.shape,
+            angle: anchor.angle,
+            distance: nodeRadius + leoBodyQuality.overlapBase * nodeRadius,
+            size: leoBodyQuality.sizeBase * range(rng, 0.88, 1.12) * nodeRadius,
+            colour: lighterColour(nodeColour, leoBodyQuality.colourLift)
+          }))
+        };
+      }
+
+      function buildCancerBodyExtras(cancerBodyQuality, nodeRadius, nodeColour, rng) {
+        const anchors = samplePerimeterAnchorsNormalized(rng, cancerBodyQuality.pointCount, cancerBodyQuality.anchorLooseness);
+        return {
+          kind: "cancerBodyExtras",
+          parts: anchors.map(anchor => ({
+            angle: anchor.angle,
+            stemLength: cancerBodyQuality.stemLengthBase * range(rng, 0.85, 1.18) * nodeRadius,
+            stemThickness: cancerBodyQuality.stemThicknessBase * range(rng, 0.85, 1.15) * nodeRadius,
+            tipShape: cancerBodyQuality.tipShape,
+            tipSize: cancerBodyQuality.tipSizeBase * range(rng, 0.88, 1.14) * nodeRadius,
+            stemColour: shiftedColour(nodeColour, 0, 0, cancerBodyQuality.stemLightShift),
+            tipColour: shiftedColour(nodeColour, 0, 0, cancerBodyQuality.stemLightShift)
+          }))
+        };
+      }
+
+      function getBodyNodeExtrasForIndex(index, bodyPlan, nodeRadius, nodeColour, seed) {
+        if (bodyPlan.sequenceRule.isMutationTrigger(index)) return null;
+        const spec = bodyPlan.primarySpec;
+        const law = spec.zodiacBodyLaw || "standard";
+        const rng = createRNG(seed * 613.7 + index * 17.2 + 9);
+        if (law === "leo") return buildLeoBodyExtras(spec.leoBodyQuality, nodeRadius, nodeColour, rng);
+        if (law === "cancer") return buildCancerBodyExtras(spec.cancerBodyQuality, nodeRadius, nodeColour, rng);
+        return null;
+      }
+
+      function copySpec(spec) {
+        return JSON.parse(JSON.stringify(spec));
+      }
+
+      function getBodyNodeSpecForIndex(index, bodyPlan) {
+        return bodyPlan.sequenceRule.isMutationTrigger(index)
+          ? copySpec(bodyPlan.mutationSpec)
+          : copySpec(bodyPlan.primarySpec);
+      }
+
+      function instantiateBodyNodeAt(x, y, radius, colour, bodyPlan, index) {
+        return new MorphShape(x, y, radius, colour, getBodyNodeSpecForIndex(index, bodyPlan));
+      }
+
+      function cellKey(col, row) {
+        return `${col},${row}`;
+      }
+
+      function getKabbalahHeadStart(rng) {
+        const starts = [
+          { col: 0, row: 1 },
+          { col: 1, row: 1 },
+          { col: 2, row: 1 }
+        ];
+        return starts[Math.floor(rng() * starts.length)];
+      }
+
+      function buildKabbalahSplashData(signature, headRadius, rng) {
+        const cols = 3;
+        const rows = 3;
+        const maxUniqueNodes = cols * rows;
+
+        const targetCount = Math.min(maxUniqueNodes, Math.floor(range(rng, 4, 7)));
+
+        const cellWidth = headRadius * 0.85 * signature.widthBias;
+        const cellHeight = headRadius * 0.78 * signature.heightBias;
+
+        const xOffset = ((cols - 1) * cellWidth) / 2;
+        const yOffset = headRadius * 0.15;
+
+        const allCells = [];
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            allCells.push({ col, row });
+          }
+        }
+
+        for (let i = allCells.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          const temp = allCells[i];
+          allCells[i] = allCells[j];
+          allCells[j] = temp;
+        }
+
+        const chosenCells = allCells.slice(0, targetCount);
+
+        const points = chosenCells.map(cell => ({
+          x: cell.col * cellWidth - xOffset,
+          y: cell.row * cellHeight + yOffset
+        }));
+
+        const edges = [];
+        for (let i = 0; i < chosenCells.length; i++) {
+          for (let j = i + 1; j < chosenCells.length; j++) {
+            const a = chosenCells[i];
+            const b = chosenCells[j];
+            const dx = Math.abs(a.col - b.col);
+            const dy = Math.abs(a.row - b.row);
+
+            if (dx <= 1 && dy <= 1 && (dx !== 0 || dy !== 0)) {
+              edges.push([i, j]);
+            }
+          }
+        }
+
+        return {
+          points,
+          edges
+        };
+      }
+
+      function getKabbalahNeighbors(col, row, cols, rows) {
+        const neighbors = [];
+
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+
+            const nextCol = col + dx;
+            const nextRow = row + dy;
+
+            if (nextCol < 0 || nextCol >= cols) continue;
+            if (nextRow < 0 || nextRow >= rows) continue;
+
+            neighbors.push({ col: nextCol, row: nextRow });
+          }
+        }
+
+        return neighbors;
+      }
+
+      function buildKabbalahWalkData(signature, headRadius, rng) {
+        const cols = 2;
+        const rows = 5;
+        const maxUniqueNodes = cols * rows;
+
+        const stepCount = Math.floor(range(rng, 7, 10));
+        const walkLength = Math.min(stepCount, maxUniqueNodes);
+
+        const cellWidth = headRadius * 0.85 * signature.widthBias;
+        const cellHeight = headRadius * 0.78 * signature.heightBias;
+
+        const xOffset = ((cols - 1) * cellWidth) / 2;
+        const yOffset = headRadius * 0.15;
+
+        const start = getKabbalahHeadStart(rng);
+
+        const visited = new Map();
+        const nodeCells = [];
+        const edges = [];
+
+        function ensureNode(cell) {
+          const key = cellKey(cell.col, cell.row);
+          if (visited.has(key)) return visited.get(key);
+
+          const index = nodeCells.length;
+          visited.set(key, index);
+          nodeCells.push({ col: cell.col, row: cell.row });
+          return index;
+        }
+
+        let current = { col: start.col, row: start.row };
+        let currentIndex = ensureNode(current);
+
+        for (let step = 1; step < walkLength; step++) {
+          const neighbors = getKabbalahNeighbors(current.col, current.row, cols, rows);
+          const next = neighbors[Math.floor(rng() * neighbors.length)];
+          const nextIndex = ensureNode(next);
+
+          edges.push([currentIndex, nextIndex]);
+
+          current = next;
+          currentIndex = nextIndex;
+        }
+
+        const points = nodeCells.map(cell => ({
+          x: cell.col * cellWidth - xOffset,
+          y: cell.row * cellHeight + yOffset
+        }));
+
+        return {
+          points,
+          edges,
+          headCell: start
+        };
+      }
+
+      function getConstellationSignature(rng) {
+        const family = weightedChoice([
+          { name: "creature", weight: 6 },
+          { name: "symbol", weight: 3 },
+          { name: "kabbalah", weight: 1 }
+        ], rng);
+
+        let archetype = "cluster";
+        let mode = null;
+
+        if (family === "creature") {
+          archetype = chooseOne([
+            "quadruped",
+            "serpentine",
+            "upright",
+            "winged",
+            "cluster"
+          ], rng);
+        } else if (family === "symbol") {
+          archetype = chooseOne([
+            "cruciform",
+            "dharma",
+            "triad",
+            "invertedTriad",
+            "janus",
+            "samsara"
+          ], rng);
+        } else {
+          archetype = "kabbalah";
+          mode = rng() < 0.2 ? "walk" : "splash";
+        }
+
+        return {
+          family,
+          archetype,
+          mode,
+          readability: range(rng, 0.35, 0.9),
+          bodyNodeCount: Math.floor(range(rng, 5, 11)),
+          widthBias: range(rng, 0.6, 1.35),
+          heightBias: range(rng, 0.55, 1.3),
+          asymmetry: range(rng, 0.05, 0.35),
+          connectorDensity: range(rng, 0.45, 0.95),
+          orbitalChance: range(rng, 0.1, 0.35)
+        };
+      }
+
+      function jitterPoint(point, rng, amount) {
+        return { x: point.x + (rng() - 0.5) * amount, y: point.y + (rng() - 0.5) * amount };
+      }
+
+      function buildCruciformPoints(signature, headRadius) {
+        const spreadX = headRadius * 1.0 * signature.widthBias;
+        const spreadY = headRadius * 1.0 * signature.heightBias;
+
+        return [
+          { x: 0, y: 0 },
+          { x: 0, y: spreadY * 0.32 },
+          { x: 0, y: spreadY * 0.64 },
+          { x: -spreadX * 0.34, y: spreadY * 0.32 },
+          { x: spreadX * 0.34, y: spreadY * 0.32 }
+        ];
+      }
+
+      function buildDharmaPoints(signature, headRadius, rng) {
+        const count = 8;
+        const radius = headRadius * 0.78 * ((signature.widthBias + signature.heightBias) * 0.5);
+        const points = [{ x: 0, y: headRadius * 0.38 }];
+
+        for (let i = 0; i < count; i++) {
+          const angle = (-Math.PI / 2) + (Math.PI * 2 * i) / count;
+          points.push({
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius + headRadius * 0.38
+          });
+        }
+
+        return points;
+      }
+
+      function buildTriadPoints(signature, headRadius) {
+        const size = headRadius * 0.92 * signature.widthBias;
+        return [
+          { x: 0, y: 0 },
+          { x: -size * 0.58, y: headRadius * 0.92 * signature.heightBias },
+          { x: size * 0.58, y: headRadius * 0.92 * signature.heightBias }
+        ];
+      }
+
+      function buildInvertedTriadPoints(signature, headRadius) {
+        const size = headRadius * 0.92 * signature.widthBias;
+        return [
+          { x: 0, y: headRadius * 1.0 * signature.heightBias },
+          { x: -size * 0.58, y: 0 },
+          { x: size * 0.58, y: 0 }
+        ];
+      }
+
+      function buildJanusPoints(signature, headRadius) {
+        const spreadX = headRadius * 0.95 * signature.widthBias;
+        const spreadY = headRadius * 1.05 * signature.heightBias;
+
+        return [
+          { x: -spreadX * 0.26, y: 0 },
+          { x: spreadX * 0.26, y: 0 },
+          { x: -spreadX * 0.26, y: spreadY * 0.42 },
+          { x: spreadX * 0.26, y: spreadY * 0.42 },
+          { x: -spreadX * 0.26, y: spreadY * 0.84 },
+          { x: spreadX * 0.26, y: spreadY * 0.84 }
+        ];
+      }
+
+      function buildSamsaraPoints(signature, headRadius) {
+        const turns = 1.65;
+        const count = 8;
+        const maxRadius = headRadius * 0.88 * signature.widthBias;
+        const points = [];
+
+        for (let i = 0; i < count; i++) {
+          const t = count === 1 ? 0 : i / (count - 1);
+          const angle = -Math.PI / 2 + t * Math.PI * 2 * turns;
+          const radius = maxRadius * (0.15 + t * 0.85);
+
+          points.push({
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius + headRadius * 0.42
+          });
+        }
+
+        return points;
+      }
+
+      function buildAuthoredEdges(signature, bodyNodes, rng) {
+        const edges = [];
+        const archetype = signature.archetype;
+
+        if (signature.family === "creature") {
+          for (let i = 0; i < bodyNodes.length - 1; i++) {
+            if (rng() < signature.connectorDensity || i === 0) edges.push([i, i + 1]);
+          }
+
+          if (archetype === "quadruped" && bodyNodes.length >= 6) edges.push([0, 4], [1, 5]);
+          if (archetype === "winged" && bodyNodes.length >= 5) edges.push([1, 3], [2, 4]);
+
+          return edges;
+        }
+
+        if (signature.family === "symbol") {
+          if (archetype === "cruciform") {
+            return [[0,1],[1,2],[1,3],[1,4]];
+          }
+
+          if (archetype === "dharma") {
+            const dharmaEdges = [];
+            for (let i = 1; i <= 8; i++) {
+              const next = i === 8 ? 1 : i + 1;
+              dharmaEdges.push([0, i]);
+              dharmaEdges.push([i, next]);
+            }
+            return dharmaEdges;
+          }
+
+          if (archetype === "triad" || archetype === "invertedTriad") {
+            return [[0,1],[1,2],[2,0]];
+          }
+
+          if (archetype === "janus") {
+            return [[0,1],[0,2],[1,3],[2,3],[2,4],[3,5],[4,5]];
+          }
+
+          if (archetype === "samsara") {
+            for (let i = 0; i < bodyNodes.length - 1; i++) edges.push([i, i + 1]);
+            return edges;
+          }
+        }
+
+        return edges;
+      }
+
+      function buildBaseConstellationPoints(signature, headRadius, rng) {
+        const hr = headRadius;
+        const spreadX = hr * 1.15 * signature.widthBias;
+        const spreadY = hr * 1.1 * signature.heightBias;
+        const archetype = signature.archetype;
+
+        if (signature.family === "creature") {
+          if (archetype === "quadruped") {
+            return [
+              { x: 0, y: 0 },
+              { x: spreadX * 0.35, y: spreadY * 0.05 },
+              { x: spreadX * 0.68, y: spreadY * -0.08 },
+              { x: spreadX * 0.9, y: spreadY * -0.15 },
+              { x: spreadX * 0.15, y: spreadY * 0.55 },
+              { x: spreadX * 0.55, y: spreadY * 0.58 },
+              { x: spreadX * 0.85, y: spreadY * 0.4 }
+            ].slice(0, signature.bodyNodeCount);
+          }
+
+          if (archetype === "serpentine") {
+            const points = [];
+            const count = signature.bodyNodeCount;
+            for (let i = 0; i < count; i++) {
+              const t = count === 1 ? 0 : i / (count - 1);
+              points.push({
+                x: (t - 0.5) * spreadX * 1.4,
+                y: Math.sin(t * Math.PI * 1.4) * spreadY * 0.45 + t * spreadY * 0.3
+              });
+            }
+            return points;
+          }
+
+          if (archetype === "upright") {
+            return [
+              { x: 0, y: 0 },
+              { x: 0, y: spreadY * 0.35 },
+              { x: 0, y: spreadY * 0.7 },
+              { x: -spreadX * 0.3, y: spreadY * 0.35 },
+              { x: spreadX * 0.3, y: spreadY * 0.35 },
+              { x: -spreadX * 0.18, y: spreadY * 1.08 },
+              { x: spreadX * 0.18, y: spreadY * 1.08 }
+            ].slice(0, signature.bodyNodeCount);
+          }
+
+          if (archetype === "winged") {
+            return [
+              { x: 0, y: 0 },
+              { x: -spreadX * 0.32, y: spreadY * 0.18 },
+              { x: spreadX * 0.32, y: spreadY * 0.18 },
+              { x: -spreadX * 0.7, y: spreadY * -0.1 },
+              { x: spreadX * 0.7, y: spreadY * -0.1 },
+              { x: 0, y: spreadY * 0.52 },
+              { x: 0, y: spreadY * 0.92 }
+            ].slice(0, signature.bodyNodeCount);
+          }
+
+          if (archetype === "cluster") {
+            const clusterPoints = [];
+            for (let i = 0; i < signature.bodyNodeCount; i++) {
+              const angle = (Math.PI * 2 * i) / signature.bodyNodeCount;
+              const ring = hr * range(rng, 0.25, 1.0);
+              clusterPoints.push({
+                x: Math.cos(angle) * ring * signature.widthBias,
+                y: Math.sin(angle) * ring * signature.heightBias + spreadY * 0.4
+              });
+            }
+            return clusterPoints;
+          }
+        }
+
+        if (signature.family === "symbol") {
+          if (archetype === "cruciform") return buildCruciformPoints(signature, headRadius);
+          if (archetype === "dharma") return buildDharmaPoints(signature, headRadius, rng);
+          if (archetype === "triad") return buildTriadPoints(signature, headRadius);
+          if (archetype === "invertedTriad") return buildInvertedTriadPoints(signature, headRadius);
+          if (archetype === "janus") return buildJanusPoints(signature, headRadius);
+          if (archetype === "samsara") return buildSamsaraPoints(signature, headRadius);
+        }
+
+        return [];
+      }
+
+      function generateConstellationBody(bodyAnchor, headRadius, headColour, rng, profile, creatureGroup, bodyPlan, seed) {
+        const signature = getConstellationSignature(rng);
+        const bodyNodeRadius = headRadius * 0.75;
+        const glyphColour = darkerColour(headColour, 28);
+        const bodyNodeColour = darkerColour(headColour, 10);
+
+        let basePoints = [];
+        let edges = [];
+        const isKabbalah = signature.family === "kabbalah";
+
+        if (isKabbalah) {
+          const kabbalahData = signature.mode === "splash"
+            ? buildKabbalahSplashData(signature, headRadius, rng)
+            : buildKabbalahWalkData(signature, headRadius, rng);
+
+          const minY = Math.min(...kabbalahData.points.map(p => p.y));
+          const desiredTop = headRadius * 0.1;
+          const yShift = desiredTop - minY;
+
+          basePoints = kabbalahData.points.map(p => ({
+            x: p.x,
+            y: p.y + yShift
+          }));
+
+          edges = kabbalahData.edges.slice();
+        } else {
+          basePoints = buildBaseConstellationPoints(signature, headRadius, rng)
+            .map(p => jitterPoint(p, rng, headRadius * (1 - signature.readability) * 0.7 + headRadius * 0.08))
+            .map(p => ({
+              x: p.x + (rng() - 0.5) * headRadius * signature.asymmetry,
+              y: p.y
+            }));
+        }
+
+        const bodyNodes = basePoints.map(p => ({
+          x: bodyAnchor.x + p.x,
+          y: bodyAnchor.y + p.y
+        }));
+
+        const bodyNodeConfig = {
+          amountXMin: 1.8, amountXMax: 4.8,
+          amountYMin: 1.8, amountYMax: 4.8,
+          speedXMin: 0.12, speedXMax: 0.24,
+          speedYMin: 0.12, speedYMax: 0.24,
+          shimmerStrength: 0.16,
+          shimmerRate: 6,
+          driftGroup: creatureGroup,
+          profile,
+          layerName: "bodyNode"
+        };
+
+        const connectorConfig = {
+          amountXMin: 3.4, amountXMax: 8.2,
+          amountYMin: 3.4, amountYMax: 8.2,
+          speedXMin: 0.16, speedXMax: 0.3,
+          speedYMin: 0.16, speedYMax: 0.3,
+          shimmerStrength: 0.28,
+          shimmerRate: 7,
+          driftGroup: creatureGroup,
+          profile,
+          layerName: "connector"
+        };
+
+        bodyNodes.forEach((bodyNode, index) => {
+          const nodeRadius = bodyNodeRadius * range(rng, 0.38, 0.52);
+          const instance = instantiateBodyNodeAt(
+            bodyNode.x,
+            bodyNode.y,
+            nodeRadius,
+            bodyNodeColour,
+            bodyPlan,
+            index
+          );
+          instance.bodyExtras = getBodyNodeExtrasForIndex(index, bodyPlan, nodeRadius, bodyNodeColour, seed);
+          applyMotionToPart(instance, bodyNodeConfig, index, rng);
+          shapes.push(instance);
+        });
+
+        if (!isKabbalah) {
+          edges = buildAuthoredEdges(signature, bodyNodes, rng);
+        }
+
+        edges.forEach((edge) => {
+          const a = bodyNodes[edge[0]];
+          const b = bodyNodes[edge[1]];
+          if (!a || !b) return;
+
+          const midCount = 1 + Math.floor(range(rng, 1, 4));
+
+          for (let i = 0; i < midCount; i++) {
+            const t = (i + 1) / (midCount + 1);
+            const gx = a.x + (b.x - a.x) * t + (rng() - 0.5) * headRadius * 0.16;
+            const gy = a.y + (b.y - a.y) * t + (rng() - 0.5) * headRadius * 0.16;
+            const glyphName = weightedChoice(FEATURE_POOLS.connector, rng);
+            const style = chooseStyleForGlyph(glyphName, rng);
+            const scale = range(rng, 0.42, 0.72);
+
+            const parts = createGlyphAt(glyphName, gx, gy, headRadius, glyphColour, style, {
+              featureScale: scale,
+              slotSide: i % 2 === 0 ? "left" : "right"
+            });
+
+            addParts(parts, rng, connectorConfig);
+          }
+
+          if (!isKabbalah && rng() < signature.orbitalChance) {
+            const anchor = rng() < 0.5 ? a : b;
+            const orbitGlyph = weightedChoice(FEATURE_POOLS.connector, rng);
+            const orbitStyle = chooseStyleForGlyph(orbitGlyph, rng);
+            const angle = rng() * Math.PI * 2;
+            const dist = headRadius * range(rng, 0.18, 0.32);
+            const ox = anchor.x + Math.cos(angle) * dist;
+            const oy = anchor.y + Math.sin(angle) * dist;
+
+            const orbitParts = createGlyphAt(orbitGlyph, ox, oy, headRadius, glyphColour, orbitStyle, {
+              featureScale: range(rng, 0.3, 0.55),
+              slotSide: chooseOne(["left", "right", "center"], rng)
+            });
+
+            addParts(orbitParts, rng, connectorConfig);
+          }
+        });
+      }
+
+      function buildCreatureAt(cx, cy, headRadius, featureScale, headColour, controls, seed) {
+        const creatureSpace = deriveCreatureSpace(cx, cy, headRadius);
+        const profile = buildMotionProfile(seed);
+        const masterRng = createRNG(seed * 97.3 + 11);
+        const creatureGroup = createCreatureDriftGroup(masterRng, profile, "creature", "creature");
+        const faceGroup = createCreatureDriftGroup(masterRng, profile, "faceGroup", "faceGroup");
+        faceGroup.parentGroup = creatureGroup;
+
+        const headSpec = getSeededHeadSpec(seed);
+        const faceLayoutSpec = getSeededFaceLayoutSpec(seed);
+        const bodyPlan = getSeededBodyPlan(seed, headSpec);
+
+        if (controls.bodyConstellation) {
+          generateConstellationBody(
+            creatureSpace.bodyAnchor,
+            headRadius,
+            headColour,
+            createRNG(seed * 53 + 17),
+            profile,
+            creatureGroup,
+            bodyPlan,
+            seed
+          );
+        }
+
+        const head = new MorphShape(creatureSpace.head.x, creatureSpace.head.y, headRadius, headColour, headSpec);
+        head.rotation = headSpec.localRotation || 0;
+        applyMotionToPart(head, {
+          amountXMin: 0.02, amountXMax: 0.08,
+          amountYMin: 0.02, amountYMax: 0.08,
+          speedXMin: 0.05, speedXMax: 0.09,
+          speedYMin: 0.05, speedYMax: 0.09,
+          shimmerStrength: 0,
+          driftGroup: creatureGroup,
+          profile,
+          layerName: "head"
+        }, 0, masterRng);
+        shapes.push(head);
+
+        buildFaceGlyphs(
+          creatureSpace.head.x,
+          creatureSpace.head.y,
+          headRadius,
+          featureScale,
+          "#222",
+          controls,
+          createRNG(seed * 71 + 31),
+          faceGroup,
+          profile,
+          headSpec,
+          faceLayoutSpec,
+          headColour
+        );
+      }
+
+      function createSingleRoomView() {
+        return {
+          seed: getSafeSeedValue(),
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height
+        };
+      }
+
+      function createGridRoomViews(cols, rows) {
+        const views = [];
+        const cellWidth = canvas.width / cols;
+        const cellHeight = canvas.height / rows;
+        let seed = 1;
+
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            views.push({
+              seed,
+              x: col * cellWidth,
+              y: row * cellHeight,
+              width: cellWidth,
+              height: cellHeight
+            });
+            seed++;
+          }
+        }
+        return views;
+      }
+
+      function populateScene() {
+        shapes = [];
+        driftGroups = [];
+        roomViews = [];
+
+        const controls = getControls();
+
+        if (controls.viewMode === "single") {
+          const seed = controls.selectedSeed;
+          const cx = canvas.width / 2;
+          const cy = canvas.height / 2 - 20;
+          const sizeRng = createRNG(seed * 2);
+          const featureRng = createRNG(seed * 3);
+          const colourRng = createRNG(seed);
+
+          const radius = range(sizeRng, 90, 100);
+          const featureScale = range(featureRng, 0.8, 1.1);
+          const colour = pastelColour(colourRng);
+
+          roomViews.push(createSingleRoomView());
+          buildCreatureAt(cx, cy, radius, featureScale, colour, controls, seed);
+          return;
+        }
+
+        const cols = Math.max(1, controls.cols);
+        const rows = Math.max(1, controls.rows);
+        roomViews = createGridRoomViews(cols, rows);
+
+        const cellWidth = canvas.width / cols;
+        const cellHeight = canvas.height / rows;
+        let positionSeed = 1;
+
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cellX = col * cellWidth;
+            const cellY = row * cellHeight;
+            const cx = cellX + cellWidth / 2;
+            const cy = cellY + cellHeight * 0.43;
+            const sizeRng = createRNG(positionSeed * 2);
+            const featureRng = createRNG(positionSeed * 3);
+            const colourRng = createRNG(positionSeed);
+
+            const baseCellScale = Math.min(cellWidth, cellHeight);
+            const radius = Math.min(range(sizeRng, 0.13, 0.16) * baseCellScale, 70);
+            const featureScale = range(featureRng, 0.7, 1.05);
+            const colour = pastelColour(colourRng);
+
+            buildCreatureAt(cx, cy, radius, featureScale, colour, controls, positionSeed);
+            positionSeed++;
+          }
+        }
+      }
+
+      function drawAllRooms() {
+        roomViews.forEach(view => drawRoomForSeed(view.seed, view));
+      }
+
+      function update(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawAllRooms();
+        driftGroups.forEach(group => group.update(time));
+        shapes.forEach(shape => {
+          shape.update(time);
+          shape.draw();
+        });
+        requestAnimationFrame(update);
+      }
+
+      function syncModeUI() {
+        const isSingle = viewModeInput.value === "single";
+        seedInput.disabled = false;
+        prevSeedBtn.disabled = false;
+        nextSeedBtn.disabled = false;
+        randomSeedBtn.disabled = false;
+        seedInput.style.opacity = isSingle ? "1" : "0.9";
+      }
+
+      function switchToSingleMode() {
+        viewModeInput.value = "single";
+        syncModeUI();
+      }
+
+      function randomSeed() {
+        switchToSingleMode();
+        const seed = Math.floor(Math.random() * 1000000) + 1;
+        setSeedValue(seed);
+        populateScene();
+      }
+
+      function gameStart() {
+        syncModeUI();
+        populateScene();
+        requestAnimationFrame(update);
+      }
+
+      [viewModeInput, colsInput, rowsInput, seedInput, randomBInput, randomEInput, randomNInput, randomMInput, bodyConstellationInput].forEach(input => {
+        input.addEventListener("change", () => {
+          if (input === viewModeInput) syncModeUI();
+          if (input === seedInput) {
+            switchToSingleMode();
+            setSeedValue(getSafeSeedValue());
+          }
+          populateScene();
+        });
+        input.addEventListener("input", () => {
+          if (input === seedInput) {
+            switchToSingleMode();
+            setSeedValue(getSafeSeedValue());
+          }
+          populateScene();
+        });
+      });
+
+      prevSeedBtn.addEventListener("click", () => {
+        switchToSingleMode();
+        setSeedValue(getSafeSeedValue() - 1);
+        populateScene();
+      });
+
+      nextSeedBtn.addEventListener("click", () => {
+        switchToSingleMode();
+        setSeedValue(getSafeSeedValue() + 1);
+        populateScene();
+      });
+
+      randomSeedBtn.addEventListener("click", randomSeed);
+
+      backgroundImages.forEach(img => {
+        img.addEventListener("load", populateScene);
+      });
+
+      gameStart();
+    </script>
+  </body>
+</html>

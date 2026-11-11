@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ball game!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+    <script>
+
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    var posX = 0;
+    var posY = 0;
+    var squareColour = randomColour();
+    var squareSize = 20;
+    var isDrawing = false;
+
+
+    setInterval(render, 1);
+    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener("mousemove", mouseMove);
+
+    function handleClick(event){
+      ctx.rect(0,0,630,67);
+      if (ctx.isPointInPath(posX, posY)){
+        squareColour = randomColour();
+        isDrawing = true;
+      }
+      if(isDrawing == true){
+        isDrawing = false;
+      }
+      else {
+        isDrawing = true;
+      }
+    }
+    function mouseMove(event){
+      posX = event.offsetX;
+      posY = event.offsetY;
+    }
+    function drawUI(){
+      ctx.fillStyle = "grey";
+      ctx.fillRect(0,0,630,67)
+      ctx.font = "50px Comic Sans MS";
+      ctx.fillStyle = "black";
+      ctx.fillText("click here to change colour", 0,50)
+      if(isDrawing == false){
+        ctx.fillText("click anywhere to start drawing", 0,750)
+      }
+
+      drawSquare(posX,posY);
+    }
+    function render(){
+        displayColour();
+        drawUI();
+      }
+    function displayColour(){
+      ctx.fillStyle = squareColour
+      ctx.fillRect(1000,0,200,200)
+
+    }
+    function drawSquare(x,y){
+      if(isDrawing == true){
+        ctx.fillStyle = squareColour;
+        ctx.fillRect(x-(squareSize /2),y-(squareSize /2),squareSize,squareSize)
+      }
+    }
+
+    function randomRange(min, max){
+      return Math.floor(Math.random()*(max-min+1))+min;
+    }
+    function randomColour(){
+      let num = Math.floor(Math.random()*(16777215-1+1))+1;
+      return '#'+num.toString(16);
+    }
+
+    </script>
+  </body>
+</html>
