@@ -102,3 +102,16 @@
 <p>The first pass had a few problems. Beams stopped at the old floor height, a wall cutting across the edge left a see-through gap, and some ramps led nowhere: into a wall, or up out of one pit and straight to the edge of another.</p>
 <figure><img src="ramp-to-nowhere.jpg" alt="two stone slabs at different heights under a red vault, one sloping down towards the camera and ending at a drop"><figcaption>a ramp to nowhere</figcaption></figure>
 <p>I also got stuck in a pit by the exit, which turned out to be the exit working from the floor below it. Now it only takes you from its own floor, and sunken zones keep clear of it.</p>
+
+<h2>levels on the tile grid</h2>
+<p>Sinking whole zones worked, but I wanted elevation to come from the same tiles the walls come from. The walls are drawn from corner tiles: each corner is open or solid. So the corners got more colours instead, one per level, with the seed choosing how many, and each law on a map dealt a level.</p>
+<p>Every level is a storey, about one and a half metres. You can drop down any cliff but not climb one, so the hard part is getting back up. I drew what I wanted on a few seeds by hand, and the generator learned from those drawings.</p>
+<figure><img src="causeway-sketch.jpg" alt="a map of coloured levels with yellow strips drawn crossing from one area to another over lower ground"><figcaption>causeways, drawn by hand</figcaption></figure>
+<p>Causeways come first: a flat strip between two areas at the same level, across lower ground. One level up, a causeway is filled in solid underneath. Two levels up, the fill gets a doorway so the floor below runs through it.</p>
+<figure><img src="causeway-fill.jpg" alt="a side-on diagram of a yellow causeway over blue fill on green floor, with an orange doorway through the fill"><figcaption>fill under a causeway</figcaption></figure>
+<figure><img src="causeway-doorway.jpg" alt="the same diagram two levels up, the doorway cut through blue and green fill down to tan floor"><figcaption>two levels up, with a doorway</figcaption></figure>
+<p>Stairs come next. They climb one storey, are always a tile long, and need floor behind them to walk up to. Most of the work was in everything they mustn't do: hang over rock, sit in pockets you can't leave, or fill a narrow strip so you can't walk past.</p>
+<figure><img src="pockets.jpg" alt="a level map with orange circles around two small tan pockets below a blue area"><figcaption>pockets you could fall into and never leave</figcaption></figure>
+<figure><img src="stairs-blocking.jpg" alt="a level map with orange circles around stairs that block narrow strips of floor"><figcaption>stairs cutting off the floor they stand on</figcaption></figure>
+<p>Small pockets now get filled in. Where a stair still can't fit cleanly, it becomes a ladder flat against the cliff. And getting back to everywhere isn't enough, because falling off near a ledge could mean a long walk round. A few stairs go in where the walk back would be longest.</p>
+<figure><img src="long-walk.jpg" alt="a level map with a long orange line traced from a ledge all the way round the map and back up"><figcaption>the walk back after falling off</figcaption></figure>

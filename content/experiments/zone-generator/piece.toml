@@ -1,6 +1,6 @@
 title = "zone generator"
 year = "2026"
-updated = "2026-11-10"
+updated = "2026-11-11"
 made_with = ["javascript", "three.js", "python"]
 blurb = ""
 lead = true
