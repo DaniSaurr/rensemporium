@@ -115,3 +115,23 @@
 <figure><img src="stairs-blocking.jpg" alt="a level map with orange circles around stairs that block narrow strips of floor"><figcaption>stairs cutting off the floor they stand on</figcaption></figure>
 <p>Small pockets now get filled in. Where a stair still can't fit cleanly, it becomes a ladder flat against the cliff. And getting back to everywhere isn't enough, because falling off near a ledge could mean a long walk round. A few stairs go in where the walk back would be longest.</p>
 <figure><img src="long-walk.jpg" alt="a level map with a long orange line traced from a ledge all the way round the map and back up"><figcaption>the walk back after falling off</figcaption></figure>
+
+<h2>v6: levels in the game</h2>
+<p>v6 takes the levels off the drawing page and into the game itself. Floors stand at their level, cliffs run along the lines where levels meet, and the stairs, ladders and causeways from the drawings are built in 3D. You walk up stairs, climb ladders, cross a causeway or walk under it through its doorway, and drop off any edge.</p>
+<p>Ladders first came out side-on, facing the way the grid ran instead of the cliff they were on, with rails sticking up past the top. Now each one faces its cliff, diagonal ones included, stops at the top edge, and you climb it at walking pace.</p>
+<figure><img src="ladder-sideways.jpg" alt="a wooden ladder standing out from a dark stone block, its rungs running into the wall"><figcaption>a ladder side-on to its wall</figcaption></figure>
+<p>Where a full ladder would hang off a corner, there's a half-width one. Ladders take the metal of the area too, the same metal as the pipes where there are any.</p>
+<figure><img src="ladder-half.jpg" alt="a narrow ladder against a short step of brick beside a raised stone floor"><figcaption>a spot that wanted a half ladder</figcaption></figure>
+<p>On some maps the start was walled in. The edge zones' floor ran right out to the border, and the game treated the outer tile as out of bounds, so the only way out wasn't walkable. The outer ring is always rock now, and a test walks every map from the start with the real movement rules to make sure nothing is shut off.</p>
+
+<h2>v7: a second layer</h2>
+<p>The rock round the outside of a map was dead space. So the generator runs again on another seed, keeps only the floor that lands on that outer rock, and stands it a storey or two above the highest floor. Thin walls and pillars inside the map stay rock and just get taller, and the ceilings rise over everything. Where the second layer meets the first it ends in an open cliff, and the same stairs, ladders and causeways join the two.</p>
+<figure><img src="deck-planes.jpg" alt="a stone causeway with flat dark panels of wall standing up out of it"><figcaption>rock walls coming up through a causeway</figcaption></figure>
+<p>Causeways crossing the second layer had walls standing up through them, where the fill under the deck met plain rock. Those walls now step down to the deck.</p>
+<p>The skylight beams didn't reach their openings any more once the ceilings rose. Now each beam is one long prism along the sun's angle, starting well above the opening and running straight through the level.</p>
+<figure><img src="beam-halfway.jpg" alt="a green-lit room of stone walls with a light beam that starts halfway down, the missing part scribbled in orange"><figcaption>a beam stopping short of its opening</figcaption></figure>
+<p>The map changed too. I wanted it like the level pages: dark rock and one flat colour per level.</p>
+<figure><img src="level-colours.jpg" alt="two level maps on dark brown, floors in tan, green and blue"><figcaption>the look I was after</figcaption></figure>
+<figure><img src="v7-map.png" alt="a v7 map: dark rock, tan, green and blue floors, small stair icons, a gold diamond exit and a light line where the player walked"><figcaption>the v7 map, with the path walked so far</figcaption></figure>
+<p>There's a fog of war option that reveals the map in a circle round wherever you've been, and a path option that draws a line behind you. The exit is gold and always shows through the fog.</p>
+<figure><img src="v7-fog.png" alt="the same map almost all dark, a small revealed patch round the player and a gold diamond far off"><figcaption>fog of war</figcaption></figure>
