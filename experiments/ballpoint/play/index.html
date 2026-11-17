@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ballpoint</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #1c1b20; overflow: hidden; color: #cfcbd6; font: 12px/1.2 "Segoe UI", system-ui, sans-serif; }
+  #desk { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+          background: radial-gradient(ellipse at 50% 40%, #34323a 0%, #1c1b20 78%); }
+  canvas { max-width: 97vw; max-height: 93vh; display: block; cursor: pointer; box-shadow: 0 12px 44px #000b, 0 1px 3px #000d; }
+  #bar { position: fixed; z-index: 6; left: 0; right: 0; bottom: 0; display: flex; gap: 6px; justify-content: center; padding: 7px; }
+  #bar button { background: #2b2a31; color: #cfcbd6; border: 1px solid #45434d; border-radius: 3px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  #bar button:hover { background: #3a3842; }
+  #prog { position: fixed; z-index: 6; left: 0; top: 0; height: 2px; width: 0; background: #4a5cc0; }
+  #nib { position: fixed; z-index: 5; left: 0; top: 0; display: none; pointer-events: none; transform-origin: 17px 168px; filter: drop-shadow(6px 8px 6px #0006); }
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<svg id="nib" width="34" height="170" viewBox="0 0 34 170">
+  <rect x="9" y="6" width="16" height="118" rx="3" fill="#ece9f2" fill-opacity=".94" stroke="#7d7a88"/>
+  <rect x="12.5" y="40" width="3" height="82" fill="#2f4bb8" fill-opacity=".4"/>
+  <rect x="9" y="6" width="16" height="30" rx="3" fill="#2f4bb8"/>
+  <rect x="13" y="0" width="8" height="10" rx="2" fill="#2f4bb8"/>
+  <path d="M9 124 L25 124 L20 152 L14 152 Z" fill="#2f4bb8"/>
+  <path d="M14 152 L20 152 L17.6 168 L16.4 168 Z" fill="#3a3a42"/>
+</svg>
+<div id="desk"><canvas id="c" title="click to finish the drawing"></canvas></div>
+<div id="bar">
+  <button id="bNew" title="n">new page</button>
+  <button id="bFin" title="f">finish</button>
+  <button id="bPaper" title="p">paper: lined</button>
+  <button id="bInk" title="i">ink: blue</button>
+  <button id="bSpeed" title="s">speed: normal</button>
+  <button id="bSave" title="d">save png</button>
+</div>
+<script src="pen.js"></script>
+<script src="shade.js"></script>
+<script src="font.js"></script>
+<script src="mesh.js"></script>
+<script src="render3d.js"></script>
+<script src="ship.js"></script>
+<script src="ufo.js"></script>
+<script src="planet.js"></script>
+<script src="extras.js"></script>
+<script src="scene.js"></script>
+<script>
+(function () {
+  const canvas = document.getElementById('c'), prog = document.getElementById('prog');
+  const papers = ['lined', 'graph', 'plain'], inks = ['blue', 'black'], speeds = [['slow', 90], ['normal', 260], ['fast', 1100]];
+  const nib = document.getElementById('nib');
+  let last = 0;
+  const st = { paper: 'lined', ink: 'blue', speed: 1, seed: 0 };
+  const q = new URLSearchParams(location.hash.slice(1));
+  if (papers.includes(q.get('paper'))) st.paper = q.get('paper');
+  if (inks.includes(q.get('ink'))) st.ink = q.get('ink');
+  let pen = null, raf = 0;
+
+  function labels() {
+    document.getElementById('bPaper').textContent = 'paper: ' + st.paper;
+    document.getElementById('bInk').textContent = 'ink: ' + st.ink;
+    document.getElementById('bSpeed').textContent = 'speed: ' + speeds[st.speed][0];
+  }
+  function hash() { try { history.replaceState(null, '', '#s=' + st.seed + '&paper=' + st.paper + '&ink=' + st.ink); } catch (e) { } }
+  function placeNib(show) {
+    if (!show || pen.tx == null) { nib.style.display = 'none'; return; }
+    const r = canvas.getBoundingClientRect(), k = r.width / 1300;
+    const x = r.left + pen.tx / pen.w * r.width, y = r.top + pen.ty / pen.h * r.height;
+    nib.style.display = 'block';
+    nib.style.transform = 'translate(' + (x - 17) + 'px,' + (y - 168) + 'px) scale(' + k + ') rotate(28deg)';
+  }
+  function loop(ts) {
+    ts = ts || performance.now();
+    const dt = last ? Math.min(50, ts - last) : 16.7; last = ts;
+    const done = pen.advance(speeds[st.speed][1] * dt / 16.7);
+    prog.style.width = (100 * pen.done / Math.max(1, pen.total)) + '%';
+    placeNib(!done);
+    if (!done) raf = requestAnimationFrame(loop); else prog.style.width = '0';
+  }
+  function newPage(seed, instant) {
+    cancelAnimationFrame(raf); last = 0; nib.style.display = 'none';
+    st.seed = seed == null ? (Math.random() * 1e9) | 0 : seed;
+    hash(); labels();
+    pen = new BP.Pen(canvas, { W: 1600, H: 1100, S: 1.5, seed: st.seed, ink: st.ink });
+    pen.makePaper(st.paper);
+    pen.compose(0, 0, pen.w, pen.h);
+    BP.compose(pen, { paper: st.paper });
+    window.pen = pen;
+    if (instant) { pen.advance(1e12); prog.style.width = '0'; } else loop();
+  }
+  function finish() { if (pen) { cancelAnimationFrame(raf); pen.advance(1e12); prog.style.width = '0'; nib.style.display = 'none'; } }
+  const cyc = (arr, v) => arr[(arr.indexOf(v) + 1) % arr.length];
+  const act = {
+    new: () => newPage(), fin: finish,
+    paper: () => { st.paper = cyc(papers, st.paper); newPage(st.seed); },
+    ink: () => { st.ink = cyc(inks, st.ink); pen.setInk(st.ink); pen.compose(0, 0, pen.w, pen.h); hash(); labels(); },
+    speed: () => { st.speed = (st.speed + 1) % speeds.length; labels(); },
+    save: () => canvas.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'ballpoint-' + st.seed + '.png'; a.click(); }),
+  };
+  for (const [id, k] of [['bNew', 'new'], ['bFin', 'fin'], ['bPaper', 'paper'], ['bInk', 'ink'], ['bSpeed', 'speed'], ['bSave', 'save']]) document.getElementById(id).onclick = act[k];
+  canvas.onclick = finish;
+  addEventListener('keydown', e => { const k = { n: 'new', f: 'fin', p: 'paper', i: 'ink', s: 'speed', d: 'save' }[e.key.toLowerCase()]; if (k) act[k](); });
+  const s0 = parseInt(q.get('s'), 10);
+  newPage(isNaN(s0) ? null : s0, q.get('instant') === '1');
+})();
+</script>
+</body>
+</html>

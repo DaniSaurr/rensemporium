@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>polyganate!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+
+    <script>
+    const canvas = document.getElementById("myCanvas");
+    const ctx = canvas.getContext("2d");
+    let mouse_position = [0,0];
+    let gameObjects = [];
+    let player;
+    let eye_offset_X = 0;
+    let eye_offset_Y = 0;
+    let global_offset = [];
+    var rightPressed = false;
+    var leftPressed = false;
+    var upPressed = false;
+    var downPressed = false;
+
+    canvas.addEventListener("mousemove", mouseMove);
+    canvas.addEventListener("mousedown", mouseDown);
+    document.addEventListener("keydown", keyDownHandler, false);
+    document.addEventListener("keyup", keyUpHandler, false);
+    function keyDownHandler(e) {
+        if ("code" in e) {
+            switch(e.code) {
+                case "Unidentified":
+                    break;
+                case "ArrowRight":
+                case "Right": // IE <= 9 and FF <= 36
+                case "KeyD":
+                    rightPressed = true;
+                    return;
+                case "ArrowLeft":
+                case "Left": // IE <= 9 and FF <= 36
+                case "KeyA":
+                    leftPressed = true;
+                    return;
+                case "ArrowUp":
+                case "Up": // IE <= 9 and FF <= 36
+                case "KeyW":
+                    upPressed = true;
+                    return;
+                case "ArrowDown":
+                case "Down": // IE <= 9 and FF <= 36
+                case "KeyS":
+                    downPressed = true;
+                    return;
+                default:
+                    return;
+            }
+        }
+        if(e.keyCode == 39) {
+            rightPressed = true;
+        }
+        else if(e.keyCode == 37) {
+            leftPressed = true;
+        }
+        if(e.keyCode == 40) {
+            downPressed = true;
+        }
+        else if(e.keyCode == 38) {
+            upPressed = true;
+        }
+    }
+    function keyUpHandler(e) {
+        if ("code" in e) {
+            switch(e.code) {
+                case "Unidentified":
+                    break;
+                case "ArrowRight":
+                case "Right": // IE <= 9 and FF <= 36
+                case "KeyD":
+                    rightPressed = false;
+                    return;
+                case "ArrowLeft":
+                case "Left": // IE <= 9 and FF <= 36
+                case "KeyA":
+                    leftPressed = false;
+                    return;
+                case "ArrowUp":
+                case "Up": // IE <= 9 and FF <= 36
+                case "KeyW":
+                    upPressed = false;
+                    return;
+                case "ArrowDown":
+                case "Down": // IE <= 9 and FF <= 36
+                case "KeyS":
+                    downPressed = false;
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        if(e.keyCode == 39) {
+            rightPressed = false;
+        }
+        else if(e.keyCode == 37) {
+            leftPressed = false;
+        }
+        if(e.keyCode == 40) {
+            downPressed = false;
+        }
+        else if(e.keyCode == 38) {
+            upPressed = false;
+        }
+    }
+
+    function mouseMove(event){
+      mouse_position[0] = event.offsetX;
+      mouse_position[1] = event.offsetY;
+      if(player){
+        player.setFacingDirection();
+      }
+    }
+    function mouseDown(event){
+      console.log("click");
+    }
+    class Triangle {
+      constructor(position,size,colour,type)
+      {
+        this.position = position;
+        this.size = size;
+        this.colour = colour;
+        this.type = type;
+      }
+      update()
+      {
+
+      }
+      draw()
+      {
+        if(this.type == "equilateral")
+        {
+          ctx.beginPath();
+          ctx.fillStyle = this.colour;
+          ctx.moveTo(this.position[0]-this.size/2, this.position[1]+this.size/2);
+          ctx.lineTo(this.position[0]+this.size/2,this.position[1]+this.size/2);
+          ctx.lineTo(this.position[0],this.position[1]-this.size);
+          ctx.lineTo(this.position[0]-this.size/2, this.position[1]+this.size/2);
+          ctx.fill();
+        }
+      }
+    }
+    class Player {
+      constructor(position,size,colour,)
+      {
+        this.position = position;
+        this.size = size;
+        this.colour = colour;
+        this.speed = 3;
+        this.facing = [,];
+        this.keyBeingPressed =0;
+      }
+      update()
+        {
+          let dx = (rightPressed ? 1 : 0) - (leftPressed ? 1 : 0);
+          let dy = (downPressed ? 1 : 0) - (upPressed ? 1 : 0);
+          if (dx !== 0 && dy !== 0) {
+              dx *= Math.SQRT1_2;
+              dy *= Math.SQRT1_2;
+          }
+          this.position[0] += dx * this.speed;
+          this.position[1] += dy * this.speed;
+        }
+      setFacingDirection()
+      {
+        //set the facing direction based on where the mouse is, and move the eyes appropriately
+        if(mouse_position[0]<canvas.width/2){this.facing[0] = "left"; eye_offset_X = -6}
+        if(mouse_position[0]>canvas.width/2){this.facing[0] = "right"; eye_offset_X = 6}
+        if(mouse_position[1]<canvas.height/2){this.facing[1] = "up"; eye_offset_Y = -3}
+        if(mouse_position[1]>canvas.height/2){this.facing[1] = "down"; eye_offset_Y = 3}
+      }
+      draw()
+      {
+        ctx.beginPath();
+        ctx.fillStyle = this.colour;
+        ctx.fillRect(this.position[0],this.position[1],this.size,this.size);
+
+        ctx.fillStyle = "black";
+        ctx.fillRect(this.position[0]+eye_offset_X+this.size/5,this.position[1]+eye_offset_Y+this.size/4,this.size/5,this.size/3);
+        ctx.fillRect(this.position[0]+eye_offset_X+this.size-(this.size/5)-this.size/5,this.position[1]+eye_offset_Y+this.size/4,this.size/5,this.size/3);
+
+      }
+    }
+
+    setInterval(update, 15);
+    startGame();
+
+    function startGame()
+    {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      populateEnvironment(50);
+      makeNewPlayer();
+    }
+    function makeNewPlayer()
+    {
+      player = new Player([canvas.width/2,canvas.height/2], 30, "red")
+      gameObjects.push(player);
+    }
+    function update()
+    {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updategameObjects();
+      drawgameObjects();
+    }
+    function updategameObjects()
+    {
+      for(let i = 0; i < gameObjects.length; i++)
+      {
+        gameObjects[i].update();
+      }
+    }
+    function populateEnvironment(amount)
+    {
+      for(let i = 0; i < amount; i++)
+      {
+        tri = new Triangle([randomRange(0,canvas.width),randomRange(0,canvas.height)],randomRange(40,70),"green","equilateral");
+        gameObjects.push(tri);
+      }
+    }
+    function drawgameObjects()
+    {
+      for(let i = 0; i < gameObjects.length; i++)
+      {
+        gameObjects[i].draw();
+      }
+    }
+    function randomRange(min, max)
+        {
+            return Math.floor(Math.random()*(max-min+1))+min;
+        }
+
+    </script>
+
+
+  </body>
+
+</html>

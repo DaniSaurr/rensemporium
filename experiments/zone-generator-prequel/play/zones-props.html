@@ -1,0 +1,1372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zone Props</title>
+<style>
+  :root { --bg:#f4f1ea; --ink:#222; --panel:#fff; --rock:#e9d8a6; --floor:#2a7f62; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  main { display:flex; gap:14px; padding:14px; align-items:flex-start; }
+  .grow { flex:1 1 0; min-width:0; }
+  .grow canvas { width:100%; }
+  @media (max-width:1000px) { main { flex-wrap:wrap; } .grow { flex-basis:100%; } .side { width:100%; } }
+  .panel { background:var(--panel); border-radius:10px; padding:10px; box-shadow:0 1px 4px #0002; }
+  h1 { font-size:1.05rem; margin:0 0 6px; }
+  canvas { display:block; max-width:100%; height:auto; }
+  #map { cursor:crosshair; touch-action:none; }
+  .side { width:280px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; }
+  .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:.85rem; }
+  .seg { display:flex; }
+  .seg button { font:inherit; padding:4px 9px; border:1px solid #999; background:#fff; cursor:pointer; }
+  .seg button:first-child { border-radius:6px 0 0 6px; }
+  .seg button:last-child { border-radius:0 6px 6px 0; }
+  .seg button + button { border-left:none; }
+  .seg button.on { background:var(--floor); color:#fff; border-color:var(--floor); }
+  button.plain { font:inherit; padding:4px 10px; border:1px solid #999; border-radius:6px; background:#fff; cursor:pointer; }
+  button.main { background:var(--floor); color:#fff; border-color:var(--floor); }
+  input[type=number] { width:80px; font:inherit; padding:3px; }
+  label { display:block; font-size:.85rem; }
+  .hint { font-size:.78rem; color:#555; line-height:1.35; margin:0; }
+  #sig { font:12px monospace; line-height:1.45; }
+  #stars button { font-size:22px; line-height:1; background:none; border:none; cursor:pointer; color:#ccc; padding:0 2px; }
+  #stars button.on { color:#e9a400; }
+  #ratingList div { cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ratingList div:hover { background:#0001; }
+  #legend { display:grid; grid-template-columns:repeat(4, 1fr); gap:2px 6px; }
+  #legend div { display:flex; align-items:center; gap:4px; font:11px monospace; }
+  #legend span.sw { width:14px; height:14px; border-radius:3px; display:inline-block; border:1px solid #0003; }
+</style>
+</head>
+<body>
+<main>
+  <div class="side">
+    <div class="panel">
+      <h1>Zone Generator · props</h1>
+      <div class="row">
+        <button class="plain main" id="gen">Generate</button>
+        <button class="plain" id="prev">◀</button>
+        <input type="number" id="seed" value="1" min="0">
+        <button class="plain" id="next">▶</button>
+      </div>
+      <label style="margin-top:8px">Blend band: <b id="bandVal"></b> tiles
+        <input type="range" id="band" min="0" max="8" step="1" value="3" style="width:100%"></label>
+      <div id="sig" style="margin-top:6px"></div>
+    </div>
+    <div class="panel">
+      <h1>Rate this seed</h1>
+      <div class="row" id="stars"></div>
+      <input type="text" id="note" placeholder="optional note (Enter to save)" style="width:100%;margin-top:6px;font:inherit;padding:3px 6px">
+      <div class="row" style="margin-top:6px">
+        <button class="plain" id="copyRatings">Copy all</button>
+        <button class="plain" id="clearRatings" title="Delete every rating">Clear</button>
+        <span id="rateMsg" class="hint"></span>
+      </div>
+      <div id="ratingList" style="margin-top:6px;max-height:160px;overflow-y:auto;font:11px monospace;line-height:1.5"></div>
+      <p class="hint" style="margin-top:4px">Keys <b>1</b>–<b>5</b> rate the current seed. Click a rated seed to load it.</p>
+    </div>
+    <div class="panel">
+      <div class="row"><div class="seg" id="tool">
+        <button data-v="floor" class="on">Paint floor</button><button data-v="erase">Erase</button><button data-v="player">Player</button>
+      </div></div>
+      <label style="margin-top:6px"><input type="checkbox" id="tint" checked> Tint rock by zone</label>
+      <label><input type="checkbox" id="outlines" checked> Zone outlines + labels</label>
+      <label><input type="checkbox" id="lines"> Tile grid</label>
+    </div>
+    <div class="panel">
+      <h1>Ceilings</h1>
+      <label><input type="checkbox" id="ceilMap" checked> Show ceiling height on map</label>
+      <div id="ceilKey" style="height:8px;border-radius:4px;margin:4px 0 2px"></div>
+      <div class="row" style="justify-content:space-between;font-size:.72rem;color:#555"><span>low (head height)</span><span>high</span></div>
+      <label style="margin-top:6px">Prop size limit: <b id="colVal"></b> pips
+        <input type="range" id="colMax" min="0" max="40" step="1" value="12" style="width:100%"></label>
+      <label>Highest ceiling: <b id="maxHVal"></b> m
+        <input type="range" id="maxH" min="3" max="16" step=".5" value="9" style="width:100%"></label>
+      <div id="ceilInfo" class="hint" style="margin-top:4px"></div>
+      <p class="hint" style="margin-top:4px">Separate pieces of solid up to the size limit become props (trees, stalagmites, boulders, broken pillars, chosen by the zone's law). They don't lower the ceiling. Caves get domes; halls and rooms get one height per space.</p>
+    </div>
+    <div class="panel">
+      <h1>Connectivity</h1>
+      <label>Fill pockets under: <b id="pocketVal"></b> pips
+        <input type="range" id="pocket" min="0" max="200" step="5" value="40" style="width:100%"></label>
+      <label>Tunnel winding: <b id="windVal"></b>
+        <input type="range" id="wind" min="0" max="1" step=".05" value=".5" style="width:100%"></label>
+      <label>Loops: open a wall if it saves <b id="loopVal"></b> tiles of walking (0 = none)
+        <input type="range" id="loop" min="0" max="40" step="1" value="10" style="width:100%"></label>
+      <label><input type="checkbox" id="showCarve" checked> Highlight tunnels (orange) and loops (blue)</label>
+      <div id="connInfo" class="hint" style="margin-top:4px"></div>
+    </div>
+    <div class="panel"><div id="legend"></div></div>
+    <p class="hint">The world is 40×40 tiles: a 2×2 arrangement of 5×5-cell blocks (4×4 tiles per cell). Each block is split into rectangles with one of Boris The Brave's irreducible 5×5 subdivisions (53 shapes × 8 orientations). Each rectangle is a zone with a law. Border pips are floor if either zone wants floor; numbers blend across the band.</p>
+  </div>
+  <div class="panel grow"><canvas id="map"></canvas></div>
+  <div class="grow" style="display:flex;flex-direction:column;gap:14px">
+    <div class="panel">
+      <h1>POV</h1>
+      <canvas id="pov" width="560" height="380" tabindex="0"></canvas>
+      <p class="hint" style="margin-top:6px"><b>W/S</b> or <b>↑/↓</b> move, <b>A/D</b> or <b>←/→</b> turn, <b>Q/E</b> strafe. Click the view if keys don't respond. Walls take their zone's colour.</p>
+    </div>
+    <div class="panel">
+      <h1>Zone graph</h1>
+      <canvas id="graph" width="440" height="440"></canvas>
+      <p class="hint" style="margin-top:6px">Nodes are zones, numbered by steps from your zone (red ring). Links: <b style="color:#555">grey</b> = joined by generation, <b style="color:#e07a1f">orange</b> = tunnel, <b style="color:#2b7bd6">blue dashed</b> = loop. White nodes have no floor; solid wall zones are hidden.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+// 53 irreducible 5x5 rectangle subdivisions by Boris The Brave
+// (boristhebrave.com/2025/05/03/exploring-rectangle-subdivisions/). Each rect is [row1, col1, row2, col2].
+const SPLITS = [[[0,0,1,2],[0,2,2,4],[0,4,4,5],[1,0,5,1],[1,1,3,2],[2,2,3,3],[2,3,4,4],[3,1,4,3],[4,1,5,5]],[[0,0,1,2],[0,2,2,4],[0,4,4,5],[1,0,5,1],[1,1,3,2],[2,2,3,3],[2,3,4,4],[3,1,5,3],[4,3,5,5]],[[0,0,2,2],[0,2,1,4],[0,4,4,5],[1,2,3,3],[1,3,4,4],[2,0,5,1],[2,1,3,2],[3,1,4,3],[4,1,5,5]],[[0,0,1,4],[0,4,4,5],[1,0,2,2],[1,2,3,3],[1,3,4,4],[2,0,5,1],[2,1,3,2],[3,1,4,3],[4,1,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,2,2],[1,2,4,3],[1,3,3,4],[2,0,5,1],[2,1,4,2],[3,3,4,5],[4,1,5,5]],[[0,0,1,2],[0,2,2,4],[0,4,3,5],[1,0,5,1],[1,1,2,2],[2,1,4,3],[2,3,3,4],[3,3,4,5],[4,1,5,5]],[[0,0,1,4],[0,4,2,5],[1,0,3,1],[1,1,2,4],[2,1,3,3],[2,3,4,5],[3,0,5,2],[3,2,4,3],[4,2,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,5,1],[1,1,2,4],[2,1,5,2],[2,2,4,3],[2,3,3,4],[3,3,4,5],[4,2,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,5,1],[1,1,2,3],[1,3,3,4],[2,1,5,2],[2,2,4,3],[3,3,4,5],[4,2,5,5]],[[0,0,2,3],[0,3,1,5],[1,3,2,4],[1,4,3,5],[2,0,5,1],[2,1,4,2],[2,2,3,4],[3,2,4,5],[4,1,5,5]],[[0,0,4,1],[0,1,1,3],[0,3,2,4],[0,4,3,5],[1,1,4,2],[1,2,2,3],[2,2,3,4],[3,2,5,5],[4,0,5,2]],[[0,0,2,1],[0,1,1,4],[0,4,3,5],[1,1,2,2],[1,2,3,4],[2,0,4,2],[3,2,4,3],[3,3,5,5],[4,0,5,3]],[[0,0,1,4],[0,4,3,5],[1,0,2,3],[1,3,3,4],[2,0,5,1],[2,1,4,2],[2,2,3,3],[3,2,4,5],[4,1,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,5,1],[1,1,2,3],[1,3,3,4],[2,1,4,2],[2,2,3,3],[3,2,4,5],[4,1,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,4,1],[1,1,2,4],[2,1,4,2],[2,2,3,4],[3,2,4,3],[3,3,5,5],[4,0,5,3]],[[0,0,1,4],[0,4,3,5],[1,0,5,1],[1,1,2,4],[2,1,4,2],[2,2,3,4],[3,2,4,3],[3,3,5,5],[4,1,5,3]],[[0,0,4,1],[0,1,1,4],[0,4,3,5],[1,1,2,3],[1,3,3,4],[2,1,4,2],[2,2,3,3],[3,2,5,5],[4,0,5,2]],[[0,0,1,4],[0,4,3,5],[1,0,4,1],[1,1,2,3],[1,3,3,4],[2,1,4,2],[2,2,3,3],[3,2,5,5],[4,0,5,2]],[[0,0,1,3],[0,3,2,4],[0,4,3,5],[1,0,4,1],[1,1,2,3],[2,1,4,2],[2,2,3,4],[3,2,5,5],[4,0,5,2]],[[0,0,4,1],[0,1,2,3],[0,3,1,5],[1,3,2,4],[1,4,3,5],[2,1,4,2],[2,2,3,4],[3,2,5,5],[4,0,5,2]],[[0,0,4,1],[0,1,1,4],[0,4,2,5],[1,1,4,2],[1,2,3,3],[1,3,2,4],[2,3,3,5],[3,2,5,5],[4,0,5,2]],[[0,0,1,4],[0,4,2,5],[1,0,5,1],[1,1,4,2],[1,2,3,3],[1,3,2,4],[2,3,3,5],[3,2,4,5],[4,1,5,5]],[[0,0,1,3],[0,3,2,5],[1,0,5,1],[1,1,4,2],[1,2,2,3],[2,2,3,5],[3,2,4,4],[3,4,5,5],[4,1,5,4]],[[0,0,1,4],[0,4,2,5],[1,0,5,1],[1,1,4,2],[1,2,2,4],[2,2,3,5],[3,2,4,3],[3,3,5,5],[4,1,5,3]],[[0,0,2,1],[0,1,1,3],[0,3,3,5],[1,1,2,2],[1,2,4,3],[2,0,5,2],[3,3,4,4],[3,4,5,5],[4,2,5,4]],[[0,0,2,1],[0,1,1,4],[0,4,3,5],[1,1,2,2],[1,2,4,3],[1,3,3,4],[2,0,5,2],[3,3,4,5],[4,2,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,2,2],[1,2,3,4],[2,0,5,1],[2,1,4,2],[3,2,4,3],[3,3,5,5],[4,1,5,3]],[[0,0,1,2],[0,2,3,3],[0,3,2,5],[1,0,5,1],[1,1,4,2],[2,3,3,4],[2,4,5,5],[3,2,4,4],[4,1,5,4]],[[0,0,1,2],[0,2,2,4],[0,4,4,5],[1,0,5,1],[1,1,2,2],[2,1,3,4],[3,1,5,3],[3,3,4,4],[4,3,5,5]],[[0,0,2,1],[0,1,1,5],[1,1,2,2],[1,2,3,4],[1,4,4,5],[2,0,3,2],[3,0,5,3],[3,3,4,4],[4,3,5,5]],[[0,0,4,1],[0,1,1,4],[0,4,3,5],[1,1,2,3],[1,3,3,4],[2,1,4,2],[2,2,5,3],[3,3,5,5],[4,0,5,2]],[[0,0,1,4],[0,4,3,5],[1,0,2,2],[1,2,3,4],[2,0,4,1],[2,1,3,2],[3,1,4,3],[3,3,5,5],[4,0,5,3]],[[0,0,1,3],[0,3,2,5],[1,0,4,1],[1,1,2,3],[2,1,3,4],[2,4,5,5],[3,1,4,2],[3,2,5,4],[4,0,5,2]],[[0,0,1,3],[0,3,2,5],[1,0,3,1],[1,1,2,3],[2,1,3,4],[2,4,4,5],[3,0,5,2],[3,2,4,4],[4,2,5,5]],[[0,0,1,3],[0,3,2,4],[0,4,4,5],[1,0,5,1],[1,1,2,3],[2,1,5,2],[2,2,3,4],[3,2,5,3],[3,3,4,4],[4,3,5,5]],[[0,0,1,2],[0,2,2,4],[0,4,4,5],[1,0,5,1],[1,1,2,2],[2,1,3,3],[2,3,4,4],[3,1,5,2],[3,2,4,3],[4,2,5,5]],[[0,0,2,2],[0,2,1,4],[0,4,2,5],[1,2,3,3],[1,3,2,4],[2,0,5,1],[2,1,3,2],[2,3,4,5],[3,1,4,3],[4,1,5,5]],[[0,0,3,1],[0,1,1,4],[0,4,3,5],[1,1,3,2],[1,2,2,4],[2,2,4,3],[2,3,3,4],[3,0,5,2],[3,3,4,5],[4,2,5,5]],[[0,0,3,1],[0,1,1,5],[1,1,2,4],[1,4,3,5],[2,1,3,2],[2,2,4,3],[2,3,3,4],[3,0,5,2],[3,3,4,5],[4,2,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,3,1],[1,1,2,4],[2,1,3,2],[2,2,4,3],[2,3,3,4],[3,0,5,2],[3,3,4,5],[4,2,5,5]],[[0,0,3,1],[0,1,1,4],[0,4,3,5],[1,1,2,3],[1,3,3,4],[2,1,3,2],[2,2,4,3],[3,0,5,2],[3,3,4,5],[4,2,5,5]],[[0,0,1,4],[0,4,3,5],[1,0,3,1],[1,1,2,3],[1,3,3,4],[2,1,3,2],[2,2,4,3],[3,0,5,2],[3,3,4,5],[4,2,5,5]],[[0,0,2,3],[0,3,1,5],[1,3,2,4],[1,4,3,5],[2,0,5,1],[2,1,4,2],[2,2,3,4],[3,2,4,3],[3,3,5,5],[4,1,5,3]],[[0,0,4,1],[0,1,1,4],[0,4,2,5],[1,1,4,2],[1,2,3,3],[1,3,2,4],[2,3,3,5],[3,2,4,4],[3,4,5,5],[4,0,5,4]],[[0,0,1,4],[0,4,2,5],[1,0,5,1],[1,1,4,2],[1,2,3,3],[1,3,2,4],[2,3,3,5],[3,2,4,4],[3,4,5,5],[4,1,5,4]],[[0,0,1,2],[0,2,2,4],[0,4,4,5],[1,0,4,1],[1,1,2,2],[2,1,3,3],[2,3,4,4],[3,1,4,2],[3,2,5,3],[4,0,5,2],[4,3,5,5]],[[0,0,1,4],[0,4,2,5],[1,0,2,2],[1,2,3,3],[1,3,2,4],[2,0,5,1],[2,1,4,2],[2,3,3,5],[3,2,4,4],[3,4,5,5],[4,1,5,4]],[[0,0,2,1],[0,1,1,4],[0,4,2,5],[1,1,2,2],[1,2,4,3],[1,3,2,4],[2,0,5,2],[2,3,3,5],[3,3,4,4],[3,4,5,5],[4,2,5,4]],[[0,0,3,1],[0,1,1,4],[0,4,2,5],[1,1,3,2],[1,2,4,3],[1,3,2,4],[2,3,3,5],[3,0,5,2],[3,3,4,4],[3,4,5,5],[4,2,5,4]],[[0,0,1,2],[0,2,2,4],[0,4,4,5],[1,0,4,1],[1,1,2,2],[2,1,3,4],[3,1,4,2],[3,2,5,3],[3,3,4,4],[4,0,5,2],[4,3,5,5]],[[0,0,4,1],[0,1,1,3],[0,3,2,4],[0,4,4,5],[1,1,4,2],[1,2,2,3],[2,2,3,4],[3,2,5,3],[3,3,4,4],[4,0,5,2],[4,3,5,5]],[[0,0,1,3],[0,3,2,4],[0,4,4,5],[1,0,4,1],[1,1,2,3],[2,1,3,4],[3,1,4,2],[3,2,5,3],[3,3,4,4],[4,0,5,2],[4,3,5,5]],[[0,0,1,2],[0,2,2,3],[0,3,1,5],[1,0,4,1],[1,1,2,2],[1,3,2,4],[1,4,4,5],[2,1,3,4],[3,1,4,2],[3,2,5,3],[3,3,4,4],[4,0,5,2],[4,3,5,5]]];
+
+const $ = id => document.getElementById(id);
+// The map is a 2×2 arrangement of 5×5 splits: 10×10 cells of 4×4 tiles.
+// The map is QUADS×QUADS blocks, each a 5×5 split of 4×4-tile cells. The seed
+// picks QUADS (1, 2 or 3), so maps are 20×20, 40×40 or 60×60 tiles.
+const CELL = 4;
+let QUADS, CELLS, N, L;
+function setWorldSize(q) { QUADS = q; CELLS = 5 * q; N = CELLS * CELL; L = 2*N + 1; }
+setWorldSize(2);
+const ROCK = [233,216,166], FLOOR = [42,127,98], DARK = [94,84,66], BLACK = [0,0,0];
+// Zone colours: hues spaced by the golden angle, so neighbouring zone numbers
+// (which are usually neighbouring zones) never get similar colours.
+function zoneColour(i) {
+  const h = (i * 137.508) % 360, s = .62, l = i % 2 ? .62 : .5;
+  const f = n => { const k = (n + h/30) % 12; return l - s*Math.min(l, 1-l)*Math.max(-1, Math.min(k-3, 9-k, 1)); };
+  return [f(0)*255, f(8)*255, f(4)*255];
+}
+const lerp = (a, b, t) => a.map((v, i) => v*(1-t) + b[i]*t);
+const rgb = ([r,g,b]) => `rgb(${r|0},${g|0},${b|0})`;
+
+// ---------- seeded randomness ----------
+function mulberry32(a) {
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+// Each stage gets its own derived seed (like the creature generator), so
+// changing one stage's logic doesn't reshuffle the others.
+const stageRng = (seed, salt) => mulberry32(Math.imul(seed + 1, 2654435761) ^ salt);
+const range = (r, a, b) => a + r() * (b - a);
+const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+function weighted(r, pool) {
+  let total = 0; for (const p of pool) total += p.w;
+  let x = r() * total;
+  for (const p of pool) { if ((x -= p.w) < 0) return p.v; }
+  return pool[pool.length-1].v;
+}
+function hash2(x, y, s) {
+  let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(s, 2246822519);
+  h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296;
+}
+function valueNoise(x, y, s) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const u = fx*fx*(3-2*fx), v = fy*fy*(3-2*fy);
+  const a = hash2(ix,iy,s), b = hash2(ix+1,iy,s), c = hash2(ix,iy+1,s), d = hash2(ix+1,iy+1,s);
+  return a + (b-a)*u + (c-a)*v + (a-b-c+d)*u*v;
+}
+const fbm = (x, y, s) => valueNoise(x, y, s) * .65 + valueNoise(x*2.1, y*2.1, s+7) * .35;
+
+// ---------- laws ----------
+// A law is a field over the world: value >= 0.5 means floor. Laws are defined
+// everywhere (not just in their zone) so they can be blended near borders.
+// `params` are plain numbers, which is what lets neighbouring zones blend them.
+const LAWS = {
+  cave: {
+    w: 4,      // weights re-tuned from ratings: organic laws scored highest
+    make: r => ({ density: range(r,.48,.62), scale: range(r,.16,.3), seed: r()*1e6|0 }),
+    field: (x, y, p) => fbm(x*p.scale, y*p.scale, p.seed) + (p.density - .5),
+  },
+  hall: {
+    w: 1,
+    make: r => ({ spacing: pick(r,[2,3,4]), rhythm: pick(r,[0,2,3]), pillar: pick(r,[0,.5]) }),
+    field: (x, y, p, z) => {
+      // Pillars on a grid; `rhythm` skips every Nth column (a CCM-style beat).
+      const s = Math.round(p.spacing), lx = x - z.x0 - s/2, ly = y - z.y0 - s/2;
+      const gx = Math.round(lx / s), gy = Math.round(ly / s);
+      const near = Math.max(Math.abs(lx - gx*s), Math.abs(ly - gy*s)) <= p.pillar + .01;
+      const rh = Math.round(p.rhythm);
+      const skipped = rh > 0 && ((gx % rh) + rh) % rh === rh - 1;
+      return near && !skipped ? 0 : 1;
+    },
+  },
+  rooms: {
+    w: 1,
+    make: r => ({ size: pick(r,[3,4,5]), door: pick(r,[1,1.5]), decay: range(r,0,.25), seed: r()*1e6|0 }),
+    field: (x, y, p, z) => {
+      // Walls on lines every `size` tiles, with a doorway in the middle of each wall run.
+      const s = Math.round(p.size), lx = x - z.x0, ly = y - z.y0;
+      const onX = Math.abs(lx/s - Math.round(lx/s)) < 1e-6, onY = Math.abs(ly/s - Math.round(ly/s)) < 1e-6;
+      if (!onX && !onY) return 1;
+      const along = onX ? ly : lx;                       // position along the wall
+      const m = ((along % s) + s) % s;
+      if (!(onX && onY) && Math.abs(m - s/2) <= p.door/2) return 1;   // doorway
+      return hash2(Math.round(x*2), Math.round(y*2), p.seed) < p.decay ? 1 : 0; // ruin decay
+    },
+  },
+  wall: {
+    // Not picked at random: every zone touching the map edge gets it. Its field
+    // stays below 0.5 (solid), but it's noisy, so blending with an inner zone
+    // gives a ragged, organic edge instead of the map's straight sides.
+    w: 0,
+    make: r => ({ seed: r()*1e6|0 }),
+    // 0.3–0.47: always solid on its own, but close enough to 0.5 that it only
+    // nibbles at neighbours when blended instead of swallowing them.
+    field: (x, y, p) => .3 + .17 * fbm(x*.35, y*.35, p.seed),
+  },
+  chamber: {
+    w: 4,
+    make: r => ({ fill: range(r,.65,.9), wobble: range(r,.05,.2), seed: r()*1e6|0 }),
+    field: (x, y, p, z) => {
+      // One big rounded room filling the zone, with a slightly noisy edge.
+      const cx = (z.x0+z.x1)/2, cy = (z.y0+z.y1)/2, rx = (z.x1-z.x0)/2, ry = (z.y1-z.y0)/2;
+      const e = ((x-cx)/rx)**2 + ((y-cy)/ry)**2;
+      return .5 + (p.fill - e) + (valueNoise(x*.4, y*.4, p.seed) - .5) * p.wobble * 2;
+    },
+  },
+};
+
+// ---------- world ----------
+let pts = new Uint8Array(L*L), zones = [], zoneOfTile = new Int16Array(N*N), walls = [], buckets = [];
+let signature = '';
+const P = (i, j) => (i < 0 || j < 0 || i >= L || j >= L) ? 0 : pts[j*L + i];
+const edgePip = (i, j) => i <= 0 || j <= 0 || i >= L-1 || j >= L-1;   // world rim stays rock
+
+function orient(rect, o) {
+  // o: 0-3 quarter turns, +4 = mirrored. Rect is [r1,c1,r2,c2] on a 5×5 lattice.
+  let [r1, c1, r2, c2] = rect;
+  if (o >= 4) [c1, c2] = [5 - c2, 5 - c1];
+  for (let k = 0; k < (o % 4); k++) [r1, c1, r2, c2] = [c1, 5 - r2, c2, 5 - r1];
+  return [r1, c1, r2, c2];
+}
+
+// Settings the seed decides. Each is picked from a short list of distinct
+// options (Boris: discrete choices read as real differences; continuous ranges
+// blur into oatmeal). The sliders show these and can override them per map.
+const SEED_SETTINGS = {
+  // Re-weighted from the first 30 ratings: small maps, low bands, small
+  // pocket limits and more winding scored best.
+  size:   [[1, 3], [2, 4], [3, 2]],                          // [value, weight]
+  band:   [[0, 2], [1, 3], [2, 3], [3, 2], [5, 1]],
+  pocket: [[10, 3], [25, 3], [40, 1]],
+  wind:   [[.25, 1], [.5, 2], [.75, 2], [1, 2]],
+  loop:   [[0, 1], [5, 2], [10, 3], [15, 2], [25, 1]],
+  colMax: [[4, 2], [8, 2], [12, 3], [20, 2], [30, 1]],
+  maxH:   [[5, 2], [7, 3], [9, 3], [12, 2], [15, 1]],
+};
+function seedSettings(seed) {
+  const r = stageRng(seed, 0xA1), out = {};
+  for (const [k, opts] of Object.entries(SEED_SETTINGS)) out[k] = weighted(r, opts.map(([v, w]) => ({ v, w })));
+  return out;
+}
+function applySettingsToSliders(st) {
+  for (const k of ['band', 'pocket', 'wind', 'loop', 'colMax', 'maxH']) $(k).value = st[k];
+  $('bandVal').textContent = st.band; showCeilVals(); showConnVals();
+}
+
+function generate(seed, keepSliders = false) {
+  // Stage 0: seed-derived settings and map size. Slider moves keep their values
+  // for this map (keepSliders); a new seed resets them to that seed's picks.
+  const st = seedSettings(seed);
+  if (!keepSliders) applySettingsToSliders(st);
+  resizeWorld(st.size);
+  // Stage 1: the big decisions. Which split and orientation for each of the
+  // four quadrants, and which laws the whole map uses.
+  const rs = stageRng(seed, 0x51);
+  const quads = [];
+  for (let q = 0; q < QUADS*QUADS; q++)
+    quads.push({ split: Math.floor(rs() * SPLITS.length), o: Math.floor(rs() * 8), cx: (q % QUADS) * 5, cy: Math.floor(q / QUADS) * 5 });
+  const lawPool = Object.entries(LAWS).filter(([, l]) => l.w > 0).map(([k, l]) => ({ v: k, w: l.w }));
+  const nLaws = rs() < .6 ? 2 : 3, mapLaws = [];
+  while (mapLaws.length < nLaws) { const k = weighted(rs, lawPool); if (!mapLaws.includes(k)) mapLaws.push(k); }
+  // One base parameter set per law for the whole map (correlation), varied a little per zone.
+  const rb = stageRng(seed, 0xB5), base = {};
+  for (const k of mapLaws) base[k] = LAWS[k].make(rb);
+
+  // Stage 2: zones.
+  const rz = stageRng(seed, 0x20);
+  const rects = quads.flatMap(qd => SPLITS[qd.split].map(rect => {
+    const [r1, c1, r2, c2] = orient(rect, qd.o);
+    return [r1 + qd.cy, c1 + qd.cx, r2 + qd.cy, c2 + qd.cx];
+  }));
+  base.wall = LAWS.wall.make(rb);
+  zones = rects.map(([r1, c1, r2, c2], i) => {
+    const onEdge = r1 === 0 || c1 === 0 || r2 === CELLS || c2 === CELLS;
+    const law = onEdge ? 'wall' : pick(rz, mapLaws), params = { ...base[law] };
+    for (const key in params) if (key !== 'seed' && typeof params[key] === 'number' && !Number.isInteger(params[key]))
+      params[key] *= range(rz, .9, 1.1);
+    if ('seed' in params) params.seed = (params.seed + i * 7919) | 0;
+    return { i, law, params, x0: c1*CELL, y0: r1*CELL, x1: c2*CELL, y1: r2*CELL, col: zoneColour(i) };
+  });
+  for (const z of zones) for (let y = z.y0; y < z.y1; y++) for (let x = z.x0; x < z.x1; x++) zoneOfTile[y*N + x] = z.i;
+
+  // Stage 3: pips.
+  const band = +$('band').value;
+  for (let j = 0; j < L; j++) for (let i = 0; i < L; i++) {
+    if (edgePip(i, j)) { pts[j*L+i] = 0; continue; }
+    const x = i/2, y = j/2;
+    const owners = [], near = [];
+    for (const z of zones) {
+      // Signed distance into the zone: >0 inside, 0 on its border, <0 outside.
+      const d = Math.min(x - z.x0, z.x1 - x, y - z.y0, z.y1 - y);
+      if (d >= 0) owners.push(z);
+      if (d > -band) near.push([z, d]);
+    }
+    // One-way blending: a wall zone takes on the character of the zones next to
+    // it, but an inner zone ignores nearby walls, so it never picks up "wallness".
+    const inner = owners.length === 1 && owners[0].law !== 'wall';
+    const blendWith = inner ? near.filter(([z]) => z.law !== 'wall') : near;
+    let floor;
+    if (owners.length > 1) {
+      // Shared border pip: floor if EITHER zone's own law wants floor.
+      floor = owners.some(z => LAWS[z.law].field(x, y, z.params, z) >= .5);
+    } else if (band === 0 || blendWith.length === 1) {
+      const z = owners[0]; floor = LAWS[z.law].field(x, y, z.params, z) >= .5;
+    } else {
+      // Inside the band: blend each nearby zone's field, weighted by how far
+      // into that zone we are (0.5 at the border, 1 deep inside, 0 a band away).
+      let sum = 0, wsum = 0;
+      for (const [z, d] of blendWith) {
+        const w = Math.max(0, Math.min(1, .5 + d / (2*band)));
+        if (!w) continue;
+        // Clamp to 0–1 so no single law (e.g. a chamber far outside its own
+        // ellipse, where its raw value plunges) can outvote the others.
+        sum += w * Math.max(0, Math.min(1, LAWS[z.law].field(x, y, z.params, z))); wsum += w;
+      }
+      floor = sum / wsum >= .5;
+    }
+    pts[j*L+i] = floor ? 1 : 0;
+  }
+
+  // Stage 4: make sure everything is reachable, then add loops.
+  connectMap(seed);
+
+  const counts = {}; for (const z of zones) counts[z.law] = (counts[z.law] || 0) + 1;
+  const oName = o => ['0°','90°','180°','270°'][o%4] + (o >= 4 ? 'm' : '');
+  signature = `${N}×${N} tiles · band ${$('band').value} · pockets <${$('pocket').value} · wind ${$('wind').value} · loops ${$('loop').value || 'off'} · columns ≤${$('colMax').value} · ceiling ≤${$('maxH').value} m${keepSliders ? ' (edited)' : ''}<br>`
+    + `splits: ${quads.map(q => `#${q.split} ${oName(q.o)}`).join(', ')}<br>${zones.length} zones · `
+    + `laws: ${[...mapLaws, 'wall'].map(k => `${k} ×${counts[k] || 0}`).join(', ')}`;
+  $('sig').innerHTML = signature;
+  $('legend').innerHTML = zones.map(z => `<div title="${z.law} ${z.x1-z.x0}×${z.y1-z.y0}"><span class="sw" style="background:${rgb(z.col)}"></span>${z.i} ${z.law.slice(0,4)}</div>`).join('');
+  rebuild();
+  placePlayer();
+}
+
+// ---------- connectivity ----------
+// After generation the floor can be split into separate regions. This pass:
+//   1. fills tiny pockets back in (not worth a tunnel),
+//   2. carves the cheapest tunnel from each other region to the main one,
+//   3. adds loops the Brogue way: open thin walls where walking around is far
+//      longer than going straight through.
+// carved[k]: 0 = generated, 1 = tunnel, 2 = loop. Used for map highlights and the zone graph.
+let carved = new Uint8Array(L*L), connectInfo = '';
+const NB8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+const zoneAtPip = k => zones[zoneOfTile[Math.min(N-1, ((k / L) | 0) >> 1) * N + Math.min(N-1, (k % L) >> 1)]];
+
+// Floor regions, 8-connected: floor on opposite corners of a pip square joins
+// through the middle (the saddle rule), and the player fits through that gap.
+function floorRegions() {
+  const id = new Int32Array(L*L).fill(-1), sizes = [];
+  for (let k0 = 0; k0 < L*L; k0++) {
+    if (pts[k0] !== 1 || id[k0] >= 0) continue;
+    const r = sizes.length, stack = [k0]; id[k0] = r; let n = 0;
+    while (stack.length) {
+      const k = stack.pop(), x = k % L, y = (k / L) | 0; n++;
+      for (const [dx, dy] of NB8) {
+        const nx = x+dx, ny = y+dy; if (nx < 0 || ny < 0 || nx >= L || ny >= L) continue;
+        const nk = ny*L + nx; if (pts[nk] === 1 && id[nk] < 0) { id[nk] = r; stack.push(nk); }
+      }
+    }
+    sizes.push(n);
+  }
+  let main = -1; sizes.forEach((s, r) => { if (main < 0 || s > sizes[main]) main = r; });
+  return { id, sizes, main };
+}
+// Open a 3×3 block of pips around k: a passage one tile wide, which the player fits through.
+function carveAt(k, type) {
+  const x = k % L, y = (k / L) | 0;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const nx = x+dx, ny = y+dy; if (edgePip(nx, ny)) continue;
+    const nk = ny*L + nx; if (!pts[nk]) { pts[nk] = 1; carved[nk] = type; }
+  }
+}
+function fillPockets(minSize) {
+  const { id, sizes, main } = floorRegions();
+  let filled = 0;
+  sizes.forEach((s, r) => { if (r !== main && s < minSize) filled++; });
+  for (let k = 0; k < L*L; k++) if (id[k] >= 0 && id[k] !== main && sizes[id[k]] < minSize) pts[k] = 0;
+  return filled;
+}
+// Small binary min-heap of [cost, index] for Dijkstra.
+class Heap {
+  constructor() { this.c = []; this.k = []; }
+  get size() { return this.c.length; }
+  push(c, k) {
+    const C = this.c, K = this.k; let i = C.length; C.push(c); K.push(k);
+    while (i > 0) { const p = (i - 1) >> 1; if (C[p] <= c) break; C[i] = C[p]; K[i] = K[p]; i = p; }
+    C[i] = c; K[i] = k;
+  }
+  pop() {
+    const C = this.c, K = this.k, top = [C[0], K[0]], lc = C.pop(), lk = K.pop();
+    if (C.length) {
+      let i = 0;
+      for (;;) {
+        let m = 2*i + 1; if (m >= C.length) break;
+        if (m + 1 < C.length && C[m+1] < C[m]) m++;
+        if (C[m] >= lc) break;
+        C[i] = C[m]; K[i] = K[m]; i = m;
+      }
+      C[i] = lc; K[i] = lk;
+    }
+    return top;
+  }
+}
+function connectRegions(wind, seed) {
+  // Cost of digging through each rock pip: 1, plus noise (winding tunnels),
+  // plus a big penalty inside wall zones so tunnels keep away from the map edge.
+  const cost = new Float32Array(L*L);
+  for (let k = 0; k < L*L; k++) {
+    const x = k % L, y = (k / L) | 0;
+    cost[k] = edgePip(x, y) ? Infinity
+      : 1 + wind * 4 * fbm(x * .22, y * .22, seed + 991) + (zoneAtPip(k).law === 'wall' ? 12 : 0);
+  }
+  let tunnels = 0;
+  for (let iter = 0; iter < 80; iter++) {
+    const { id, sizes, main } = floorRegions();
+    if (sizes.length <= 1) break;
+    // Dijkstra outwards from the whole main region until it touches any other region.
+    const dist = new Float32Array(L*L).fill(Infinity), prev = new Int32Array(L*L).fill(-1), heap = new Heap();
+    for (let k = 0; k < L*L; k++) if (id[k] === main) { dist[k] = 0; heap.push(0, k); }
+    let hit = -1;
+    while (heap.size) {
+      const [d, k] = heap.pop();
+      if (d > dist[k]) continue;
+      if (id[k] >= 0 && id[k] !== main) { hit = k; break; }
+      const x = k % L, y = (k / L) | 0;
+      for (const [dx, dy] of NB8) {
+        const nx = x+dx, ny = y+dy; if (nx < 0 || ny < 0 || nx >= L || ny >= L) continue;
+        const nk = ny*L + nx, step = (pts[nk] ? .01 : cost[nk]) * (dx && dy ? 1.414 : 1);
+        if (d + step < dist[nk]) { dist[nk] = d + step; prev[nk] = k; heap.push(d + step, nk); }
+      }
+    }
+    if (hit < 0) break;
+    for (let k = hit; k >= 0 && id[k] !== main; k = prev[k]) carveAt(k, 1);
+    tunnels++;
+  }
+  return tunnels;
+}
+// Brogue-style loops. A candidate is a straight run of rock (up to 5 tiles
+// thick) with floor at both ends. Like Brogue, it opens if walking from one end
+// to the other is at least `saveTiles` tiles longer than going straight through.
+// Candidates are tried in random order and distances are re-measured each time,
+// so two loops never do the same job. Runs that join two different zones need
+// only 70% of the saving, so loops between rooms are favoured.
+function addLoops(rng, saveTiles) {
+  if (!saveTiles) return 0;
+  const MAX_THICK = 10, cands = [];
+  for (let y = 1; y < L-1; y++) for (let x = 1; x < L-1; x++) {
+    const a = y*L + x; if (!pts[a] || (x + y) % 2) continue;
+    for (const [dx, dy] of [[1,0],[0,1]]) {
+      let s = 1, ok = true;
+      while (s <= MAX_THICK) {
+        const px = x + dx*s, py = y + dy*s; if (edgePip(px, py)) { ok = false; break; }
+        const k = py*L + px; if (pts[k]) break;
+        if (zoneAtPip(k).law === 'wall') { ok = false; break; }
+        s++;
+      }
+      if (ok && s > 1 && s <= MAX_THICK) cands.push([a, (y + dy*s)*L + x + dx*s, s, dx, dy]);
+    }
+  }
+  for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [cands[i], cands[j]] = [cands[j], cands[i]]; }
+  const mark = new Int32Array(L*L), dist = new Int32Array(L*L), queue = new Int32Array(L*L);
+  let stamp = 0, loops = 0;
+  for (const [a, b, s, dx, dy] of cands) {
+    let stillRock = true;
+    for (let t = 1; t < s; t++) if (pts[a + (dy*L + dx)*t]) { stillRock = false; break; }
+    if (!stillRock) continue;                 // an earlier loop already opened it
+    const need = s + saveTiles * 2 * (zoneAtPip(a) !== zoneAtPip(b) ? .7 : 1);   // in pip steps
+    // Breadth-first walk from a, giving up once we're past `need` steps.
+    stamp++; let head = 0, tail = 0, found = false;
+    queue[tail++] = a; mark[a] = stamp; dist[a] = 0;
+    while (head < tail) {
+      const k = queue[head++]; if (k === b) { found = true; break; }
+      if (dist[k] >= need) continue;
+      const x = k % L, y = (k / L) | 0;
+      for (const [ex, ey] of NB8) {
+        const nk = (y+ey)*L + x+ex;
+        if (pts[nk] && mark[nk] !== stamp) { mark[nk] = stamp; dist[nk] = dist[k] + 1; queue[tail++] = nk; }
+      }
+    }
+    if (found) continue;                      // already a short way round: no loop needed
+    for (let t = 0; t <= s; t++) carveAt(a + (dy*L + dx)*t, 2);
+    loops++;
+  }
+  return loops;
+}
+function connectMap(seed) {
+  carved = new Uint8Array(L*L);
+  const before = floorRegions().sizes.length;
+  const filled = fillPockets(+$('pocket').value);
+  const tunnels = connectRegions(+$('wind').value, seed);
+  const loops = addLoops(stageRng(seed, 0x700), +$('loop').value);
+  const after = floorRegions().sizes.length;
+  connectInfo = `${before} regions → ${filled} pockets filled · ${tunnels} tunnels · ${loops} loops · ${after} region${after === 1 ? '' : 's'} left`;
+  $('connInfo').textContent = connectInfo;
+}
+
+// ---------- zone graph ----------
+// Two zones are linked if a floor pip sits on their shared border. A link is
+// "natural" if any of those pips came from generation, otherwise it's a tunnel
+// or a loop. Depth = steps through the graph from the player's zone.
+let zoneLinks = new Map(), zoneHasFloor = [];
+function computeZoneGraph() {
+  zoneLinks = new Map(); zoneHasFloor = zones.map(() => false);
+  for (let j = 1; j < L-1; j++) for (let i = 1; i < L-1; i++) {
+    const k = j*L + i; if (!pts[k]) continue;
+    const ids = new Set();
+    for (const ty of [(j-1) >> 1, j >> 1]) for (const tx of [(i-1) >> 1, i >> 1])
+      ids.add(zoneOfTile[Math.min(N-1, ty)*N + Math.min(N-1, tx)]);
+    for (const z of ids) zoneHasFloor[z] = true;
+    if (ids.size < 2) continue;
+    const list = [...ids].sort((p, q) => p - q);
+    for (let p = 0; p < list.length; p++) for (let q = p+1; q < list.length; q++) {
+      const key = list[p] + '-' + list[q], t = carved[k];
+      if (!zoneLinks.has(key) || t < zoneLinks.get(key)) zoneLinks.set(key, t);
+    }
+  }
+}
+const gcv = $('graph'), gg = gcv.getContext('2d');
+let graphZone = -1;
+function drawGraph() {
+  const S = gcv.width / N;
+  const pz = zoneOfTile[Math.min(N-1, Math.floor(player.y))*N + Math.min(N-1, Math.floor(player.x))];
+  graphZone = pz;
+  // Depth from the player's zone (breadth-first through the links).
+  const adj = zones.map(() => []);
+  for (const key of zoneLinks.keys()) { const [a, b] = key.split('-').map(Number); adj[a].push(b); adj[b].push(a); }
+  const depth = zones.map(() => -1); depth[pz] = 0;
+  const q = [pz];
+  while (q.length) { const a = q.shift(); for (const b of adj[a]) if (depth[b] < 0) { depth[b] = depth[a] + 1; q.push(b); } }
+  gg.fillStyle = '#faf8f2'; gg.fillRect(0, 0, gcv.width, gcv.height);
+  for (const z of zones) {
+    gg.fillStyle = z.law === 'wall' ? '#e4e0d6' : rgb(lerp([255,255,255], z.col, .3));
+    gg.fillRect(z.x0*S, z.y0*S, (z.x1-z.x0)*S, (z.y1-z.y0)*S);
+    gg.strokeStyle = '#0002'; gg.lineWidth = 1;
+    gg.strokeRect(z.x0*S + .5, z.y0*S + .5, (z.x1-z.x0)*S - 1, (z.y1-z.y0)*S - 1);
+  }
+  const C = z => [(z.x0+z.x1)/2*S, (z.y0+z.y1)/2*S];
+  const STYLE = [['#555', 2, []], ['#e07a1f', 3.5, []], ['#2b7bd6', 3, [6, 4]]];
+  for (const [key, t] of zoneLinks) {
+    const [a, b] = key.split('-').map(Number), [ax, ay] = C(zones[a]), [bx, by] = C(zones[b]);
+    const [col, w, dash] = STYLE[t];
+    gg.strokeStyle = col; gg.lineWidth = w; gg.setLineDash(dash);
+    gg.beginPath(); gg.moveTo(ax, ay); gg.lineTo(bx, by); gg.stroke();
+  }
+  gg.setLineDash([]);
+  gg.font = 'bold 10px system-ui'; gg.textAlign = 'center'; gg.textBaseline = 'middle';
+  for (const z of zones) {
+    const [x, y] = C(z), wall = z.law === 'wall';
+    if (wall && depth[z.i] < 0) continue;              // solid wall zones aren't part of the graph
+    const r = wall ? 5 : 9;
+    gg.beginPath(); gg.arc(x, y, r, 0, Math.PI*2);
+    gg.fillStyle = !zoneHasFloor[z.i] ? '#fff' : wall ? '#bbb' : rgb(z.col); gg.fill();
+    gg.lineWidth = z.i === pz ? 3 : 1.5; gg.strokeStyle = z.i === pz ? '#e63946' : '#333'; gg.stroke();
+    if (!wall) { gg.fillStyle = '#111'; gg.fillText(depth[z.i] < 0 ? '–' : depth[z.i], x, y + .5); }
+  }
+}
+
+// ---------- walls: marching squares on the pip lattice ----------
+// For walls and floor drawing, column pips count as floor: they become props
+// (sprites with their own collision), not little walled-off lumps.
+const W = (i, j) => (i < 0 || j < 0 || i >= L || j >= L) ? 0 : (pts[j*L + i] || columnPip[j*L + i]) ? 1 : 0;
+function rebuild() {
+  classifyColumns();
+  walls = []; buckets = Array.from({ length: N*N }, () => []);
+  for (let j = 0; j < L-1; j++) for (let i = 0; i < L-1; i++) {
+    const nw = W(i,j), ne = W(i+1,j), se = W(i+1,j+1), sw = W(i,j+1);
+    const x = i/2, y = j/2, h = .25;
+    const mid = { N:[x+h, y], E:[x+.5, y+h], S:[x+h, y+.5], W:[x, y+h] };
+    const cut = [];
+    if (nw !== ne) cut.push('N'); if (ne !== se) cut.push('E');
+    if (se !== sw) cut.push('S'); if (sw !== nw) cut.push('W');
+    const tile = Math.floor(y)*N + Math.floor(x), zone = zones[zoneOfTile[tile]];
+    const add = (a, b) => { const w = { a: mid[a], b: mid[b], zone }; walls.push(w); buckets[tile].push(w); };
+    if (cut.length === 2) add(cut[0], cut[1]);
+    else if (cut.length === 4) { if (nw) { add('N','E'); add('S','W'); } else { add('N','W'); add('E','S'); } }
+  }
+  computeCeilings();
+  buildProps();
+  computeZoneGraph();
+  renderMapCache();
+}
+
+// ---------- ceilings ----------
+// Heights are in metres; the map works in tiles. One tile is 3 m, which sets
+// how big the player is relative to the layout (1.5 m felt cramped).
+const TILE_M = 3, EYE_M = 1.6, MIN_CEIL = 2.2;
+// How flat each law's ceilings are: 0 = domes that follow the distance to the
+// nearest wall (organic), 1 = one height per space set by the room size (built).
+const LAW_FLAT = { cave: 0, chamber: .25, hall: 1, rooms: 1, wall: 0 };
+const side = 1;                                 // green is the playable side
+let ceil = new Float32Array(L*L), columnPip = new Uint8Array(L*L);
+let ceilStats = '';
+
+// Exact Euclidean distance transform (Felzenszwalb & Huttenlocher), squared, in pip units.
+function dt1(f, n, out, v, z) {
+  let k = 0; v[0] = 0; z[0] = -1e20; z[1] = 1e20;
+  for (let q = 1; q < n; q++) {
+    let s = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k])) / (2*q - 2*v[k]);
+    while (s <= z[k]) { k--; s = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k])) / (2*q - 2*v[k]); }
+    k++; v[k] = q; z[k] = s; z[k+1] = 1e20;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) { while (z[k+1] < q) k++; out[q] = (q - v[k])**2 + f[v[k]]; }
+}
+function edt(isSource) {
+  const d = new Float64Array(L*L), f = new Float64Array(L), o = new Float64Array(L);
+  const v = new Int32Array(L), z = new Float64Array(L+1);
+  for (let k = 0; k < L*L; k++) d[k] = isSource[k] ? 0 : 1e20;
+  for (let x = 0; x < L; x++) {
+    for (let y = 0; y < L; y++) f[y] = d[y*L + x];
+    dt1(f, L, o, v, z);
+    for (let y = 0; y < L; y++) d[y*L + x] = o[y];
+  }
+  for (let y = 0; y < L; y++) {
+    for (let x = 0; x < L; x++) f[x] = d[y*L + x];
+    dt1(f, L, o, v, z);
+    for (let x = 0; x < L; x++) d[y*L + x] = Math.sqrt(o[x]);
+  }
+  return d;
+}
+const smooth01 = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t*t*(3 - 2*t); };
+
+// Sort the solid pips into separate pieces. Small pieces that touch nothing
+// else are COLUMNS (they become props); everything else is STRUCTURE.
+let structurePip = new Uint8Array(L*L), columnComps = [];
+function classifyColumns() {
+  const colMax = +$('colMax').value;
+  const solid = new Uint8Array(L*L), seen = new Uint8Array(L*L);
+  structurePip = new Uint8Array(L*L); columnPip = new Uint8Array(L*L); columnComps = [];
+  for (let k = 0; k < L*L; k++) solid[k] = pts[k] !== side || edgePip(k % L, (k / L) | 0) ? 1 : 0;
+  for (let k0 = 0; k0 < L*L; k0++) {
+    if (!solid[k0] || seen[k0]) continue;
+    const comp = [k0]; seen[k0] = 1; let touchesRim = false;
+    for (let n = 0; n < comp.length; n++) {
+      const k = comp[n], x = k % L, y = (k / L) | 0;
+      if (edgePip(x, y)) touchesRim = true;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {   // 4-neighbours: saddles split solid
+        const nx = x+dx, ny = y+dy; if (nx < 0 || ny < 0 || nx >= L || ny >= L) continue;
+        const nk = ny*L + nx; if (solid[nk] && !seen[nk]) { seen[nk] = 1; comp.push(nk); }
+      }
+    }
+    const isColumn = !touchesRim && comp.length <= colMax;
+    if (isColumn) columnComps.push(comp);
+    for (const k of comp) (isColumn ? columnPip : structurePip)[k] = 1;
+  }
+}
+
+function computeCeilings() {
+  const maxH = +$('maxH').value;
+  // 1. Columns were sorted out by classifyColumns(); they don't lower the ceiling.
+  const structure = structurePip, nColumns = columnComps.length;
+  // 2. Openness. d = distance to the nearest structure (pip units).
+  //    Clearance c = distance to the actual wall line, in tiles.
+  const d = edt(structure), clear = new Float32Array(L*L);
+  for (let k = 0; k < L*L; k++) clear[k] = structure[k] ? 0 : Math.max(0, d[k]*.5 - .25);
+  // 3. Room size: the radius of the biggest open circle covering each point.
+  //    Stamp every point's circle (radius = its clearance) and keep the max.
+  const room = new Float32Array(L*L);
+  for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) {
+    const c = clear[y*L + x]; if (c <= 0) continue;
+    const r = Math.floor(d[y*L + x] - .5), r2 = r*r;
+    for (let j = Math.max(0, y-r); j <= Math.min(L-1, y+r); j++)
+      for (let i = Math.max(0, x-r); i <= Math.min(L-1, x+r); i++)
+        if ((i-x)**2 + (j-y)**2 <= r2 && room[j*L+i] < c) room[j*L+i] = c;
+    if (room[y*L+x] < c) room[y*L+x] = c;
+  }
+  // 4. Height: mix dome (clearance) and flat (room size) by the zone's law,
+  //    then map openness to metres: corridors ≈ head height, halls up to maxH.
+  for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) {
+    const k = y*L + x;
+    if (structure[k]) { ceil[k] = -1; continue; }
+    const tx = Math.min(N-1, x >> 1), ty = Math.min(N-1, y >> 1);
+    const flat = LAW_FLAT[zones[zoneOfTile[ty*N + tx]].law];
+    const m = clear[k] * (1 - flat) + room[k] * flat;
+    ceil[k] = MIN_CEIL + (maxH - MIN_CEIL) * smooth01(.75, 5, m);
+  }
+  // Structure pips take their highest open neighbour, so the ceiling doesn't
+  // sag towards the wall line between pips.
+  for (let pass = 0; pass < 2; pass++) {
+    const src = ceil.slice();
+    for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) {
+      const k = y*L + x; if (src[k] >= 0) continue;
+      let best = -1;
+      for (let j = Math.max(0, y-1); j <= Math.min(L-1, y+1); j++)
+        for (let i = Math.max(0, x-1); i <= Math.min(L-1, x+1); i++) best = Math.max(best, src[j*L+i]);
+      ceil[k] = best;
+    }
+  }
+  for (let k = 0; k < L*L; k++) if (ceil[k] < 0) ceil[k] = MIN_CEIL;
+  // 5. Smooth twice with a 3×3 box so small wall dents don't make the ceiling jump.
+  for (let pass = 0; pass < 2; pass++) {
+    const src = ceil.slice();
+    for (let y = 1; y < L-1; y++) for (let x = 1; x < L-1; x++) {
+      let s = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) s += src[(y+j)*L + x+i];
+      ceil[y*L + x] = s / 9;
+    }
+  }
+  let lo = Infinity, hi = 0;
+  for (let k = 0; k < L*L; k++) if (pts[k] === side && !edgePip(k % L, (k/L)|0)) { lo = Math.min(lo, ceil[k]); hi = Math.max(hi, ceil[k]); }
+  ceilStats = `${nColumns} props · ceilings ${lo.toFixed(1)}–${hi.toFixed(1)} m`;
+  $('ceilInfo').textContent = ceilStats;
+}
+// Ceiling height (in tiles) at a world point, bilinear between pips.
+function ceilAt(x, y) {
+  const fx = Math.max(0, Math.min(L-1.001, x*2)), fy = Math.max(0, Math.min(L-1.001, y*2));
+  const i = fx | 0, j = fy | 0, u = fx - i, v = fy - j, k = j*L + i;
+  const h = ceil[k]*(1-u)*(1-v) + ceil[k+1]*u*(1-v) + ceil[k+L]*(1-u)*v + ceil[k+L+1]*u*v;
+  return h / TILE_M;
+}
+
+// ---------- map ----------
+// Map pixels per tile: an even number (half-tiles must land on whole pixels,
+// or the row-by-row floor fill shows stripes), keeping the map about 640 px.
+let TS = 16;
+const map = $('map'), mg = map.getContext('2d');
+const cache = document.createElement('canvas');
+const cg = cache.getContext('2d');
+function renderMapCache() {
+  const tint = $('tint').checked;
+  for (let ty = 0; ty < N; ty++) for (let tx = 0; tx < N; tx++) {
+    cg.fillStyle = rgb(tint ? lerp(ROCK, zones[zoneOfTile[ty*N+tx]].col, .45) : ROCK);
+    cg.fillRect(tx*TS, ty*TS, TS, TS);
+  }
+  // Floor, one row of pip squares per path: one giant path of ~14k shapes is
+  // very slow to build, while 120 small ones are quick.
+  const s = TS/2;
+  cg.fillStyle = rgb(FLOOR);
+  for (let j = 0; j < L-1; j++) {
+    cg.beginPath();
+    for (let i = 0; i < L-1; i++) {
+      const ring = [[W(i,j),0,0],[W(i+1,j),1,0],[W(i+1,j+1),1,1],[W(i,j+1),0,1]], pp = [];
+      for (let k = 0; k < 4; k++) {
+        const [b,cx,cy] = ring[k], [nb,nx,ny] = ring[(k+1)%4];
+        if (b) pp.push([cx,cy]);
+        if (b !== nb) pp.push([(cx+nx)/2,(cy+ny)/2]);
+      }
+      if (!pp.length) continue;
+      pp.forEach(([px,py],k) => cg[k ? 'lineTo' : 'moveTo']((i+px)*s, (j+py)*s));
+      cg.closePath();
+    }
+    cg.fill();
+  }
+  if ($('ceilMap').checked) drawCeilingOverlay();
+  if ($('showCarve').checked) {
+    // Tunnels orange, loops blue, drawn over the pips they opened.
+    const s2 = TS/2;
+    for (let k = 0; k < L*L; k++) if (carved[k] && pts[k]) {
+      cg.fillStyle = carved[k] === 1 ? '#e07a1fb0' : '#2b7bd6b0';
+      cg.fillRect((k % L)*s2 - s2/2, ((k / L) | 0)*s2 - s2/2, s2, s2);
+    }
+  }
+  // Prop icons: a dot sized by the prop, coloured by kind.
+  const PROP_ICON = { tree: '#2f5d32', bigtree: '#1f4a24', stalagmite: '#8a7a60', boulder: '#6b655b', pillar: '#c9bb94' };
+  for (const p of props) {
+    cg.fillStyle = PROP_ICON[p.kind]; cg.strokeStyle = '#0008'; cg.lineWidth = 1;
+    cg.beginPath(); cg.arc(p.x*TS, p.y*TS, Math.max(2.5, p.w * TS * .45), 0, Math.PI*2); cg.fill(); cg.stroke();
+  }
+  if ($('lines').checked) {
+    cg.strokeStyle = '#0002'; cg.lineWidth = 1;
+    for (let k = 0; k <= N; k++) {
+      cg.beginPath(); cg.moveTo(k*TS+.5, 0); cg.lineTo(k*TS+.5, N*TS); cg.stroke();
+      cg.beginPath(); cg.moveTo(0, k*TS+.5); cg.lineTo(N*TS, k*TS+.5); cg.stroke();
+    }
+  }
+  if ($('outlines').checked) {
+    cg.lineWidth = 2; cg.setLineDash([6, 4]);
+    for (const z of zones) {
+      cg.strokeStyle = rgb(lerp(z.col, BLACK, .35));
+      cg.strokeRect(z.x0*TS + 1, z.y0*TS + 1, (z.x1-z.x0)*TS - 2, (z.y1-z.y0)*TS - 2);
+    }
+    cg.setLineDash([]);
+    cg.font = 'bold 10px system-ui'; cg.textAlign = 'center'; cg.textBaseline = 'middle';
+    for (const z of zones) {
+      const cx = (z.x0+z.x1)/2*TS, cy = (z.y0+z.y1)/2*TS, label = `${z.i} ${z.law.slice(0,4)}`;
+      cg.fillStyle = '#fffd'; const w = cg.measureText(label).width + 6;
+      cg.fillRect(cx - w/2, cy - 7, w, 14);
+      cg.fillStyle = '#222'; cg.fillText(label, cx, cy);
+    }
+  }
+  drawGraph();
+  drawMap();
+}
+// Ceiling overlay: colour every playable pip by its ceiling height, masked to
+// the playable side's shape (the green shape, or everything except it).
+const HEAT = [[40,60,140],[40,150,160],[120,200,90],[250,220,70],[250,250,230]];
+function heat(t) {
+  t = Math.max(0, Math.min(1, t)) * (HEAT.length - 1);
+  const i = Math.min(HEAT.length - 2, Math.floor(t));
+  return lerp(HEAT[i], HEAT[i+1], t - i);
+}
+$('ceilKey').style.background = `linear-gradient(90deg, ${HEAT.map(c => rgb(c)).join(',')})`;
+const ovl = document.createElement('canvas'), og = ovl.getContext('2d');
+const msk = document.createElement('canvas'), mk = msk.getContext('2d');
+// Reallocate everything sized by the map when the seed picks a new size.
+let sizedFor = 0;
+function resizeWorld(q) {
+  if (q === sizedFor) return;
+  sizedFor = q; setWorldSize(q);
+  pts = new Uint8Array(L*L); zoneOfTile = new Int16Array(N*N);
+  carved = new Uint8Array(L*L); ceil = new Float32Array(L*L); columnPip = new Uint8Array(L*L);
+  TS = Math.max(2, Math.floor(640 / N / 2) * 2);
+  map.width = map.height = cache.width = cache.height = ovl.width = ovl.height = msk.width = msk.height = N * TS;
+}
+function drawCeilingOverlay() {
+  const s = TS/2, maxH = +$('maxH').value;
+  og.globalCompositeOperation = 'source-over';
+  og.clearRect(0, 0, ovl.width, ovl.height);
+  for (let j = 0; j < L; j++) for (let i = 0; i < L; i++) {
+    og.fillStyle = rgb(heat((ceil[j*L+i] - MIN_CEIL) / (maxH - MIN_CEIL)));
+    og.fillRect(i*s - s/2, j*s - s/2, s, s);
+  }
+  // Columns get a dark dot so you can see which solid pieces count as columns.
+  mk.clearRect(0, 0, msk.width, msk.height);
+  mk.fillStyle = '#000';
+  for (let j = 0; j < L-1; j++) {
+    mk.beginPath();
+    for (let i = 0; i < L-1; i++) {
+      const ring = [[W(i,j),0,0],[W(i+1,j),1,0],[W(i+1,j+1),1,1],[W(i,j+1),0,1]], pp = [];
+      for (let k = 0; k < 4; k++) {
+        const [b,cx,cy] = ring[k], [nb,nx,ny] = ring[(k+1)%4];
+        if (b) pp.push([cx,cy]);
+        if (b !== nb) pp.push([(cx+nx)/2,(cy+ny)/2]);
+      }
+      if (!pp.length) continue;
+      pp.forEach(([px,py],k) => mk[k ? 'lineTo' : 'moveTo']((i+px)*s, (j+py)*s));
+      mk.closePath();
+    }
+    mk.fill();
+  }
+  og.globalCompositeOperation = side ? 'destination-in' : 'destination-out';
+  og.drawImage(msk, 0, 0);
+  og.globalCompositeOperation = 'source-over';
+  cg.globalAlpha = .85; cg.drawImage(ovl, 0, 0); cg.globalAlpha = 1;
+
+}
+function drawMap() {
+  mg.drawImage(cache, 0, 0);
+  const pz = zoneOfTile[Math.min(N-1, Math.floor(player.y))*N + Math.min(N-1, Math.floor(player.x))];
+  if (pz !== graphZone) drawGraph();
+  const px = player.x*TS, py = player.y*TS, r = TS*6;
+  mg.fillStyle = '#e6394640';
+  mg.beginPath(); mg.moveTo(px, py); mg.arc(px, py, r, player.a - FOV/2, player.a + FOV/2); mg.closePath(); mg.fill();
+  mg.fillStyle = '#e63946'; mg.beginPath(); mg.arc(px, py, 4, 0, Math.PI*2); mg.fill();
+}
+
+// ---------- props ----------
+// Each column (small separate piece of solid) becomes one prop, chosen by its
+// size and the law of the zone it stands in. Props block movement with a
+// circle and are drawn as upright sprites in the POV.
+const PROP_RULES = {
+  //         [single pip / tiny: main, alt]   [cluster of 4+ pips: main, alt]
+  cave:    [['stalagmite', 'stalagmite'], ['boulder', 'boulder']],
+  chamber: [['tree', 'stalagmite'],       ['boulder', 'tree']],
+  hall:    [['tree', 'tree'],             ['bigtree', 'bigtree']],
+  rooms:   [['pillar', 'pillar'],         ['pillar', 'boulder']],
+  wall:    [['stalagmite', 'boulder'],    ['boulder', 'boulder']],
+};
+let props = [], propBuckets = [];
+
+// ---- textures, generated from basics: value noise, stripes and cracks ----
+// Each is 32×32 RGB. Faces sample them with perspective-correct UVs.
+const TEX = 32;
+function makeTexture(fn) {
+  const t = new Uint8Array(TEX * TEX * 3);
+  for (let y = 0; y < TEX; y++) for (let x = 0; x < TEX; x++) {
+    const [r, g, b] = fn(x, y), i = (y * TEX + x) * 3;
+    t[i] = Math.max(0, Math.min(255, r)); t[i+1] = Math.max(0, Math.min(255, g)); t[i+2] = Math.max(0, Math.min(255, b));
+  }
+  return t;
+}
+// Noise that tiles across the texture edge, so repeats don't show a seam.
+const tnoise = (x, y, f, s) => {
+  const u = x / TEX, v = y / TEX;
+  const a = valueNoise(u*f, v*f, s), b = valueNoise((u-1)*f, v*f, s), c = valueNoise(u*f, (v-1)*f, s), d = valueNoise((u-1)*f, (v-1)*f, s);
+  return a*(1-u)*(1-v) + b*u*(1-v) + c*(1-u)*v + d*u*v;
+};
+const TEXTURES = {
+  // bark: brown, long vertical grain, a few dark furrows
+  bark: makeTexture((x, y) => {
+    const grain = tnoise(x * 4, y * .5, 4, 11), fur = Math.abs(Math.sin((x + grain * 6) * .9));
+    const k = .55 + grain * .5 - (fur < .18 ? .3 : 0);
+    return [96 * k, 66 * k, 40 * k];
+  }),
+  // leaves: blotchy greens with light speckles
+  leaf: makeTexture((x, y) => {
+    const n = tnoise(x, y, 6, 21) * .6 + tnoise(x, y, 14, 22) * .4, spk = hash2(x, y, 23) > .93 ? .25 : 0;
+    const k = .55 + n * .6 + spk;
+    return [52 * k, 98 * k, 50 * k];
+  }),
+  // rock: grey-brown, two octaves of noise, dark cracks where noise crosses its middle
+  rock: makeTexture((x, y) => {
+    const n = tnoise(x, y, 5, 31) * .65 + tnoise(x, y, 13, 32) * .35, crack = Math.abs(tnoise(x, y, 4, 33) - .5) < .025;
+    const k = (.65 + n * .55) * (crack ? .55 : 1);
+    return [140 * k, 128 * k, 110 * k];
+  }),
+  // drip-stone: ochre-grey with wavy horizontal growth rings
+  drip: makeTexture((x, y) => {
+    const n = tnoise(x, y, 7, 41), ring = .5 + .5 * Math.sin((y + n * 5) * .8);
+    const k = .7 + ring * .25 + n * .2;
+    return [158 * k, 138 * k, 104 * k];
+  }),
+  // cut stone: pale blocks with mortar lines and speckle
+  stone: makeTexture((x, y) => {
+    const row = Math.floor(y / 8), off = row % 2 ? 8 : 0;
+    const mortar = y % 8 === 0 || (x + off) % 16 === 0;
+    const k = (.8 + tnoise(x, y, 9, 51) * .3) * (mortar ? .7 : 1) * (hash2(x, y, 52) > .9 ? .9 : 1);
+    return [206 * k, 194 * k, 164 * k];
+  }),
+};
+
+// ---- low-poly meshes ----
+// Triangles in world space: tiles for x/y, tiles for height z. Each vertex
+// carries a UV; each face is flat-shaded once, from a fixed light direction.
+const LIGHT = (() => { const v = [-.45, -.55, .7], l = Math.hypot(...v); return v.map(c => c / l); })();
+function addTri(out, A, B, C, mat) {
+  const ux = B[0]-A[0], uy = B[1]-A[1], uz = B[2]-A[2], vx = C[0]-A[0], vy = C[1]-A[1], vz = C[2]-A[2];
+  const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx, nl = Math.hypot(nx, ny, nz) || 1;
+  // abs(): meshes are built without caring about winding, so light both sides alike
+  const shade = .42 + .58 * Math.abs((nx*LIGHT[0] + ny*LIGHT[1] + nz*LIGHT[2]) / nl);
+  out.push({ v: [A, B, C], tex: TEXTURES[mat], shade });
+}
+// An n-sided prism or cone: ring radius r0 at z0 narrowing to r1 at z1.
+// jitter roughens the ring; topZ (optional) gives each top vertex its own height.
+function prism(out, cx, cy, n, r0, r1, z0, z1, mat, rng, o = {}) {
+  const rot = o.rot ?? rng() * Math.PI * 2, jit = o.jitter ?? 0, vRep = o.vRep ?? 1;
+  const bot = [], top = [];
+  for (let i = 0; i <= n; i++) {
+    const k = i % n, a = rot + Math.PI * 2 * k / n, j = 1 + (rng() - .5) * jit;
+    const zt = o.topZ ? o.topZ(k) : z1;
+    bot.push([cx + Math.cos(a) * r0 * j, cy + Math.sin(a) * r0 * j, z0, i / n, 0]);
+    top.push([cx + Math.cos(a) * r1 * j, cy + Math.sin(a) * r1 * j, zt, i / n, vRep]);
+  }
+  for (let i = 0; i < n; i++) {
+    addTri(out, bot[i], bot[i+1], top[i+1], mat);
+    addTri(out, bot[i], top[i+1], top[i], mat);
+  }
+  if (o.cap) {
+    const c = [cx, cy, o.capZ ?? z1, .5, .5];
+    for (let i = 0; i < n; i++) addTri(out, top[i], top[i+1], c, mat);
+  }
+}
+// Icosahedron (20 faces): rough blobs for boulders and tree canopies.
+const ICO_V = (() => {
+  const t = (1 + Math.sqrt(5)) / 2;
+  return [[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]]
+    .map(v => { const l = Math.hypot(...v); return v.map(c => c / l); });
+})();
+const ICO_F = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+               [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+function blob(out, cx, cy, cz, rx, ry, rz, mat, rng, jitter) {
+  const vs = ICO_V.map(([x, y, z]) => {
+    const j = 1 + (rng() - .5) * jitter;
+    return [cx + x * rx * j, cy + y * ry * j, cz + z * rz * j, Math.atan2(y, x) / (Math.PI * 2) + .5, Math.acos(z) / Math.PI];
+  });
+  for (const [a, b, c] of ICO_F) addTri(out, vs[a], vs[b], vs[c], mat);
+}
+// One mesh per prop kind. w = width in tiles, h = height in tiles.
+function buildMesh(p, rng) {
+  const out = [], { x, y } = p, w = p.w, h = p.h / TILE_M;
+  if (p.kind === 'stalagmite') {
+    prism(out, x, y, 6, w / 2, w * .04, 0, h, 'drip', rng, { jitter: .35, vRep: Math.max(1, h * 3) });
+    if (rng() < .6) {                                      // a smaller sibling beside it
+      const a = rng() * Math.PI * 2, d = w * .45;
+      prism(out, x + Math.cos(a) * d, y + Math.sin(a) * d, 5, w * .22, w * .03, 0, h * (.35 + rng() * .25), 'drip', rng, { jitter: .3, vRep: 1.5 });
+    }
+  } else if (p.kind === 'boulder') {
+    const rz = Math.min(h / 2, w * .4);
+    blob(out, x, y, rz * .85, w / 2, w / 2 * (.75 + rng() * .3), rz, 'rock', rng, .35);
+  } else if (p.kind === 'tree' || p.kind === 'bigtree') {
+    const big = p.kind === 'bigtree', trunkTop = h * (big ? .55 : .5);
+    prism(out, x, y, 5, w * (big ? .11 : .09), w * .05, 0, trunkTop, 'bark', rng, { jitter: .2, vRep: 3 });
+    const blobs = big ? 4 : 2 + (rng() < .5 ? 1 : 0);
+    for (let i = 0; i < blobs; i++) {
+      const r = w * (big ? .3 : .38) * (.8 + rng() * .4);
+      const cz = Math.min(h - r * .8, trunkTop + r * (.6 + rng() * .7));
+      const a = rng() * Math.PI * 2, d = i ? w * .18 * rng() : 0;
+      blob(out, x + Math.cos(a) * d, y + Math.sin(a) * d, cz, r, r, r * .85, 'leaf', rng, .3);
+    }
+  } else if (p.kind === 'pillar') {
+    const r = w * .32;
+    prism(out, x, y, 4, w * .5, w * .5, 0, .06, 'stone', rng, { rot: Math.PI / 4, cap: true });   // plinth
+    prism(out, x, y, 8, r, r * .95, .06, h, 'stone', rng, {
+      rot: 0, vRep: Math.max(1, h * 2), cap: true, capZ: h * .82,
+      topZ: () => h * (1 - rng() * .3),                                // broken, uneven top
+    });
+  }
+  return out;
+}
+const PROP_SIZE = {        // width (tiles), height (m, capped by the ceiling), collision radius (tiles)
+  tree:       [0.9, 5.5, 0.12],
+  bigtree:    [1.5, 8.0, 0.22],
+  stalagmite: [0.35, 3.2, 0.14],
+  boulder:    [0.8, 1.6, 0.30],
+  pillar:     [0.4, 3.0, 0.15],
+};
+function buildProps() {
+  props = []; propBuckets = Array.from({ length: N*N }, () => []);
+  const rng = mulberry32((+seedEl.value | 0) * 7 + 13);
+  for (const comp of columnComps) {
+    let sx = 0, sy = 0;
+    for (const k of comp) { sx += (k % L) / 2; sy += ((k / L) | 0) / 2; }
+    const x = sx / comp.length, y = sy / comp.length;
+    const zone = zones[zoneOfTile[Math.min(N-1, Math.floor(y))*N + Math.min(N-1, Math.floor(x))]];
+    const rules = PROP_RULES[zone.law] || PROP_RULES.cave;
+    const options = rules[comp.length >= 4 ? 1 : 0];
+    const kind = options[rng() < .7 ? 0 : 1];
+    const [w0, h0, r0] = PROP_SIZE[kind];
+    // Bigger clusters make bigger props, a little varied so rows don't look stamped.
+    const scale = (1 + Math.min(1.5, (comp.length - 1) * .08)) * (.85 + rng() * .3);
+    const ceilM = ceilAt(x, y) * TILE_M;
+    const p = { x, y, kind, w: w0 * scale, h: Math.min(h0 * scale, ceilM * .92), r: r0 * scale, zone };
+    p.tris = buildMesh(p, rng);
+    props.push(p);
+    propBuckets[Math.min(N-1, Math.floor(y))*N + Math.min(N-1, Math.floor(x))].push(p);
+  }
+}
+
+// ---------- player ----------
+// Player radius 0.075 tiles ≈ 0.23 m. MAX_D is the view/fog distance in tiles.
+const FOV = 70 * Math.PI/180, RADIUS = .075, MAX_D = 14;
+const player = { x: 30, y: 30, a: 0 };
+function distToSeg(px, py, [ax, ay], [bx, by]) {
+  const dx = bx-ax, dy = by-ay, len = dx*dx + dy*dy || 1;
+  const t = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / len));
+  return Math.hypot(px - (ax + t*dx), py - (ay + t*dy));
+}
+function blocked(x, y) {
+  if (x < 1 || y < 1 || x > N-1 || y > N-1) return true;
+  const tx = Math.floor(x), ty = Math.floor(y);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const b = buckets[(ty+dy)*N + tx+dx];
+    if (b) for (const w of b) if (distToSeg(x, y, w.a, w.b) < RADIUS) return true;
+    const pb = propBuckets[(ty+dy)*N + tx+dx];
+    if (pb) for (const p of pb) if (Math.hypot(x - p.x, y - p.y) < p.r + RADIUS) return true;
+  }
+  return false;
+}
+// Floor test: is the pip nearest this point floor, and not touching a wall?
+const onFloor = (x, y) => P(Math.round(x*2), Math.round(y*2)) === 1 && !blocked(x, y);
+function placePlayer() {
+  // Start near the middle, on the floor pip closest to the centre.
+  let best = null, bd = Infinity;
+  for (let j = 1; j < L-1; j++) for (let i = 1; i < L-1; i++) {
+    if (!pts[j*L+i]) continue;
+    const d = (i/2 - N/2)**2 + (j/2 - N/2)**2;
+    if (d < bd && onFloor(i/2, j/2)) { bd = d; best = [i/2, j/2]; }
+  }
+  if (best) { player.x = best[0]; player.y = best[1]; }
+  drawMap();
+}
+function tryMove(dx, dy) {
+  if (!blocked(player.x + dx, player.y)) player.x += dx;
+  if (!blocked(player.x, player.y + dy)) player.y += dy;
+}
+
+// ---------- POV: grid-stepped raycaster ----------
+// Every wall piece lies inside one tile, so a ray only needs to test the walls
+// in the tiles it passes through, nearest first. That keeps 60×60 maps fast.
+const pov = $('pov'), pg = pov.getContext('2d');
+const PW = pov.width, PH = pov.height, COLS = PW / 2, projDist = (PW/2) / Math.tan(FOV/2);
+function castRay(ox, oy, dx, dy) {
+  let tx = Math.floor(ox), ty = Math.floor(oy);
+  const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+  const tdx = Math.abs(1/dx), tdy = Math.abs(1/dy);
+  let tmx = (dx > 0 ? tx + 1 - ox : ox - tx) * tdx, tmy = (dy > 0 ? ty + 1 - oy : oy - ty) * tdy;
+  for (let steps = 0; steps < 60; steps++) {
+    if (tx < 0 || ty < 0 || tx >= N || ty >= N) return [Infinity, null];
+    let best = Infinity, hit = null;
+    for (const w of buckets[ty*N + tx]) {
+      const [ax, ay] = w.a, ex = w.b[0]-ax, ey = w.b[1]-ay, den = dx*ey - dy*ex;
+      if (Math.abs(den) < 1e-9) continue;
+      const t = ((ax-ox)*ey - (ay-oy)*ex) / den, u = ((ax-ox)*dy - (ay-oy)*dx) / den;
+      if (t > 0 && u >= 0 && u <= 1 && t < best) { best = t; hit = w; }
+    }
+    if (hit) return [best, hit];
+    if (Math.min(tmx, tmy) > MAX_D) return [Infinity, null];
+    if (tmx < tmy) { tmx += tdx; tx += sx; } else { tmy += tdy; ty += sy; }
+  }
+  return [Infinity, null];
+}
+// Each screen column: step along the ray drawing the ceiling as we go (near to
+// far, like the old "voxel space" terrain trick, but upside down), then draw
+// the first wall from the local ceiling down to the floor. Walls and columns
+// therefore always reach whatever the ceiling height is where they stand.
+const EYE = EYE_M / TILE_M;                                  // eye height in tiles
+let zbuf = null;                                             // nearest wall depth per screen column
+const CEIL_LOW = [128,114,92], CEIL_HIGH = [38,34,30];
+// The view is drawn into a pixel buffer and copied to the canvas once per
+// frame. Canvas fills cost a few microseconds each, and the ceiling needed
+// ~10,000 of them per frame; writing pixels directly costs the same however
+// finely the ceiling is sampled.
+const frame = pg.createImageData(PW, PH), px32 = new Uint32Array(frame.data.buffer);
+const pack = ([r, g, b]) => (255 << 24) | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0);
+const SKY = pack(DARK);
+const FLOOR_ROWS = new Uint32Array(PH);   // floor gradient, one colour per screen row
+for (let y = PH/2; y < PH; y++) FLOOR_ROWS[y] = pack(lerp(DARK, FLOOR, (y - PH/2) / (PH/2)));
+const zb = new Float32Array(PW * PH);     // depth per pixel, so props hide correctly behind walls and each other
+function fillSpan(x0, x1, y0, y1, col, depth = Infinity) {
+  y0 = Math.max(0, Math.round(y0)); y1 = Math.min(PH, Math.round(y1));
+  for (let y = y0; y < y1; y++) { const row = y * PW; for (let x = x0; x < x1; x++) { px32[row + x] = col; zb[row + x] = depth; } }
+}
+function drawPov() {
+  const colW = PW / COLS, maxH = +$('maxH').value;
+  if (!zbuf) zbuf = new Float32Array(COLS);
+  zbuf.fill(Infinity);
+  // Background: fog above the horizon, floor gradient below.
+  for (let y = 0; y < PH; y++) {
+    const col = y < PH/2 ? SKY : FLOOR_ROWS[y], row = y * PW;
+    for (let x = 0; x < PW; x++) px32[row + x] = col;
+  }
+  zb.fill(Infinity);
+  const screenY = (z, perp) => PH/2 - (z - EYE) * projDist / perp;   // z in tiles
+  for (let c = 0; c < COLS; c++) {
+    const camX = (c + .5) / COLS * 2 - 1;
+    const ang = player.a + Math.atan(camX * Math.tan(FOV/2));
+    const dx = Math.cos(ang), dy = Math.sin(ang), cosA = Math.cos(ang - player.a);
+    const [d, w] = castRay(player.x, player.y, dx, dy);
+    const end = Math.min(w ? d : MAX_D, MAX_D);
+    const x0 = Math.round(c*colW), x1 = Math.round((c+1)*colW);
+    // Ceiling: walk outwards. Each step's ceiling shows between the lowest
+    // point drawn so far and where this step projects; higher ceilings further
+    // away are hidden behind nearer, lower ones automatically.
+    let drawn = 0, wallTop = 0;
+    const sample = t => {
+      const hz = ceilAt(player.x + dx*t, player.y + dy*t), perp = t * cosA;
+      const y = screenY(hz, perp);
+      if (y > drawn) {
+        const lowness = 1 - smooth01(MIN_CEIL, maxH, hz * TILE_M);
+        const yy = Math.min(y, PH/2);
+        fillSpan(x0, x1, drawn, yy + 1, pack(lerp(lerp(CEIL_HIGH, CEIL_LOW, lowness), DARK, Math.min(1, perp / MAX_D))), perp);
+        drawn = yy;
+      }
+      return y;
+    };
+    // Fine steps (about 1.5% of the distance) keep the bands thinner than a
+    // pixel or two, so they don't show or crawl while you move.
+    for (let t = .05; t < end - .02; t += .015 + t*.015) sample(t);
+    // Last sample right at the wall: the ceiling and the wall top then use the
+    // same height, so there's never a gap between them.
+    if (w && d <= MAX_D) wallTop = sample(Math.max(.05, d - .02));
+    else { sample(end); continue; }
+    // Wall: from the ceiling at the wall down to the floor.
+    const perp = d * cosA;
+    zbuf[c] = perp;
+    const top = Math.max(drawn, wallTop);
+    const bottom = screenY(0, perp);
+    const nx = -(w.b[1]-w.a[1]), ny = w.b[0]-w.a[0], nl = Math.hypot(nx, ny);
+    const light = .7 + .3 * Math.abs((nx*.6 + ny*.8) / nl);
+    const base = lerp(ROCK, w.zone.col, .55);           // each zone's walls in its own colour
+    fillSpan(x0, x1, top, bottom, pack(lerp(lerp(BLACK, base, light), DARK, Math.min(1, perp / MAX_D))), perp);
+  }
+  drawProps3D();
+  pg.putImageData(frame, 0, 0);
+}
+// Low-poly props: every triangle is moved into camera space, clipped against
+// a near plane, projected, and filled pixel by pixel with perspective-correct
+// texture coordinates and a depth test against the walls, ceiling and other props.
+const NEAR = .04;
+function drawProps3D() {
+  const ca = Math.cos(player.a), sa = Math.sin(player.a);
+  const tx0 = Math.floor(player.x), ty0 = Math.floor(player.y), R = Math.ceil(MAX_D);
+  const toCam = v => {
+    const dx = v[0] - player.x, dy = v[1] - player.y;
+    return [dx*ca + dy*sa, -dx*sa + dy*ca, v[2], v[3], v[4]];   // depth, lateral, z, u, v
+  };
+  for (let ty = Math.max(0, ty0 - R); ty <= Math.min(N-1, ty0 + R); ty++)
+    for (let tx = Math.max(0, tx0 - R); tx <= Math.min(N-1, tx0 + R); tx++)
+      for (const p of propBuckets[ty*N + tx]) {
+        const pd = (p.x - player.x)*ca + (p.y - player.y)*sa;
+        if (pd < -p.w || pd > MAX_D + p.w) continue;              // behind us or beyond the fog
+        for (const t of p.tris) {
+          let poly = t.v.map(toCam);
+          if (poly.every(q => q[0] < NEAR)) continue;
+          if (poly.some(q => q[0] < NEAR)) poly = clipNear(poly);
+          const sp = poly.map(([d, l, z, u, v]) => {
+            const iz = 1 / d;
+            return [PW/2 + l * iz * projDist, PH/2 - (z - EYE) * iz * projDist, iz, u * iz, v * iz];
+          });
+          for (let i = 1; i + 1 < sp.length; i++) rasterTri(sp[0], sp[i], sp[i+1], t.tex, t.shade);
+        }
+      }
+}
+// Keep the part of a polygon in front of the near plane (Sutherland–Hodgman, one plane).
+function clipNear(poly) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const A = poly[i], B = poly[(i + 1) % poly.length], ina = A[0] >= NEAR, inb = B[0] >= NEAR;
+    if (ina) out.push(A);
+    if (ina !== inb) { const t = (NEAR - A[0]) / (B[0] - A[0]); out.push(A.map((c, k) => c + (B[k] - c) * t)); }
+  }
+  return out;
+}
+function rasterTri(A, B, C, tex, shade) {
+  const area = (B[0]-A[0])*(C[1]-A[1]) - (C[0]-A[0])*(B[1]-A[1]);
+  if (Math.abs(area) < 1e-3) return;
+  const x0 = Math.max(0, Math.floor(Math.min(A[0], B[0], C[0]))), x1 = Math.min(PW - 1, Math.ceil(Math.max(A[0], B[0], C[0])));
+  const y0 = Math.max(0, Math.floor(Math.min(A[1], B[1], C[1]))), y1 = Math.min(PH - 1, Math.ceil(Math.max(A[1], B[1], C[1])));
+  if (x0 > x1 || y0 > y1) return;
+  const inv = 1 / area;
+  for (let y = y0; y <= y1; y++) {
+    const py = y + .5, row = y * PW;
+    for (let x = x0; x <= x1; x++) {
+      const px = x + .5;
+      // Barycentric weights from edge functions; all share area's sign when inside.
+      const w0 = ((B[0]-px)*(C[1]-py) - (C[0]-px)*(B[1]-py)) * inv;
+      const w1 = ((C[0]-px)*(A[1]-py) - (A[0]-px)*(C[1]-py)) * inv;
+      const w2 = 1 - w0 - w1;
+      if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+      const iz = w0*A[2] + w1*B[2] + w2*C[2], depth = 1 / iz, k = row + x;
+      if (depth >= zb[k]) continue;
+      zb[k] = depth;
+      const u = (w0*A[3] + w1*B[3] + w2*C[3]) * depth, v = (w0*A[4] + w1*B[4] + w2*C[4]) * depth;
+      const tu = ((Math.floor(u * TEX) % TEX) + TEX) % TEX, tv = ((Math.floor(v * TEX) % TEX) + TEX) % TEX;
+      const ti = (tv * TEX + tu) * 3, f = Math.min(1, depth / MAX_D), s2 = shade * (1 - f);
+      px32[k] = (255 << 24)
+        | ((tex[ti+2] * s2 + DARK[2] * f) << 16)
+        | ((tex[ti+1] * s2 + DARK[1] * f) << 8)
+        | (tex[ti] * s2 + DARK[0] * f);
+    }
+  }
+}
+
+// ---------- input ----------
+let tool = 'floor', painting = false;
+document.querySelectorAll('#tool button').forEach(b => b.onclick = () => {
+  tool = b.dataset.v;
+  document.querySelectorAll('#tool button').forEach(o => o.classList.toggle('on', o === b));
+});
+function mapAt(e) {
+  const r = map.getBoundingClientRect(), k = map.width / r.width;
+  return [(e.clientX - r.left) * k / TS, (e.clientY - r.top) * k / TS];
+}
+function mapAct(e) {
+  const [x, y] = mapAt(e);
+  if (tool === 'player') {
+    if (blocked(x, y)) return;
+    if (P(Math.round(x*2), Math.round(y*2)) !== 1) return;   // players only stand on green
+    player.x = x; player.y = y; drawMap();
+    return;
+  }
+  const tx = Math.floor(x), ty = Math.floor(y);
+  if (tx < 0 || ty < 0 || tx >= N || ty >= N) return;
+  const v = tool === 'floor' && e.button !== 2 ? 1 : 0;
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
+    const pi = 2*tx + i, pj = 2*ty + j;
+    if (!edgePip(pi, pj)) pts[pj*L + pi] = v;
+  }
+  rebuild();
+}
+map.addEventListener('contextmenu', e => e.preventDefault());
+map.addEventListener('pointerdown', e => { painting = true; mapAct(e); });
+map.addEventListener('pointermove', e => { if (painting && tool !== 'player') mapAct(e); });
+window.addEventListener('pointerup', () => painting = false);
+
+const seedEl = $('seed');
+const regen = (keepSliders = false) => generate(Math.max(0, +seedEl.value | 0), keepSliders === true);
+$('gen').onclick = () => { seedEl.value = Math.floor(Math.random() * 100000); regen(); };
+$('prev').onclick = () => { seedEl.value = Math.max(0, (+seedEl.value|0) - 1); regen(); };
+$('next').onclick = () => { seedEl.value = (+seedEl.value|0) + 1; regen(); };
+seedEl.onchange = () => regen();
+$('band').oninput = () => { $('bandVal').textContent = $('band').value; regen(true); };
+$('bandVal').textContent = $('band').value;
+for (const id of ['tint', 'outlines', 'lines', 'ceilMap']) $(id).onchange = renderMapCache;
+const showCeilVals = () => { $('colVal').textContent = $('colMax').value; $('maxHVal').textContent = $('maxH').value; };
+$('colMax').oninput = () => { showCeilVals(); rebuild(); };
+$('maxH').oninput = () => { showCeilVals(); computeCeilings(); buildProps(); renderMapCache(); };
+showCeilVals();
+const showConnVals = () => { $('pocketVal').textContent = $('pocket').value; $('windVal').textContent = $('wind').value; $('loopVal').textContent = $('loop').value; };
+for (const id of ['pocket', 'wind', 'loop']) $(id).oninput = () => { showConnVals(); regen(true); };
+$('showCarve').onchange = renderMapCache;
+showConnVals();
+
+const keys = {};
+const MOVE_KEYS = ['w','a','s','d','q','e','arrowup','arrowdown','arrowleft','arrowright'];
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (MOVE_KEYS.includes(k)) { keys[k] = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+pov.addEventListener('click', () => pov.focus());
+
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const k = n => keys[n];
+  const turn = (k('d') || k('arrowright') ? 1 : 0) - (k('a') || k('arrowleft') ? 1 : 0);
+  const fwd = (k('w') || k('arrowup') ? 1 : 0) - (k('s') || k('arrowdown') ? 1 : 0);
+  const side = (k('e') ? 1 : 0) - (k('q') ? 1 : 0);
+  player.a += turn * 2.4 * dt;
+  if (fwd || side) {
+    const sp = 1.5 * dt, ca = Math.cos(player.a), sa = Math.sin(player.a);   // 1.5 tiles/s = 4.5 m/s
+    tryMove((ca*fwd - sa*side) * sp, (sa*fwd + ca*side) * sp);
+  }
+  if (turn || fwd || side) drawMap();
+  drawPov();
+  requestAnimationFrame(loop);
+}
+
+// ---------- ratings ----------
+// Stored in this browser only (localStorage). Each rating keeps the map's
+// summary line, so the settings behind every score travel with it.
+const RKEY = 'zoneGen.props.ratings.v1';   // separate from the original page: seeds differ now
+let ratings = {};
+try { ratings = JSON.parse(localStorage.getItem(RKEY) || '{}') || {}; } catch (e) { ratings = {}; }
+const saveRatings = () => { try { localStorage.setItem(RKEY, JSON.stringify(ratings)); } catch (e) {} };
+const curSeed = () => String(Math.max(0, +seedEl.value | 0));
+const plainSig = () => $('sig').innerHTML.replace(/<br>/g, ' | ').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+for (let n = 1; n <= 5; n++) {
+  const b = document.createElement('button'); b.textContent = '★'; b.title = `${n} / 5`;
+  b.onclick = () => rate(n); $('stars').append(b);
+}
+function rate(n) {
+  const k = curSeed();
+  ratings[k] = { stars: n, note: $('note').value.trim(), sig: plainSig() };
+  saveRatings(); showRating();
+}
+function showRating() {
+  const r = ratings[curSeed()];
+  [...$('stars').children].forEach((b, i) => b.classList.toggle('on', !!r && i < r.stars));
+  $('note').value = r ? r.note : '';
+  const keys = Object.keys(ratings).sort((a, b) => ratings[b].stars - ratings[a].stars || a - b);
+  $('ratingList').innerHTML = keys.map(k => {
+    const r = ratings[k];
+    return `<div data-seed="${k}" title="${r.sig.replace(/"/g, '&quot;')}">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)} seed ${k}${r.note ? ' — ' + r.note.replace(/</g, '&lt;') : ''}</div>`;
+  }).join('') || '<span class="hint">No ratings yet.</span>';
+  $('rateMsg').textContent = keys.length ? `${keys.length} rated` : '';
+}
+$('ratingList').onclick = e => { const d = e.target.closest('[data-seed]'); if (d) { seedEl.value = d.dataset.seed; regen(); } };
+$('note').addEventListener('keydown', e => { if (e.key === 'Enter') { const r = ratings[curSeed()]; if (r) { r.note = $('note').value.trim(); saveRatings(); showRating(); } $('note').blur(); } });
+$('copyRatings').onclick = async () => {
+  const keys = Object.keys(ratings).sort((a, b) => a - b);
+  const text = keys.map(k => { const r = ratings[k]; return `seed ${k}: ${r.stars}/5${r.note ? ' — ' + r.note : ''}\n    ${r.sig}`; }).join('\n');
+  try { await navigator.clipboard.writeText(text); $('rateMsg').textContent = `copied ${keys.length}`; }
+  catch (e) { prompt('Copy your ratings:', text); }
+};
+$('clearRatings').onclick = () => { if (confirm('Delete all ratings?')) { ratings = {}; saveRatings(); showRating(); } };
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key >= '1' && e.key <= '5') rate(+e.key);
+});
+// Refresh the stars whenever a map is generated.
+const _generate = generate;
+generate = function (seed, keep) { _generate(seed, keep); showRating(); };
+
+regen();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

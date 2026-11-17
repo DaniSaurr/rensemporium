@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ren's Shaper 3</title>
+<style>
+  :root{
+    --bg:#1d1d1d; --region:#303030; --panel:#2d2d2d; --panel-head:#3a3a3a;
+    --widget:#4a4a4a; --widget-hi:#5c5c5c; --field:#232323;
+    --line:#151515; --line-soft:#3d3d3d; --text:#e6e6e6; --muted:#9a9a9a;
+    --accent:#4772b3; --accent-hi:#5b88cc; --select:#e8912b;
+    --x:#cc4b4b; --y:#5fbf60; --headers:#dfe4ee;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",Inter,Roboto,-apple-system,system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;}
+
+  #app{height:100vh;display:grid;grid-template-rows:38px 1fr 24px;overflow:hidden;}
+  #topbar{display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--region);border-bottom:1px solid var(--line);}
+  #body{display:grid;grid-template-columns:74px 1fr minmax(340px,34vw);overflow:hidden;}
+  #statusbar{display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--region);border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+
+  .brand{font-weight:600;letter-spacing:.3px;color:var(--headers);font-size:15px;white-space:nowrap;}
+  .brand small{color:var(--accent-hi);font-weight:600;}
+  .topspacer{flex:1;}
+  .topbtn{background:var(--widget);border:1px solid var(--line);color:var(--text);height:26px;min-width:30px;padding:0 8px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12px;}
+  .topbtn:hover{background:var(--widget-hi);}
+  .topbtn.on{background:var(--accent);border-color:var(--accent-hi);}
+  .topbtn svg{width:16px;height:16px;}
+  .topbtn.hot{background:var(--select);border-color:#f0a44e;color:#171717;font-weight:600;}
+  .topbtn.hot:hover{background:#f0a44e;}
+
+  #toolbar{background:var(--region);border-right:1px solid var(--line);padding:6px 0;display:flex;flex-direction:column;
+    align-items:center;gap:3px;overflow-y:auto;}
+  #toolbar .sep{width:46px;height:1px;background:var(--line-soft);margin:5px 0;}
+  .tbtn{width:60px;padding:7px 2px 5px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--muted);
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;}
+  .tbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .tbtn .lbl{font-size:10px;letter-spacing:.2px;}
+  .tbtn:hover{background:var(--widget);color:var(--text);}
+  .tbtn.on{background:var(--accent);color:#fff;border-color:var(--accent-hi);}
+
+  #stageWrap{position:relative;background:var(--bg);overflow:hidden;}
+  #stage{display:block;width:100%;height:100%;cursor:crosshair;}
+  #modeBadge{position:absolute;right:12px;top:12px;background:rgba(20,20,20,.86);border:1px solid var(--accent);
+    padding:5px 11px;color:#fff;font-family:ui-monospace,Consolas,monospace;font-size:12px;border-radius:5px;pointer-events:none;}
+  #hint{position:absolute;left:12px;bottom:12px;background:rgba(20,20,20,.82);border:1px solid var(--line-soft);
+    padding:8px 11px;color:var(--text);font-size:11.5px;max-width:640px;line-height:1.5;border-radius:6px;}
+  #hint .x{float:right;margin-left:10px;cursor:pointer;color:var(--muted);}
+  #hint.hide{display:none;}
+
+  #props{background:var(--region);border-left:1px solid var(--line);overflow-y:auto;padding:8px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--panel-head);cursor:pointer;
+    user-select:none;font-weight:600;color:var(--headers);font-size:12.5px;}
+  .panel-head::before{content:"";width:0;height:0;border-left:5px solid var(--muted);border-top:4px solid transparent;
+    border-bottom:4px solid transparent;transform:rotate(90deg);transition:transform .12s;}
+  .panel.collapsed .panel-head::before{transform:rotate(0deg);}
+  .panel-head .badge{margin-left:auto;font-weight:400;color:var(--muted);font-size:11px;}
+  .panel-body{padding:10px;}
+  .panel.collapsed .panel-body{display:none;}
+
+  .hintline{font-size:11.5px;color:var(--muted);line-height:1.5;margin:6px 0 0;}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .preset-group{margin:0 0 12px;}
+  .preset-group:last-child{margin-bottom:0;}
+  .preset-category{display:flex;align-items:center;gap:8px;margin:0 0 6px;color:var(--accent-hi);
+    font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;}
+  .preset-category::after{content:"";height:1px;background:var(--line-soft);flex:1;}
+  .preset-category small{color:var(--muted);font-size:9px;letter-spacing:0;font-weight:500;}
+  #layerList{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+  .layer-row{display:grid;grid-template-columns:24px 24px 1fr 24px;align-items:center;gap:4px;padding:4px;
+    border:1px solid var(--line);background:var(--field);border-radius:5px;cursor:pointer;}
+  .layer-row.active{border-color:var(--accent-hi);background:#34425a;}
+  .layer-row button{width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;padding:0;}
+  .layer-row button:hover{background:var(--widget);color:var(--text);}
+  .layer-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;}
+  .layer-name input{width:100%;padding:3px 5px;}
+  .layer-actions{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:6px;}
+  .layer-actions .btn{padding:6px 3px;}
+  .edit-note{padding:7px 8px;margin-top:7px;background:#232a35;border:1px solid #3f5679;border-radius:5px;color:#b9cbe5;font-size:11px;line-height:1.45;}
+  .panel.object-locked .panel-body{opacity:.48;pointer-events:none;}
+
+  .btn{background:var(--widget);color:var(--text);border:1px solid var(--line);padding:7px 10px;border-radius:5px;
+    cursor:pointer;font-size:12px;flex:1;text-align:center;white-space:nowrap;}
+  .btn:hover{background:var(--widget-hi);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.primary{background:var(--accent);border-color:var(--accent-hi);color:#fff;}
+  .btn.primary:hover{background:var(--accent-hi);}
+  .btn.wide{flex:none;width:100%;}
+
+  .field{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0;font-size:12px;}
+  .field > span{color:var(--muted);}
+  input[type="number"],input[type="text"],select,textarea{background:var(--field);color:var(--text);border:1px solid var(--line);
+    padding:6px 8px;font-size:12px;border-radius:5px;width:100%;font-family:inherit;}
+  .field input[type="number"]{width:104px;text-align:center;cursor:ew-resize;}
+  .field select{width:104px;}
+  input[type="number"]:hover{border-color:var(--accent);}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent-hi);cursor:text;}
+  select{cursor:pointer;}
+  textarea{resize:vertical;min-height:54px;font-family:ui-monospace,Consolas,monospace;font-size:11px;}
+  .check{display:flex;align-items:center;gap:8px;margin:7px 0;cursor:pointer;font-size:12px;}
+  .check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+
+  /* operator stack */
+  .op-addbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:10px;}
+  .op-addbar select{min-width:0;height:32px;}
+  .op-addbar .btn{flex:none;width:auto;height:32px;padding:0 14px;}
+  #stackList{display:flex;flex-direction:column;gap:7px;}
+  .op{border:1px solid var(--line);background:var(--field);border-radius:7px;overflow:hidden;}
+  .op.off{opacity:.45;}
+  .op-head{display:flex;align-items:center;gap:5px;padding:6px;background:var(--panel-head);min-height:38px;}
+  .op-head .nm{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--headers);cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .op-head button{background:var(--widget);border:1px solid var(--line);color:var(--text);border-radius:4px;
+    width:27px;height:27px;line-height:1;cursor:pointer;font-size:12px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .op-head button:hover{background:var(--widget-hi);}
+  .op-head button.dot{background:var(--accent);border-color:var(--accent-hi);color:#fff;}
+  .op-head button.del:hover{background:#511a1a;border-color:#6a2b2b;color:#ff9b9b;}
+  .op-body{padding:4px 8px 8px;}
+  .op.collapsed .op-body{display:none;}
+  .op .field{margin:5px 0;}
+  .op-randomise{margin-top:7px;}
+  .mirror-grid{display:flex;flex-direction:column;gap:5px;margin:7px 0 9px;}
+  .mirror-axis-row{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;}
+  .mirror-axis-row > span{color:var(--muted);font-size:12px;text-align:right;}
+  .mirror-axis-buttons{display:grid;grid-template-columns:repeat(2,1fr);}
+  .mirror-axis-buttons button{height:29px;background:var(--widget);color:var(--muted);border:1px solid var(--line);
+    cursor:pointer;font:inherit;font-size:12px;margin-left:-1px;}
+  .mirror-axis-buttons button:first-child{margin-left:0;border-radius:5px 0 0 5px;}
+  .mirror-axis-buttons button:last-child{border-radius:0 5px 5px 0;}
+  .mirror-axis-buttons button:hover:not(:disabled){background:var(--widget-hi);color:var(--text);}
+  .mirror-axis-buttons button.on{background:var(--accent);border-color:var(--accent-hi);color:#fff;position:relative;z-index:1;}
+  .mirror-axis-buttons button:disabled{opacity:.32;cursor:not-allowed;}
+
+  .small{font-size:11.5px;color:var(--muted);line-height:1.45;}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;}
+  .ok{color:#8fe6a8;} .danger{color:#ff8888;}
+  .kbd{font-family:ui-monospace,Consolas,monospace;background:var(--field);border:1px solid var(--line-soft);
+    border-radius:4px;padding:1px 6px;color:var(--accent-hi);font-size:11px;}
+
+  #help{position:absolute;inset:0;background:rgba(15,15,15,.95);display:none;padding:30px;overflow:auto;z-index:20;}
+  #help.show{display:block;}
+  #help h2{font-size:18px;color:var(--headers);margin-top:0;}
+  #help h3{font-size:13px;color:var(--accent-hi);margin:16px 0 4px;}
+  #help table{border-collapse:collapse;margin-top:4px;}
+  #help td{padding:3px 16px 3px 0;vertical-align:top;font-size:12.5px;}
+  #help .col{display:inline-block;vertical-align:top;margin-right:44px;}
+
+  ::-webkit-scrollbar{width:12px;height:12px;}
+  ::-webkit-scrollbar-thumb{background:#464646;border:3px solid var(--region);border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:#585858;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">Ren's&nbsp;Shaper&nbsp;<small>3</small></div>
+    <button id="undoBtn" class="topbtn" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button id="redoBtn" class="topbtn" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+    <button id="resetViewBtn" class="topbtn" title="Fit view (Home)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="M21 16v5h-5"/></svg></button>
+    <button id="shuffleBtn" class="topbtn hot" title="Shuffle the numbers in the current stack (R)">Shuffle</button>
+    <button id="surpriseBtn" class="topbtn" title="Throw away the stack and build a random one (Shift+R)">Surprise</button>
+    <div class="topspacer"></div>
+    <button id="fillBtn" class="topbtn" title="Toggle fill (F)">Fill</button>
+    <button id="ptsBtn" class="topbtn" title="Toggle points (P)">Points</button>
+    <button id="checkBtn" class="topbtn" title="Highlight crossings and overlapping runs">Check</button>
+    <button id="exportBtn" class="topbtn" title="Download SVG (E)">Export SVG</button>
+    <button id="helpBtn" class="topbtn" title="Help (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg></button>
+  </header>
+
+  <div id="body">
+
+    <nav id="toolbar">
+      <button class="tbtn seedbtn on" data-seed="circle" title="Circle"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg><span class="lbl">Circle</span></button>
+      <button class="tbtn seedbtn" data-seed="polygon" title="Polygon"><svg viewBox="0 0 24 24"><path d="M12 3l8 6-3 10H7L4 9z"/></svg><span class="lbl">Poly</span></button>
+      <button class="tbtn seedbtn" data-seed="star" title="Star"><svg viewBox="0 0 24 24"><path d="m12 3 2.6 5.6L21 9.5l-4.5 4.3 1.1 6.2L12 17l-5.6 3 1.1-6.2L3 9.5l6.4-.9z"/></svg><span class="lbl">Star</span></button>
+      <button class="tbtn seedbtn" data-seed="superellipse" title="Superellipse / squircle"><svg viewBox="0 0 24 24"><path d="M4 12c0-5 3-8 8-8s8 3 8 8-3 8-8 8-8-3-8-8z"/></svg><span class="lbl">Squircle</span></button>
+      <button class="tbtn seedbtn" data-seed="rect" title="Rounded rectangle"><svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="3"/></svg><span class="lbl">Rect</span></button>
+      <button class="tbtn seedbtn" data-seed="arc" title="Open arc"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 0 1 16 0"/></svg><span class="lbl">Arc</span></button>
+      <button class="tbtn seedbtn" data-seed="lancet" title="Pointed lancet arch"><svg viewBox="0 0 24 24"><path d="M5 21V13C5 8 8 5 12 2c4 3 7 6 7 11v8"/></svg><span class="lbl">Lancet</span></button>
+      <button class="tbtn seedbtn" data-seed="editable" title="Editable Bézier root"><svg viewBox="0 0 24 24"><path d="M4 18C7 4 17 4 20 18"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/></svg><span class="lbl">Edit</span></button>
+      <button class="tbtn seedbtn" data-seed="line" title="Straight line"><svg viewBox="0 0 24 24"><path d="M4 18 20 6"/></svg><span class="lbl">Line</span></button>
+      <div class="sep"></div>
+      <button class="tbtn seedbtn" data-seed="freehand" title="Draw freehand in the viewport"><svg viewBox="0 0 24 24"><path d="M3 17c4 0 4-10 8-10s4 10 8 10"/></svg><span class="lbl">Draw</span></button>
+      <button class="tbtn seedbtn" data-seed="svg" title="Paste an SVG path"><svg viewBox="0 0 24 24"><path d="M9 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1"/></svg><span class="lbl">SVG</span></button>
+    </nav>
+
+    <div id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="modeBadge">—</div>
+      <div id="hint"><span class="x" id="hintX">✕</span>
+        Build independent objects in the Layers panel. Convert any seed to an editable Bézier root, then stack operators per object.
+        Drag sideways on any number to scrub it.
+        <span class="kbd">R</span> shuffles the numbers, <span class="kbd">Shift+R</span> builds a random stack,
+        <span class="kbd">E</span> exports SVG for Blender. Wheel zooms, middle-drag pans.</div>
+      <div id="help"></div>
+    </div>
+
+    <aside id="props">
+
+      <section class="panel" id="panelLayers">
+        <div class="panel-head">Objects <span class="badge" id="layerBadge">1</span></div>
+        <div class="panel-body">
+          <div id="layerList"></div>
+          <div class="layer-actions">
+            <button class="btn" id="newLayer" title="New object">+</button>
+            <button class="btn" id="dupLayer" title="Duplicate object">⧉</button>
+            <button class="btn" id="layerUp" title="Move object up">↑</button>
+            <button class="btn" id="layerDown" title="Move object down">↓</button>
+            <button class="btn" id="delLayer" title="Delete object">×</button>
+          </div>
+          <p class="hintline">Objects evaluate independently. Select one to edit its root and operator stack.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="panelShape">
+        <div class="panel-head">Shape <span class="badge" id="shapeBadge">circle</span></div>
+        <div class="panel-body" id="shapeBody"></div>
+      </section>
+
+      <section class="panel" id="panelStack">
+        <div class="panel-head">Operators <span class="badge" id="stackBadge">0</span></div>
+        <div class="panel-body">
+          <div class="op-addbar">
+            <select id="addOpSel" aria-label="Operator to add"></select>
+            <button class="btn primary" id="addOp">Add</button>
+          </div>
+          <div id="stackList"></div>
+          <p class="hintline">Operators run top to bottom. Click a name to fold it; the dot toggles it off.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="panelPresets">
+        <div class="panel-head">Starters</div>
+        <div class="panel-body">
+          <div id="presetList"></div>
+          <p class="hintline">Loads a shape and a stack. Good places to start scrubbing from.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="panelExport">
+        <div class="panel-head">Export <span class="badge" id="exportBadge">—</span></div>
+        <div class="panel-body">
+          <div class="check"><input type="checkbox" id="exSmooth" checked><label for="exSmooth">Smooth to bezier curves</label></div>
+          <div class="field"><span>Curve tension</span><input type="number" id="exTension" value="1" min="0" max="2" step="0.05"></div>
+          <div class="field"><span>Simplify</span><input type="number" id="exSimplify" value="0.6" min="0" max="20" step="0.1"></div>
+          <div class="field"><span>Doc size (mm)</span><input type="number" id="exSize" value="200" min="5" max="2000" step="1"></div>
+          <div class="field"><span>Margin (mm)</span><input type="number" id="exMargin" value="4" min="0" max="200" step="1"></div>
+          <div class="check"><input type="checkbox" id="exFill" checked><label for="exFill">Write fill on closed paths</label></div>
+          <div class="row">
+            <button class="btn primary" id="dlSvg">Download SVG</button>
+            <button class="btn" id="copySvg">Copy</button>
+          </div>
+          <div style="height:6px"></div>
+          <div class="row">
+            <button class="btn" id="saveJson">Save recipe</button>
+            <button class="btn" id="loadJson">Load recipe</button>
+          </div>
+          <input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+          <p class="hintline">In Blender: <span class="mono">File ▸ Import ▸ Scalable Vector Graphics</span>. Each path
+            arrives as its own curve object. They import small, so scale up and set Geometry ▸ Extrude to give them depth.</p>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+
+  <footer id="statusbar">
+    <span id="status">Ready.</span>
+    <span class="topspacer" style="flex:1"></span>
+    <span id="stats" class="mono">—</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================ utils */
+const el = id => document.getElementById(id);
+const TAU = Math.PI*2;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const uid=p=>p+"_"+Math.random().toString(36).slice(2,8);
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function setStatus(m){ el("status").textContent=m; }
+
+/* value noise table, periodic so closed shapes stay seamless */
+function noiseTable(seed,n){ const r=mulberry32(seed*7919+13); const t=new Array(n); for(let i=0;i<n;i++) t[i]=r()*2-1; return t; }
+function noiseAt(t,u){ const n=t.length,x=u*n,i=Math.floor(x),f=x-i;
+  const a=t[((i%n)+n)%n], b=t[(((i+1)%n)+n)%n], s=f*f*(3-2*f); return a+(b-a)*s; }
+
+/* ============================================================ path helpers
+   a path is { pts:[{x,y}], closed:bool }                                    */
+function clonePaths(ps){ return ps.map(p=>({closed:p.closed, pts:p.pts.map(q=>({x:q.x,y:q.y}))})); }
+function centroid(p){ let x=0,y=0; for(const q of p.pts){x+=q.x;y+=q.y;} const n=p.pts.length||1; return {x:x/n,y:y/n}; }
+function allCentroid(ps){ let x=0,y=0,n=0; for(const p of ps) for(const q of p.pts){x+=q.x;y+=q.y;n++;} n=n||1; return {x:x/n,y:y/n}; }
+function bbox(ps){ let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+  for(const p of ps) for(const q of p.pts){ if(q.x<a)a=q.x; if(q.y<b)b=q.y; if(q.x>c)c=q.x; if(q.y>d)d=q.y; }
+  if(a===Infinity) return {minX:0,minY:0,maxX:1,maxY:1,w:1,h:1};
+  return {minX:a,minY:b,maxX:c,maxY:d,w:Math.max(c-a,1e-6),h:Math.max(d-b,1e-6)}; }
+function signedArea(p){ let s=0; const n=p.pts.length; for(let i=0;i<n;i++){ const a=p.pts[i],b=p.pts[(i+1)%n]; s+=a.x*b.y-b.x*a.y; } return s/2; }
+function pointCount(ps){ let n=0; for(const p of ps) n+=p.pts.length; return n; }
+
+/* ---- output budget --------------------------------------------------------
+   Repeat, stamp, stitch, interpolate and offset all multiply the set they are
+   given, so innocent numbers compound into six figures a couple of operators
+   down the stack. Path count needs its own ceiling as well as point count,
+   because every path becomes a separate curve object on Blender import.      */
+const LIMITS = { paths:5000, points:300000 };
+let budgetNote="";
+function noteBudget(label){ if(!budgetNote) budgetNote=label; }
+
+/* how many copies of the whole set are still affordable */
+function copyCap(ps, requested, label){
+  const byPaths  = Math.floor(LIMITS.paths  / Math.max(1, ps.length));
+  const byPoints = Math.floor(LIMITS.points / Math.max(1, pointCount(ps)));
+  const n = Math.max(1, Math.min(requested, byPaths, byPoints));
+  if(n < requested) noteBudget(label);
+  return n;
+}
+
+/* for operators that emit paths one at a time; O(1) per push, no rescanning */
+function emitter(initial, label){
+  const out = initial || [];
+  let pts = pointCount(out);
+  return {
+    out,
+    full(){ return out.length>=LIMITS.paths || pts>=LIMITS.points; },
+    push(path){
+      if(out.length>=LIMITS.paths || pts>=LIMITS.points){ noteBudget(label); return false; }
+      out.push(path); pts += path.pts.length; return true;
+    }
+  };
+}
+function pathLength(p){ let total=0,n=p.pts.length; for(let i=1;i<n;i++) total+=Math.hypot(p.pts[i].x-p.pts[i-1].x,p.pts[i].y-p.pts[i-1].y);
+  if(p.closed&&n>2) total+=Math.hypot(p.pts[0].x-p.pts[n-1].x,p.pts[0].y-p.pts[n-1].y); return total; }
+
+/* Spatially hashed preflight. Endpoint meetings are intentional construction
+   nodes; interior crossings and collinear shared runs are reported. */
+function findIntersections(ps,maxIssues=300){
+  const segs=[];
+  ps.forEach((p,pi)=>{
+    for(let i=0;i<p.pts.length-1;i++) segs.push({a:p.pts[i],b:p.pts[i+1],pi,si:i,n:p.pts.length-1,closed:p.closed});
+    if(p.closed&&p.pts.length>2) segs.push({a:p.pts[p.pts.length-1],b:p.pts[0],pi,si:p.pts.length-1,n:p.pts.length,closed:true});
+  });
+  if(!segs.length) return {points:[],truncated:false};
+  const bb=bbox(ps), cell=Math.max(8,Math.sqrt((bb.w*bb.h)/Math.max(80,segs.length/2)));
+  const bins=new Map(),tested=new Set(),points=[]; let truncated=false;
+  const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+  const meeting=(s,t)=>s.pi===t.pi&&(Math.abs(s.si-t.si)<=1||(s.closed&&Math.abs(s.si-t.si)>=s.n-1));
+  function hit(s,t){
+    const a=s.a,b=s.b,c=t.a,d=t.b, rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y;
+    const den=rx*sy-ry*sx, eps=1e-6;
+    if(Math.abs(den)<eps){
+      if(Math.abs(cross(a,b,c))>eps) return null;
+      const axis=Math.abs(rx)>=Math.abs(ry)?"x":"y";
+      const lo=Math.max(Math.min(a[axis],b[axis]),Math.min(c[axis],d[axis]));
+      const hi=Math.min(Math.max(a[axis],b[axis]),Math.max(c[axis],d[axis]));
+      if(hi-lo<0.2) return null;
+      const mid=(lo+hi)/2, u=Math.abs(b[axis]-a[axis])>eps?(mid-a[axis])/(b[axis]-a[axis]):0.5;
+      return {x:a.x+rx*u,y:a.y+ry*u,type:"overlap"};
+    }
+    const qx=c.x-a.x,qy=c.y-a.y, u=(qx*ry-qy*rx)/den, v=(qx*sy-qy*sx)/den;
+    if(v>1e-4&&v<0.9999&&u>1e-4&&u<0.9999) return {x:a.x+v*rx,y:a.y+v*ry,type:"crossing"};
+    return null;
+  }
+  for(let id=0;id<segs.length&&!truncated;id++){
+    const s=segs[id], x0=Math.floor(Math.min(s.a.x,s.b.x)/cell),x1=Math.floor(Math.max(s.a.x,s.b.x)/cell);
+    const y0=Math.floor(Math.min(s.a.y,s.b.y)/cell),y1=Math.floor(Math.max(s.a.y,s.b.y)/cell);
+    for(let x=x0;x<=x1&&!truncated;x++) for(let y=y0;y<=y1&&!truncated;y++){
+      const key=x+","+y, bucket=bins.get(key)||[];
+      for(const other of bucket){
+        const pair=other+"|"+id; if(tested.has(pair)) continue; tested.add(pair);
+        if(meeting(segs[other],s)) continue;
+        const p=hit(segs[other],s); if(p){ points.push(p); if(points.length>=maxIssues){truncated=true;break;} }
+      }
+      bucket.push(id); bins.set(key,bucket);
+    }
+  }
+  return {points,truncated};
+}
+
+/* outward unit normals, one per point */
+function normals(p){
+  const n=p.pts.length, out=new Array(n);
+  const sign = p.closed ? (signedArea(p)>0 ? 1 : -1) : 1;
+  for(let i=0;i<n;i++){
+    let a,b;
+    if(p.closed){ a=p.pts[(i-1+n)%n]; b=p.pts[(i+1)%n]; }
+    else { a=p.pts[Math.max(0,i-1)]; b=p.pts[Math.min(n-1,i+1)]; }
+    let tx=b.x-a.x, ty=b.y-a.y; const L=Math.hypot(tx,ty)||1; tx/=L; ty/=L;
+    out[i]={x:ty*sign, y:-tx*sign};
+  }
+  return out;
+}
+
+/* cumulative arclength, normalised 0..1 */
+function arcParams(p){
+  const n=p.pts.length, d=new Array(n).fill(0); let total=0;
+  for(let i=1;i<n;i++){ total+=Math.hypot(p.pts[i].x-p.pts[i-1].x, p.pts[i].y-p.pts[i-1].y); d[i]=total; }
+  if(p.closed) total+=Math.hypot(p.pts[0].x-p.pts[n-1].x, p.pts[0].y-p.pts[n-1].y);
+  if(total<=0) return d.map((_,i)=>i/Math.max(1,n));
+  return d.map(v=>v/total);
+}
+
+function resamplePath(p,count){
+  const pts=p.pts; if(pts.length<2) return p;
+  const loop=p.closed, seq=loop? pts.concat([pts[0]]) : pts;
+  const segs=[]; let total=0;
+  for(let i=1;i<seq.length;i++){ const L=Math.hypot(seq[i].x-seq[i-1].x, seq[i].y-seq[i-1].y); segs.push(L); total+=L; }
+  if(total<=0) return p;
+  const n=Math.max(3,Math.round(count));
+  const step= loop ? total/n : total/(n-1);
+  const out=[]; let si=0, acc=0;
+  for(let k=0;k<n;k++){
+    let target=k*step;
+    while(si<segs.length-1 && acc+segs[si]<target){ acc+=segs[si]; si++; }
+    const t = segs[si]>0 ? (target-acc)/segs[si] : 0;
+    const a=seq[si], b=seq[si+1]||seq[si];
+    out.push({x:lerp(a.x,b.x,clamp(t,0,1)), y:lerp(a.y,b.y,clamp(t,0,1))});
+  }
+  return {pts:out, closed:loop};
+}
+
+function transformPath(p,fn){ return {closed:p.closed, pts:p.pts.map(fn)}; }
+function rotatePt(q,c,ang,sx,sy){
+  const co=Math.cos(ang), si=Math.sin(ang);
+  const x=(q.x-c.x)*sx, y=(q.y-c.y)*sy;
+  return {x:c.x+x*co-y*si, y:c.y+x*si+y*co};
+}
+
+function defaultEditable(){
+  return {closed:false, anchors:[
+    {x:-180,y:80,hin:{x:-180,y:80},hout:{x:-120,y:-80},mode:"smooth"},
+    {x:0,y:-120,hin:{x:-70,y:-120},hout:{x:70,y:-120},mode:"smooth"},
+    {x:180,y:80,hin:{x:120,y:-80},hout:{x:180,y:80},mode:"smooth"}
+  ]};
+}
+function cubicPoint(a,b,t){
+  const u=1-t,p0=a,p1=a.hout||a,p2=b.hin||b,p3=b;
+  return {x:u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x,
+          y:u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y};
+}
+function sampleEditable(root,res){
+  if(!root||!root.anchors||root.anchors.length<2) return [];
+  const A=root.anchors,n=A.length,segs=root.closed?n:n-1,each=Math.max(3,Math.ceil(res/segs)),pts=[];
+  for(let i=0;i<segs;i++){ const a=A[i],b=A[(i+1)%n];
+    for(let k=0;k<each;k++) pts.push(cubicPoint(a,b,k/each));
+  }
+  if(!root.closed) pts.push({x:A[n-1].x,y:A[n-1].y});
+  return [{pts,closed:!!root.closed}];
+}
+
+/* ============================================================ seeds */
+const SEEDS = {
+  circle:{ label:"Circle", params:[
+    {k:"r",label:"Radius",min:5,max:600,step:1,def:150},
+    {k:"res",label:"Points",min:8,max:1200,step:1,def:220,int:true}],
+    fn:p=>{ const pts=[]; for(let i=0;i<p.res;i++){ const a=i/p.res*TAU; pts.push({x:Math.cos(a)*p.r,y:Math.sin(a)*p.r}); } return [{pts,closed:true}]; } },
+
+  polygon:{ label:"Polygon", params:[
+    {k:"sides",label:"Sides",min:3,max:60,step:1,def:6,int:true},
+    {k:"r",label:"Radius",min:5,max:600,step:1,def:150},
+    {k:"rot",label:"Rotate",min:-180,max:180,step:1,def:0},
+    {k:"res",label:"Points/side",min:1,max:120,step:1,def:20,int:true}],
+    fn:p=>{ const pts=[]; const off=p.rot*Math.PI/180;
+      for(let i=0;i<p.sides;i++){
+        const a0=off+i/p.sides*TAU, a1=off+(i+1)/p.sides*TAU;
+        const A={x:Math.cos(a0)*p.r,y:Math.sin(a0)*p.r}, B={x:Math.cos(a1)*p.r,y:Math.sin(a1)*p.r};
+        for(let j=0;j<p.res;j++){ const t=j/p.res; pts.push({x:lerp(A.x,B.x,t),y:lerp(A.y,B.y,t)}); }
+      } return [{pts,closed:true}]; } },
+
+  star:{ label:"Star", params:[
+    {k:"points",label:"Points",min:3,max:60,step:1,def:5,int:true},
+    {k:"r",label:"Outer",min:5,max:600,step:1,def:170},
+    {k:"inner",label:"Inner %",min:1,max:150,step:1,def:45},
+    {k:"rot",label:"Rotate",min:-180,max:180,step:1,def:-90},
+    {k:"res",label:"Points/edge",min:1,max:120,step:1,def:14,int:true}],
+    fn:p=>{ const verts=[], off=p.rot*Math.PI/180, ri=p.r*p.inner/100, n=p.points*2;
+      for(let i=0;i<n;i++){ const a=off+i/n*TAU, rr=(i%2===0)?p.r:ri; verts.push({x:Math.cos(a)*rr,y:Math.sin(a)*rr}); }
+      const pts=[]; for(let i=0;i<n;i++){ const A=verts[i],B=verts[(i+1)%n];
+        for(let j=0;j<p.res;j++){ const t=j/p.res; pts.push({x:lerp(A.x,B.x,t),y:lerp(A.y,B.y,t)}); } }
+      return [{pts,closed:true}]; } },
+
+  superellipse:{ label:"Squircle", params:[
+    {k:"rx",label:"Width",min:5,max:600,step:1,def:170},
+    {k:"ry",label:"Height",min:5,max:600,step:1,def:170},
+    {k:"n",label:"Exponent",min:0.2,max:8,step:0.05,def:3},
+    {k:"res",label:"Points",min:8,max:1200,step:1,def:260,int:true}],
+    fn:p=>{ const pts=[];
+      for(let i=0;i<p.res;i++){ const a=i/p.res*TAU, ca=Math.cos(a), sa=Math.sin(a);
+        pts.push({ x:Math.sign(ca)*Math.pow(Math.abs(ca),2/p.n)*p.rx,
+                   y:Math.sign(sa)*Math.pow(Math.abs(sa),2/p.n)*p.ry }); }
+      return [{pts,closed:true}]; } },
+
+  rect:{ label:"Rectangle", params:[
+    {k:"w",label:"Width",min:5,max:900,step:1,def:280},
+    {k:"h",label:"Height",min:5,max:900,step:1,def:180},
+    {k:"round",label:"Corner",min:0,max:400,step:1,def:24},
+    {k:"res",label:"Points",min:16,max:1200,step:1,def:240,int:true}],
+    fn:p=>{ const w=p.w/2,h=p.h/2,r=Math.min(p.round,Math.min(w,h));
+      const corners=[[w-r,h-r,0],[-w+r,h-r,Math.PI/2],[-w+r,-h+r,Math.PI],[w-r,-h+r,-Math.PI/2]];
+      const raw=[];
+      for(const [cx,cy,a0] of corners){
+        const steps=Math.max(2,Math.round(p.res/8));
+        for(let i=0;i<=steps;i++){ const a=a0+ (i/steps)*(Math.PI/2);
+          raw.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r}); }
+      }
+      return [resamplePath({pts:raw,closed:true}, p.res)]; } },
+
+  arc:{ label:"Arc", params:[
+    {k:"r",label:"Radius",min:5,max:600,step:1,def:180},
+    {k:"sweep",label:"Sweep",min:5,max:359,step:1,def:180},
+    {k:"start",label:"Start",min:-180,max:180,step:1,def:180},
+    {k:"res",label:"Points",min:4,max:1200,step:1,def:160,int:true}],
+    fn:p=>{ const pts=[], a0=p.start*Math.PI/180, sw=p.sweep*Math.PI/180;
+      for(let i=0;i<p.res;i++){ const a=a0+ i/(p.res-1)*sw; pts.push({x:Math.cos(a)*p.r,y:Math.sin(a)*p.r}); }
+      return [{pts,closed:false}]; } },
+
+  lancet:{ label:"Lancet", params:[
+    {k:"w",label:"Width",min:20,max:900,step:1,def:220},
+    {k:"h",label:"Height",min:20,max:1200,step:1,def:380},
+    {k:"shoulder",label:"Shoulder",min:0.05,max:0.95,step:0.01,def:0.62},
+    {k:"res",label:"Points",min:12,max:1200,step:2,def:260,int:true}],
+    fn:p=>{ const pts=[],n=Math.max(6,Math.floor(p.res/2)),left={x:-p.w/2,y:p.h/2},tip={x:0,y:-p.h/2},
+      right={x:p.w/2,y:p.h/2},c1={x:-p.w/2,y:p.h/2-p.h*p.shoulder},c2={x:p.w/2,y:p.h/2-p.h*p.shoulder};
+      for(let i=0;i<n;i++){ const t=i/n,u=1-t; pts.push({x:u*u*left.x+2*u*t*c1.x+t*t*tip.x,y:u*u*left.y+2*u*t*c1.y+t*t*tip.y}); }
+      for(let i=0;i<=n;i++){ const t=i/n,u=1-t; pts.push({x:u*u*tip.x+2*u*t*c2.x+t*t*right.x,y:u*u*tip.y+2*u*t*c2.y+t*t*right.y}); }
+      return [{pts,closed:false}]; } },
+
+  editable:{ label:"Editable Bézier", params:[
+    {k:"closed",label:"Closed",type:"bool",def:false},
+    {k:"res",label:"Preview points",min:12,max:1600,step:1,def:260,int:true}],
+    fn:p=>{ if(state.editable) state.editable.closed=!!p.closed; return sampleEditable(state.editable,p.res); } },
+
+  line:{ label:"Line", params:[
+    {k:"len",label:"Length",min:5,max:900,step:1,def:320},
+    {k:"ang",label:"Angle",min:-180,max:180,step:1,def:0},
+    {k:"res",label:"Points",min:2,max:1200,step:1,def:120,int:true}],
+    fn:p=>{ const pts=[], a=p.ang*Math.PI/180, hx=Math.cos(a)*p.len/2, hy=Math.sin(a)*p.len/2;
+      for(let i=0;i<p.res;i++){ const t=i/(p.res-1); pts.push({x:lerp(-hx,hx,t),y:lerp(-hy,hy,t)}); }
+      return [{pts,closed:false}]; } },
+
+  freehand:{ label:"Freehand", params:[
+    {k:"closed",label:"Close it",type:"bool",def:true},
+    {k:"res",label:"Points",min:8,max:1200,step:1,def:220,int:true}],
+    fn:p=>{ const raw=state.freehand||[]; if(raw.length<3) return [];
+      return [resamplePath({pts:raw.map(q=>({x:q.x,y:q.y})),closed:!!p.closed}, p.res)]; } },
+
+  svg:{ label:"SVG path", params:[
+    {k:"closed",label:"Close it",type:"bool",def:true},
+    {k:"res",label:"Points",min:8,max:2000,step:1,def:300,int:true},
+    {k:"scale",label:"Scale",min:0.05,max:20,step:0.05,def:1}],
+    fn:p=>{ const paths=sampleSvg(state.svgSource||"", p.res); if(!paths.length) return [];
+      const bb=bbox(paths), cx=(bb.minX+bb.maxX)/2, cy=(bb.minY+bb.maxY)/2;
+      const k=p.scale*300/Math.max(bb.w,bb.h);
+      return paths.map(pa=>({closed:!!p.closed, pts:pa.pts.map(q=>({x:(q.x-cx)*k, y:(q.y-cy)*k}))})); } }
+};
+
+/* sample any SVG path data using the browser's own path maths */
+let svgHost=null;
+function sampleSvg(src,res){
+  if(!src.trim()) return [];
+  if(!svgHost){ svgHost=document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svgHost.setAttribute("width","0"); svgHost.setAttribute("height","0");
+    svgHost.style.cssText="position:absolute;left:-9999px;top:0;"; document.body.appendChild(svgHost); }
+  // accept either raw "d" data or a whole <svg> blob
+  let ds=[];
+  if(/<\s*(svg|path)/i.test(src)){
+    const m=src.match(/\sd\s*=\s*"([^"]+)"/gi)||[];
+    ds=m.map(s=>s.replace(/^\sd\s*=\s*"/i,"").replace(/"$/,""));
+  } else ds=[src];
+  const out=[];
+  for(const d of ds){
+    if(!d.trim()) continue;
+    const node=document.createElementNS("http://www.w3.org/2000/svg","path");
+    node.setAttribute("d",d); svgHost.appendChild(node);
+    let L=0; try{ L=node.getTotalLength(); }catch(e){ L=0; }
+    if(L>0){
+      const n=Math.max(8,Math.round(res)), pts=[];
+      for(let i=0;i<n;i++){ const pt=node.getPointAtLength(i/n*L); pts.push({x:pt.x,y:pt.y}); }
+      out.push({pts,closed:true});
+    }
+    svgHost.removeChild(node);
+  }
+  return out;
+}
+
+function clipPathsToMirrorSide(ps,axis,pos,positive){
+  const value=q=>axis==="x"?q.x:q.y;
+  const inside=q=>positive?value(q)>=pos-1e-7:value(q)<=pos+1e-7;
+  const cross=(a,b)=>{
+    const av=value(a),bv=value(b),t=(pos-av)/((bv-av)||1e-12);
+    return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+  };
+  const out=[];
+  for(const path of ps){
+    const src=path.pts;if(src.length<2)continue;
+    if(path.closed){
+      const pts=[];let prev=src.at(-1),prevIn=inside(prev);
+      for(const cur of src){const curIn=inside(cur);
+        if(curIn!==prevIn)pts.push(cross(prev,cur));
+        if(curIn)pts.push({x:cur.x,y:cur.y});
+        prev=cur;prevIn=curIn;
+      }
+      if(pts.length>=3)out.push({closed:true,pts});
+    }else{
+      let run=[];
+      for(let i=0;i<src.length-1;i++){
+        const a=src[i],b=src[i+1],aIn=inside(a),bIn=inside(b);
+        if(aIn&&!run.length)run.push({x:a.x,y:a.y});
+        if(aIn&&bIn)run.push({x:b.x,y:b.y});
+        else if(aIn&&!bIn){run.push(cross(a,b));if(run.length>=2)out.push({closed:false,pts:run});run=[];}
+        else if(!aIn&&bIn){run=[cross(a,b),{x:b.x,y:b.y}];}
+      }
+      if(run.length>=2)out.push({closed:false,pts:run});
+    }
+  }
+  return out;
+}
+function mirroredPaths(ps,axis,pos){
+  return ps.map(a=>({closed:a.closed,pts:a.pts.map(q=>
+    axis==="x"?{x:2*pos-q.x,y:q.y}:{x:q.x,y:2*pos-q.y}).reverse()}));
+}
+
+/* ============================================================ operators */
+const OPS = {
+  resample:{ label:"Resample", params:[{k:"n",label:"Points",min:8,max:2000,step:1,def:240,int:true}],
+    fn:(ps,p)=>ps.map(a=>resamplePath(a,p.n)) },
+
+  smooth:{ label:"Smooth", params:[
+    {k:"amt",label:"Amount",min:0,max:1,step:0.02,def:0.5},
+    {k:"it",label:"Iterations",min:1,max:30,step:1,def:4,int:true}],
+    fn:(ps,p)=>ps.map(a=>{ let pts=a.pts.map(q=>({x:q.x,y:q.y})); const n=pts.length;
+      for(let k=0;k<p.it;k++){ const nx=pts.map((q,i)=>{
+        if(!a.closed&&(i===0||i===n-1)) return {x:q.x,y:q.y};
+        const A=pts[(i-1+n)%n], B=pts[(i+1)%n];
+        return {x:lerp(q.x,(A.x+B.x)/2,p.amt), y:lerp(q.y,(A.y+B.y)/2,p.amt)}; }); pts=nx; }
+      return {pts,closed:a.closed}; }) },
+
+  chaikin:{ label:"Round corners", params:[{k:"it",label:"Iterations",min:1,max:6,step:1,def:2,int:true}],
+    fn:(ps,p)=>ps.map(a=>{ let pts=a.pts;
+      for(let k=0;k<p.it;k++){ if(pts.length>4000) break; const out=[], n=pts.length, last=a.closed?n:n-1;
+        if(!a.closed) out.push(pts[0]);
+        for(let i=0;i<last;i++){ const A=pts[i], B=pts[(i+1)%n];
+          out.push({x:A.x*0.75+B.x*0.25, y:A.y*0.75+B.y*0.25});
+          out.push({x:A.x*0.25+B.x*0.75, y:A.y*0.25+B.y*0.75}); }
+        if(!a.closed) out.push(pts[n-1]);
+        pts=out; }
+      return {pts,closed:a.closed}; }) },
+
+  wave:{ label:"Wave", params:[
+    {k:"amp",label:"Amplitude",min:-300,max:300,step:0.5,def:16},
+    {k:"cycles",label:"Cycles",min:0,max:120,step:1,def:9,int:true},
+    {k:"phase",label:"Phase",min:0,max:360,step:1,def:0}],
+    fn:(ps,p)=>ps.map(a=>{ const nrm=normals(a), t=arcParams(a), ph=p.phase*Math.PI/180;
+      return {closed:a.closed, pts:a.pts.map((q,i)=>{ const s=Math.sin(t[i]*p.cycles*TAU+ph)*p.amp;
+        return {x:q.x+nrm[i].x*s, y:q.y+nrm[i].y*s}; })}; }) },
+
+  roughen:{ label:"Roughen", params:[
+    {k:"amp",label:"Amplitude",min:0,max:300,step:0.5,def:14},
+    {k:"freq",label:"Frequency",min:2,max:120,step:1,def:14,int:true},
+    {k:"seed",label:"Seed",min:0,max:999,step:1,def:1,int:true}],
+    fn:(ps,p)=>ps.map((a,ix)=>{ const nrm=normals(a), t=arcParams(a), tab=noiseTable(p.seed+ix*31,Math.max(2,p.freq));
+      return {closed:a.closed, pts:a.pts.map((q,i)=>{ const s=noiseAt(tab,t[i])*p.amp;
+        return {x:q.x+nrm[i].x*s, y:q.y+nrm[i].y*s}; })}; }) },
+
+  lobes:{ label:"Lobes", params:[
+    {k:"count",label:"Count",min:1,max:60,step:1,def:6,int:true},
+    {k:"amp",label:"Amount",min:-1,max:1,step:0.01,def:0.28},
+    {k:"phase",label:"Phase",min:0,max:360,step:1,def:0},
+    {k:"sharp",label:"Sharpness",min:0.2,max:6,step:0.05,def:1}],
+    fn:(ps,p)=>{ const c=allCentroid(ps), ph=p.phase*Math.PI/180;
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>{
+        const dx=q.x-c.x, dy=q.y-c.y, ang=Math.atan2(dy,dx), r=Math.hypot(dx,dy);
+        let w=Math.sin(ang*p.count+ph); w=Math.sign(w)*Math.pow(Math.abs(w),p.sharp);
+        const rr=r*(1+p.amp*w);
+        return {x:c.x+Math.cos(ang)*rr, y:c.y+Math.sin(ang)*rr}; })})); } },
+
+  twist:{ label:"Twist", params:[{k:"deg",label:"Degrees",min:-1080,max:1080,step:1,def:70}],
+    fn:(ps,p)=>{ const c=allCentroid(ps); let max=1e-6;
+      for(const a of ps) for(const q of a.pts) max=Math.max(max,Math.hypot(q.x-c.x,q.y-c.y));
+      const k=p.deg*Math.PI/180;
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>{
+        const d=Math.hypot(q.x-c.x,q.y-c.y)/max; return rotatePt(q,c,k*d,1,1); })})); } },
+
+  bulge:{ label:"Bulge", params:[
+    {k:"amp",label:"Amount",min:-1,max:2,step:0.01,def:0.4},
+    {k:"power",label:"Falloff",min:0.2,max:8,step:0.05,def:2}],
+    fn:(ps,p)=>{ const c=allCentroid(ps); let max=1e-6;
+      for(const a of ps) for(const q of a.pts) max=Math.max(max,Math.hypot(q.x-c.x,q.y-c.y));
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>{
+        const dx=q.x-c.x, dy=q.y-c.y, d=Math.hypot(dx,dy)/max;
+        const f=1+p.amp*Math.pow(1-clamp(d,0,1),p.power);
+        return {x:c.x+dx*f, y:c.y+dy*f}; })})); } },
+
+  taper:{ label:"Taper", params:[
+    {k:"amt",label:"Amount",min:-1,max:2,step:0.01,def:0.6},
+    {k:"axis",label:"Along",type:"opt",opts:["y","x"],def:"y"}],
+    fn:(ps,p)=>{ const bb=bbox(ps), vert=p.axis==="y";
+      const lo=vert?bb.minY:bb.minX, span=vert?bb.h:bb.w, cx=(bb.minX+bb.maxX)/2, cy=(bb.minY+bb.maxY)/2;
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>{
+        const t=(((vert?q.y:q.x)-lo)/span);
+        const f=1+p.amt*(t-0.5)*2;
+        return vert? {x:cx+(q.x-cx)*f, y:q.y} : {x:q.x, y:cy+(q.y-cy)*f}; })})); } },
+
+  skew:{ label:"Skew", params:[
+    {k:"amt",label:"Amount",min:-3,max:3,step:0.01,def:0.4},
+    {k:"axis",label:"Along",type:"opt",opts:["y","x"],def:"y"}],
+    fn:(ps,p)=>{ const bb=bbox(ps), cx=(bb.minX+bb.maxX)/2, cy=(bb.minY+bb.maxY)/2;
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>
+        p.axis==="y" ? {x:q.x+(q.y-cy)*p.amt, y:q.y} : {x:q.x, y:q.y+(q.x-cx)*p.amt} )})); } },
+
+  offset:{ label:"Offset", params:[
+    {k:"dist",label:"Distance",min:-300,max:300,step:0.5,def:16},
+    {k:"copies",label:"Copies",min:1,max:60,step:1,def:1,int:true},
+    {k:"keep",label:"Keep original",type:"bool",def:false}],
+    fn:(ps,p)=>{ const E=emitter([], "offset");
+      for(const a of ps){
+        if(p.keep) E.push(a);
+        const nrm=normals(a);
+        for(let c=1;c<=p.copies;c++){ const d=p.dist*c;
+          if(!E.push({closed:a.closed, pts:a.pts.map((q,i)=>({x:q.x+nrm[i].x*d, y:q.y+nrm[i].y*d}))})) break; }
+        if(E.full()) break;
+      } return E.out; } },
+
+  jitter:{ label:"Jitter", params:[
+    {k:"amt",label:"Amount",min:0,max:200,step:0.5,def:6},
+    {k:"seed",label:"Seed",min:0,max:999,step:1,def:1,int:true}],
+    fn:(ps,p)=>{ const r=mulberry32(p.seed*104729+7);
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>
+        ({x:q.x+(r()*2-1)*p.amt, y:q.y+(r()*2-1)*p.amt}))})); } },
+
+  quantize:{ label:"Quantize", params:[
+    {k:"grid",label:"Grid",min:1,max:300,step:1,def:24},
+    {k:"stair",label:"Keep steps",type:"bool",def:true}],
+    fn:(ps,p)=>ps.map(a=>{ const g=Math.max(0.5,p.grid);
+      let pts=a.pts.map(q=>({x:Math.round(q.x/g)*g, y:Math.round(q.y/g)*g}));
+      if(p.stair){ const out=[]; for(const q of pts){ const L=out[out.length-1];
+        if(!L || L.x!==q.x || L.y!==q.y) out.push(q); } pts=out.length>2?out:pts; }
+      return {pts,closed:a.closed}; }) },
+
+  radial:{ label:"Radial repeat", pivot:{mode:"pivot",x:"px",y:"py"}, params:[
+    {k:"count",label:"Count",min:1,max:120,step:1,def:6,int:true},
+    {k:"radius",label:"Push out",min:-600,max:600,step:1,def:0},
+    {k:"spin",label:"Spin each",min:-360,max:360,step:1,def:0},
+    {k:"scale",label:"Scale step",min:0.05,max:2,step:0.01,def:1},
+    {k:"arc",label:"Arc",min:5,max:360,step:1,def:360},
+    {k:"pivot",label:"Pivot",type:"opt",opts:["centre","custom"],def:"centre"},
+    {k:"px",label:"Pivot X",min:-4000,max:4000,step:1,def:0},
+    {k:"py",label:"Pivot Y",min:-4000,max:4000,step:1,def:0}],
+    fn:(ps,p)=>{ const c=(p.pivot==="custom")?{x:p.px,y:p.py}:allCentroid(ps), out=[];
+      const n=copyCap(ps, p.count, "repeat");
+      for(let i=0;i<n;i++){
+        const a=(i/(p.arc>=360?n:Math.max(1,n-1)))*(p.arc*Math.PI/180);
+        const s=Math.pow(p.scale,i), push=p.radius*i;
+        const spin=(p.spin*Math.PI/180)*i;
+        for(const path of ps){
+          out.push({closed:path.closed, pts:path.pts.map(q=>{
+            let r=rotatePt(q,c,spin,s,s);          // local spin + scale
+            r=rotatePt(r,c,a,1,1);                 // place around the ring
+            return {x:r.x+Math.cos(a)*push, y:r.y+Math.sin(a)*push}; })});
+        }
+      } return out; } },
+
+  linear:{ label:"Array", params:[
+    {k:"count",label:"Count",min:1,max:120,step:1,def:5,int:true},
+    {k:"dx",label:"Step X",min:-800,max:800,step:1,def:150},
+    {k:"dy",label:"Step Y",min:-800,max:800,step:1,def:0},
+    {k:"scale",label:"Scale step",min:0.05,max:2,step:0.01,def:1},
+    {k:"rot",label:"Rotate step",min:-180,max:180,step:1,def:0}],
+    fn:(ps,p)=>{ const c=allCentroid(ps), out=[];
+      const n=copyCap(ps, p.count, "repeat");
+      for(let i=0;i<n;i++){ const s=Math.pow(p.scale,i), ang=p.rot*Math.PI/180*i;
+        for(const path of ps){
+          out.push({closed:path.closed, pts:path.pts.map(q=>{
+            const r=rotatePt(q,c,ang,s,s);
+            return {x:r.x+p.dx*i, y:r.y+p.dy*i}; })}); }
+      } return out; } },
+
+  mirror:{ label:"Mirror", params:[
+    {k:"axisX",label:"Axis X",type:"bool",def:true},
+    {k:"axisY",label:"Axis Y",type:"bool",def:false},
+    {k:"bisectX",label:"Bisect X",type:"bool",def:false},
+    {k:"bisectY",label:"Bisect Y",type:"bool",def:false},
+    {k:"flipX",label:"Flip X",type:"bool",def:false},
+    {k:"flipY",label:"Flip Y",type:"bool",def:false},
+    {k:"posX",label:"Position X",min:-800,max:800,step:1,def:0},
+    {k:"posY",label:"Position Y",min:-800,max:800,step:1,def:0},
+    {k:"keep",label:"Keep original",type:"bool",def:true}],
+    fn:(ps,p)=>{
+      const axisX=p.axisX!==undefined?p.axisX:p.axis==="x",axisY=p.axisY!==undefined?p.axisY:p.axis==="y";
+      const posX=p.posX!==undefined?p.posX:(p.axis==="x"?(p.pos||0):0);
+      const posY=p.posY!==undefined?p.posY:(p.axis==="y"?(p.pos||0):0);
+      let base=clonePaths(ps);
+      if(axisX&&p.bisectX)base=clipPathsToMirrorSide(base,"x",posX,!!p.flipX);
+      if(axisY&&p.bisectY)base=clipPathsToMirrorSide(base,"y",posY,!!p.flipY);
+      const out=p.keep===false?[]:clonePaths(base);
+      if(axisX)out.push(...mirroredPaths(base,"x",posX));
+      if(axisY)out.push(...mirroredPaths(base,"y",posY));
+      if(axisX&&axisY)out.push(...mirroredPaths(mirroredPaths(base,"x",posX),"y",posY));
+      return out.length?out:base;
+    } },
+
+  stamp:{ label:"Stamp along path", params:[
+    {k:"shape",label:"Primitive",type:"opt",opts:["brick","diamond","triangle","hexagon","circle"],def:"brick"},
+    {k:"spacing",label:"Spacing",min:3,max:300,step:1,def:42},
+    {k:"size",label:"Size",min:1,max:240,step:1,def:22},
+    {k:"aspect",label:"Aspect",min:0.1,max:6,step:0.05,def:1.8},
+    {k:"rotate",label:"Rotate",min:-180,max:180,step:1,def:0},
+    {k:"normal",label:"Normal offset",min:-300,max:300,step:1,def:0},
+    {k:"alternate",label:"Alternate 90°",type:"bool",def:false},
+    {k:"keep",label:"Keep guide",type:"bool",def:false}],
+    fn:(ps,p)=>{ const E=emitter(p.keep?clonePaths(ps):[], "stamp");
+      for(const a of ps){
+        if(E.full()) break;
+        const count=Math.max(a.closed?3:2,Math.min(1000,Math.round(pathLength(a)/Math.max(1,p.spacing))));
+        const guide=resamplePath(a,count), nr=normals(guide), n=guide.pts.length;
+        for(let i=0;i<n;i++){
+          const q=guide.pts[i], A=guide.pts[a.closed?(i-1+n)%n:Math.max(0,i-1)],
+                B=guide.pts[a.closed?(i+1)%n:Math.min(n-1,i+1)];
+          const base=Math.atan2(B.y-A.y,B.x-A.x)+(p.rotate+(p.alternate&&i%2?90:0))*Math.PI/180;
+          const cx=q.x+nr[i].x*p.normal, cy=q.y+nr[i].y*p.normal;
+          let verts=[];
+          if(p.shape==="brick"){
+            const rx=p.size*p.aspect/2, ry=p.size/2;
+            verts=[[-rx,-ry],[rx,-ry],[rx,ry],[-rx,ry]];
+          }else{
+            const sides=p.shape==="triangle"?3:p.shape==="hexagon"?6:p.shape==="diamond"?4:18;
+            const rot=p.shape==="diamond"?Math.PI/4:-Math.PI/2;
+            for(let k=0;k<sides;k++){ const ang=rot+k/sides*TAU;
+              verts.push([Math.cos(ang)*p.size*(p.shape==="circle"?1:p.aspect),Math.sin(ang)*p.size]); }
+          }
+          const co=Math.cos(base),si=Math.sin(base);
+          if(!E.push({closed:true,pts:verts.map(v=>({x:cx+v[0]*co-v[1]*si,y:cy+v[0]*si+v[1]*co}))})) break;
+        }
+      }
+      return E.out.length?E.out:ps; } },
+
+  stitch:{ label:"Stitch between paths", params:[
+    {k:"count",label:"Bridges",min:2,max:400,step:1,def:24,int:true},
+    {k:"shift",label:"End shift",min:-100,max:100,step:1,def:0,int:true},
+    {k:"bow",label:"Bow",min:-300,max:300,step:1,def:0},
+    {k:"pair",label:"Pairing",type:"opt",opts:["neighbours","first to all"],def:"neighbours"},
+    {k:"keep",label:"Keep source",type:"bool",def:true}],
+    fn:(ps,p)=>{ if(ps.length<2) return ps; const E=emitter(p.keep?clonePaths(ps):[], "stitch");
+      const pairs=[]; if(p.pair==="first to all"){ for(let i=1;i<ps.length;i++) pairs.push([ps[0],ps[i]]); }
+      else for(let i=0;i<ps.length-1;i+=2) pairs.push([ps[i],ps[i+1]]);
+      for(const pair of pairs){
+        if(E.full()) break;
+        const A=resamplePath(pair[0],p.count),B=resamplePath(pair[1],p.count),n=Math.min(A.pts.length,B.pts.length);
+        for(let i=0;i<n;i++){
+          const j=((i+p.shift)%n+n)%n,a=A.pts[i],b=B.pts[j],mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+          const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+          if(!E.push({closed:false,pts:[{x:a.x,y:a.y},{x:mx-dy/L*p.bow,y:my+dx/L*p.bow},{x:b.x,y:b.y}]})) break;
+        }
+      }
+      return E.out.length?E.out:ps; } },
+
+  interpolate:{ label:"Interpolate paths", params:[
+    {k:"copies",label:"Between",min:1,max:80,step:1,def:5,int:true},
+    {k:"points",label:"Points",min:8,max:1200,step:1,def:180,int:true},
+    {k:"bias",label:"Bias",min:-3,max:3,step:0.05,def:0},
+    {k:"reverse",label:"Reverse second",type:"bool",def:false},
+    {k:"keep",label:"Keep source",type:"bool",def:true}],
+    fn:(ps,p)=>{ if(ps.length<2) return ps; const E=emitter(p.keep?clonePaths(ps):[], "interpolate");
+      for(let z=0;z<ps.length-1;z+=2){
+        if(E.full()) break;
+        const A=resamplePath(ps[z],p.points),B=resamplePath(ps[z+1],p.points);
+        const bp=p.reverse?B.pts.slice().reverse():B.pts,n=Math.min(A.pts.length,bp.length);
+        for(let k=1;k<=p.copies;k++){
+          let t=k/(p.copies+1); t=p.bias===0?t:(p.bias>0?Math.pow(t,1+p.bias):1-Math.pow(1-t,1-p.bias));
+          const pts=[]; for(let i=0;i<n;i++) pts.push({x:lerp(A.pts[i].x,bp[i].x,t),y:lerp(A.pts[i].y,bp[i].y,t)});
+          if(!E.push({closed:A.closed&&B.closed,pts})) break;
+        }
+      }
+      return E.out.length?E.out:ps; } },
+
+  xform:{ label:"Transform", params:[
+    {k:"tx",label:"Move X",min:-900,max:900,step:1,def:0},
+    {k:"ty",label:"Move Y",min:-900,max:900,step:1,def:0},
+    {k:"rot",label:"Rotate",min:-360,max:360,step:1,def:0},
+    {k:"sx",label:"Scale X",min:0.05,max:5,step:0.01,def:1},
+    {k:"sy",label:"Scale Y",min:0.05,max:5,step:0.01,def:1}],
+    fn:(ps,p)=>{ const c=allCentroid(ps), ang=p.rot*Math.PI/180;
+      return ps.map(a=>({closed:a.closed, pts:a.pts.map(q=>{
+        const r=rotatePt(q,c,ang,p.sx,p.sy); return {x:r.x+p.tx, y:r.y+p.ty}; })})); } },
+
+  spread:{ label:"Spread apart", params:[
+    {k:"amt",label:"Amount",min:-2,max:4,step:0.01,def:0.5}],
+    fn:(ps,p)=>{ const c=allCentroid(ps);
+      return ps.map(a=>{ const ac=centroid(a);
+        const dx=(ac.x-c.x)*p.amt, dy=(ac.y-c.y)*p.amt;
+        return {closed:a.closed, pts:a.pts.map(q=>({x:q.x+dx, y:q.y+dy}))}; }); } },
+
+  cull:{ label:"Thin out", params:[
+    {k:"keepEvery",label:"Keep every",min:1,max:12,step:1,def:2,int:true},
+    {k:"offsetN",label:"Starting at",min:0,max:11,step:1,def:0,int:true}],
+    fn:(ps,p)=>{ const out=ps.filter((_,i)=>((i-p.offsetN)%p.keepEvery)===0); return out.length?out:ps; } }
+};
+
+const OP_ORDER = ["resample","smooth","chaikin","wave","roughen","lobes","twist","bulge","taper","skew",
+                  "offset","jitter","quantize","radial","linear","mirror","stamp","stitch","interpolate",
+                  "spread","cull","xform"];
+
+function defaultParams(spec){ const o={}; for(const q of spec.params) o[q.k]=q.def; return o; }
+
+/* ============================================================ state */
+function makeObject(name="Object",seedType="circle"){
+  return {id:uid("obj"),name,visible:true,locked:false,seedType,
+    seedParams:defaultParams(SEEDS[seedType]),stack:[],freehand:[],svgSource:"",editable:defaultEditable()};
+}
+const state = {
+  objects:[],
+  activeId:null,
+  view:{scale:1, x:0, y:0},
+  show:{fill:false, points:false, edit:true},
+  issues:[],
+  paths:[],
+  activePaths:[],
+  objectPaths:new Map(),
+  editSelection:null,
+  editSelected:[],
+  history:[], future:[]
+  ,get current(){ return this.objects.find(o=>o.id===this.activeId)||this.objects[0]||null; }
+  ,get seedType(){ return this.current?.seedType||"circle"; },set seedType(v){ if(this.current)this.current.seedType=v; }
+  ,get seedParams(){ return this.current?.seedParams||{}; },set seedParams(v){ if(this.current)this.current.seedParams=v; }
+  ,get stack(){ return this.current?.stack||[]; },set stack(v){ if(this.current)this.current.stack=v; }
+  ,get freehand(){ return this.current?.freehand||[]; },set freehand(v){ if(this.current)this.current.freehand=v; }
+  ,get svgSource(){ return this.current?.svgSource||""; },set svgSource(v){ if(this.current)this.current.svgSource=v; }
+  ,get editable(){ return this.current?.editable||null; },set editable(v){ if(this.current)this.current.editable=v; }
+};
+state.objects=[makeObject("Object 1")]; state.activeId=state.objects[0].id;
+
+function cleanObject(o){ return {id:o.id,name:o.name,visible:o.visible!==false,locked:!!o.locked,seedType:o.seedType,
+  seedParams:o.seedParams,stack:o.stack,freehand:o.freehand||[],svgSource:o.svgSource||"",editable:o.editable||defaultEditable()}; }
+function snapshot(){ return JSON.stringify({v:3,activeId:state.activeId,objects:state.objects.map(cleanObject)}); }
+function restore(js){ const d=JSON.parse(js);
+  if(d.v===3&&Array.isArray(d.objects)){ state.objects=d.objects.map(cleanObject); state.activeId=d.activeId; }
+  else { const o=makeObject("Imported object",d.s||"circle"); o.seedParams=d.sp||defaultParams(SEEDS[o.seedType]);
+    o.stack=d.st||[];o.freehand=d.fh||[];o.svgSource=d.sv||"";state.objects=[o];state.activeId=o.id; }
+  if(!state.objects.length){ const o=makeObject("Object 1");state.objects=[o];state.activeId=o.id; }
+  if(!state.current) state.activeId=state.objects[0].id;
+  state.editSelection=null;
+  state.editSelected=[];
+  buildLayers(); buildShapePanel(); buildStack(); syncSeedButtons(); recompute(); }
+function pushSnap(js){ state.history.push(js); if(state.history.length>60) state.history.shift(); state.future.length=0; }
+function pushHistory(){ pushSnap(snapshot()); }
+function undo(){ if(!state.history.length){ setStatus("Nothing to undo."); return; }
+  state.future.push(snapshot()); restore(state.history.pop()); setStatus("Undo."); }
+function redo(){ if(!state.future.length){ setStatus("Nothing to redo."); return; }
+  state.history.push(snapshot()); restore(state.future.pop()); setStatus("Redo."); }
+
+/* ============================================================ evaluation */
+function evaluateActive(){
+  const spec=SEEDS[state.seedType];
+  let ps=[];
+  budgetNote="";
+  try{ ps=spec.fn(state.seedParams)||[]; }catch(e){ ps=[]; }
+  ps=clonePaths(ps);
+  for(const op of state.stack){
+    if(!op.on) continue;
+    const def=OPS[op.type]; if(!def) continue;
+    try{
+      const next=def.fn(ps,op.p);
+      if(Array.isArray(next) && next.length) ps=next.filter(a=>a&&a.pts&&a.pts.length>1);
+    }catch(e){ /* a bad operator should never kill the viewport */ }
+    /* last line of defence: an operator that ignores the budget still cannot
+       hand a runaway set to the next one, or to the canvas, or to the export */
+    if(ps.length>LIMITS.paths){ ps=ps.slice(0,LIMITS.paths); noteBudget(def.label.toLowerCase()); }
+    if(pointCount(ps)>LIMITS.points){
+      let acc=0; const cut=[];
+      for(const a of ps){ if(acc+a.pts.length>LIMITS.points) break; cut.push(a); acc+=a.pts.length; }
+      ps = cut.length? cut : ps.slice(0,1);
+      noteBudget(def.label.toLowerCase());
+    }
+  }
+  return ps;
+}
+
+let rafPending=false;
+function recompute(){
+  const active=state.activeId,all=[],notes=[]; state.objectPaths=new Map();
+  for(const obj of state.objects){
+    state.activeId=obj.id;
+    const ps=evaluateActive().map(p=>Object.assign(p,{objectId:obj.id,objectName:obj.name}));
+    state.objectPaths.set(obj.id,ps);
+    if(obj.visible!==false) all.push(...ps);
+    if(budgetNote) notes.push(obj.name);
+  }
+  state.activeId=active;
+  state.paths=all;
+  state.activePaths=state.objectPaths.get(active)||[];
+  budgetNote=notes.join(", ");
+  state.issues=[];
+  el("checkBtn").classList.remove("on");
+  el("stats").textContent = state.paths.length+" paths · "+pointCount(state.paths)+" points"
+    + (budgetNote? "  ·  clamped at "+budgetNote : "");
+  el("stats").style.color = budgetNote ? "#e8912b" : "";
+  el("exportBadge").textContent = state.paths.length+" paths"+(budgetNote?" (clamped)":"");
+  el("modeBadge").textContent = state.current.name+" · "+SEEDS[state.seedType].label
+    + (state.stack.filter(o=>o.on).length? " + "+state.stack.filter(o=>o.on).length+" ops":"");
+  if(!rafPending){ rafPending=true; requestAnimationFrame(()=>{ rafPending=false; draw(); }); }
+  syncCursor();
+  saveLocal();
+}
+
+/* ============================================================ canvas */
+const cv=el("stage"), ctx=cv.getContext("2d");
+function resizeStage(){ const r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0); draw(); }
+window.addEventListener("resize",resizeStage);
+
+function w2s(q){ return {x:state.view.x+q.x*state.view.scale, y:state.view.y+q.y*state.view.scale}; }
+function s2w(x,y){ return {x:(x-state.view.x)/state.view.scale, y:(y-state.view.y)/state.view.scale}; }
+
+function fitView(){
+  const r=cv.getBoundingClientRect();
+  const bb = state.paths.length? bbox(state.paths) : {minX:-200,minY:-200,maxX:200,maxY:200,w:400,h:400};
+  const pad=48;
+  const s=Math.min((r.width-pad*2)/bb.w, (r.height-pad*2)/bb.h);
+  state.view.scale=clamp(s,0.001,400);
+  state.view.x=r.width/2-((bb.minX+bb.maxX)/2)*state.view.scale;
+  state.view.y=r.height/2-((bb.minY+bb.maxY)/2)*state.view.scale;
+  draw();
+}
+
+function drawGrid(w,h){
+  const s=state.view.scale;
+  let step=100; while(step*s<48) step*=2; while(step*s>220) step/=2;
+  ctx.lineWidth=1;
+  const o=s2w(0,0), e=s2w(w,h);
+  ctx.strokeStyle="#262626";
+  ctx.beginPath();
+  for(let x=Math.floor(o.x/step)*step; x<e.x; x+=step){ const p=w2s({x,y:0}); ctx.moveTo(p.x+.5,0); ctx.lineTo(p.x+.5,h); }
+  for(let y=Math.floor(o.y/step)*step; y<e.y; y+=step){ const p=w2s({x:0,y}); ctx.moveTo(0,p.y+.5); ctx.lineTo(w,p.y+.5); }
+  ctx.stroke();
+  const c=w2s({x:0,y:0});
+  ctx.strokeStyle="#3a2020"; ctx.beginPath(); ctx.moveTo(0,c.y+.5); ctx.lineTo(w,c.y+.5); ctx.stroke();
+  ctx.strokeStyle="#1e321e"; ctx.beginPath(); ctx.moveTo(c.x+.5,0); ctx.lineTo(c.x+.5,h); ctx.stroke();
+}
+
+/* operators that are currently showing a placed pivot */
+function pivotOps(){
+  const out=[];
+  for(const o of state.stack){ const d=OPS[o.type];
+    if(o.on && d && d.pivot && o.p[d.pivot.mode]==="custom") out.push(o); }
+  return out;
+}
+function drawPivots(){
+  for(const op of pivotOps()){
+    const d=OPS[op.type].pivot;
+    const s=w2s({x:op.p[d.x], y:op.p[d.y]});
+    const hot=(pickPivot===op)||(pivotDrag&&pivotDrag.op===op);
+    ctx.strokeStyle=hot?"#ffd27f":"#e8912b"; ctx.lineWidth=hot?2:1.3;
+    ctx.beginPath();
+    ctx.moveTo(s.x-10,s.y+.5); ctx.lineTo(s.x+10,s.y+.5);
+    ctx.moveTo(s.x+.5,s.y-10); ctx.lineTo(s.x+.5,s.y+10);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(s.x,s.y,5.5,0,TAU); ctx.stroke();
+  }
+}
+function drawEditableControls(){
+  if(state.seedType!=="editable"||!state.show.edit||!state.editable)return;
+  const A=state.editable.anchors,sel=state.editSelection,selected=new Set(state.editSelected||[]);
+  ctx.lineWidth=1;ctx.strokeStyle="rgba(91,136,204,.85)";
+  for(let i=0;i<A.length;i++){
+    const a=A[i],p=w2s(a),hi=w2s(a.hin||a),ho=w2s(a.hout||a);
+    ctx.beginPath();ctx.moveTo(hi.x,hi.y);ctx.lineTo(p.x,p.y);ctx.lineTo(ho.x,ho.y);ctx.stroke();
+    for(const [part,h] of [["hin",hi],["hout",ho]]){ctx.fillStyle=sel&&sel.index===i&&sel.part===part?"#ffffff":"#5b88cc";
+      ctx.beginPath();ctx.arc(h.x,h.y,3.5,0,TAU);ctx.fill();}
+    ctx.fillStyle=selected.has(i)?"#fff2b2":"#e8912b";
+    ctx.strokeStyle="#171717";ctx.beginPath();ctx.rect(p.x-5,p.y-5,10,10);ctx.fill();ctx.stroke();
+  }
+  if(editTransform){
+    const p=w2s(editTransform.pivot);
+    ctx.strokeStyle="#ffd27f";ctx.lineWidth=1.5;ctx.beginPath();
+    ctx.moveTo(p.x-9,p.y+.5);ctx.lineTo(p.x+9,p.y+.5);
+    ctx.moveTo(p.x+.5,p.y-9);ctx.lineTo(p.x+.5,p.y+9);ctx.stroke();
+  }
+  if(boxSelect&&!boxSelect.waiting&&boxSelect.start&&boxSelect.current){
+    const a=boxSelect.start,b=boxSelect.current;
+    ctx.fillStyle="rgba(91,136,204,.12)";ctx.strokeStyle="#79a9ee";ctx.lineWidth=1;
+    ctx.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.strokeRect(a.x+.5,a.y+.5,b.x-a.x,b.y-a.y);
+  }
+}
+
+function draw(){
+  const r=cv.getBoundingClientRect(), w=r.width, h=r.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#1d1d1d"; ctx.fillRect(0,0,w,h);
+  drawGrid(w,h);
+
+  const ps=state.paths;
+  if(state.show.fill){
+    ctx.fillStyle="rgba(71,114,179,.24)";
+    ctx.beginPath();
+    for(const p of ps){ if(!p.closed) continue;
+      p.pts.forEach((q,i)=>{ const s=w2s(q); i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y); }); ctx.closePath(); }
+    ctx.fill("evenodd");
+  }
+
+  function strokeSet(paths,color,width){
+    ctx.lineWidth=width;ctx.strokeStyle=color;ctx.lineJoin="round";ctx.lineCap="round";ctx.beginPath();
+    for(const p of paths){p.pts.forEach((q,i)=>{const s=w2s(q);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});if(p.closed)ctx.closePath();}
+    ctx.stroke();
+  }
+  strokeSet(ps.filter(p=>p.objectId!==state.activeId),"#63758d",1.15);
+  strokeSet(ps.filter(p=>p.objectId===state.activeId),"#9fc5f8",1.6);
+
+  if(state.show.points && pointCount(ps)<9000){
+    ctx.fillStyle="#e8912b";
+    for(const p of ps) for(const q of p.pts){ const s=w2s(q); ctx.fillRect(s.x-1.5,s.y-1.5,3,3); }
+  }
+
+  if(state.issues.length){
+    for(const q of state.issues){ const s=w2s(q);
+      ctx.fillStyle="rgba(255,76,76,.18)"; ctx.beginPath(); ctx.arc(s.x,s.y,9,0,TAU); ctx.fill();
+      ctx.strokeStyle="#ff6464"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(s.x,s.y,4,0,TAU); ctx.stroke();
+    }
+  }
+
+  drawPivots();
+  drawEditableControls();
+
+  if(state.seedType==="freehand" && drawing.active && drawing.pts.length>1){
+    ctx.strokeStyle="#e8912b"; ctx.lineWidth=2; ctx.beginPath();
+    drawing.pts.forEach((q,i)=>{ const s=w2s(q); i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y); });
+    ctx.stroke();
+  }
+}
+
+/* ---- view interaction ---- */
+let panning=null, spaceDown=false;
+let pickPivot=null, pivotDrag=null;
+let editDrag=null;
+let editTransform=null, boxSelect=null, lastCanvasMouse=null;
+const drawing={active:false, pts:[]};
+function canvasPos(ev){ const r=cv.getBoundingClientRect(); return {x:ev.clientX-r.left, y:ev.clientY-r.top}; }
+function syncCursor(){ cv.style.cursor = (pickPivot||boxSelect) ? "crosshair" : (editTransform ? "move" : (state.seedType==="freehand" ? "crosshair" : "default")); }
+function selectedAnchorIndices(){
+  const n=state.editable?.anchors.length||0;
+  return [...new Set(state.editSelected||[])].filter(i=>i>=0&&i<n).sort((a,b)=>a-b);
+}
+function setAnchorSelection(indices,primary=null){
+  state.editSelected=[...new Set(indices)].sort((a,b)=>a-b);
+  const i=primary??state.editSelected.at(-1);
+  state.editSelection=i===undefined?null:{index:i,part:"anchor"};
+}
+function editHit(p){
+  if(state.seedType!=="editable"||state.current.locked||!state.editable)return null;
+  const A=state.editable.anchors;
+  for(let i=0;i<A.length;i++){const a=A[i],s=w2s(a);if(Math.hypot(s.x-p.x,s.y-p.y)<=8)return {index:i,part:"anchor"};}
+  for(let i=0;i<A.length;i++)for(const part of ["hin","hout"]){const s=w2s(A[i][part]||A[i]);if(Math.hypot(s.x-p.x,s.y-p.y)<=7)return {index:i,part};}
+  return null;
+}
+function beginEditTransform(type){
+  if(state.seedType!=="editable"||state.current.locked||!state.editable)return false;
+  const indices=selectedAnchorIndices();if(!indices.length){setStatus("Select one or more anchor points first.");return false;}
+  const A=state.editable.anchors,pts=indices.map(i=>A[i]);
+  const minX=Math.min(...pts.map(a=>a.x)),maxX=Math.max(...pts.map(a=>a.x));
+  const minY=Math.min(...pts.map(a=>a.y)),maxY=Math.max(...pts.map(a=>a.y));
+  const pivot={x:(minX+maxX)/2,y:(minY+maxY)/2};
+  const screen=lastCanvasMouse||w2s(pivot),start=s2w(screen.x,screen.y);
+  editTransform={type,indices,pivot,start,snap:snapshot(),changed:false,
+    startAngle:Math.atan2(start.y-pivot.y,start.x-pivot.x),
+    startDist:Math.max(.0001,Math.hypot(start.x-pivot.x,start.y-pivot.y)),
+    originals:indices.map(i=>{const a=A[i];return {i,x:a.x,y:a.y,hin:{...a.hin},hout:{...a.hout}};})};
+  syncCursor();draw();
+  setStatus((type==="move"?"Move":type==="rotate"?"Rotate":"Scale")+" selected points — click or Enter to confirm, Esc to cancel.");
+  return true;
+}
+function updateEditTransform(screen){
+  if(!editTransform||!screen)return;
+  const t=editTransform,w=s2w(screen.x,screen.y),A=state.editable.anchors;
+  let amount=0;
+  if(t.type==="move") amount=Math.hypot(w.x-t.start.x,w.y-t.start.y);
+  else if(t.type==="rotate") amount=Math.atan2(w.y-t.pivot.y,w.x-t.pivot.x)-t.startAngle;
+  else amount=Math.hypot(w.x-t.pivot.x,w.y-t.pivot.y)/t.startDist;
+  const transformPoint=q=>{
+    if(t.type==="move")return{x:q.x+w.x-t.start.x,y:q.y+w.y-t.start.y};
+    if(t.type==="scale")return{x:t.pivot.x+(q.x-t.pivot.x)*amount,y:t.pivot.y+(q.y-t.pivot.y)*amount};
+    const c=Math.cos(amount),s=Math.sin(amount),x=q.x-t.pivot.x,y=q.y-t.pivot.y;
+    return{x:t.pivot.x+x*c-y*s,y:t.pivot.y+x*s+y*c};
+  };
+  for(const o of t.originals){
+    const a=A[o.i],p=transformPoint(o),hi=transformPoint(o.hin),ho=transformPoint(o.hout);
+    a.x=p.x;a.y=p.y;a.hin=hi;a.hout=ho;
+  }
+  t.changed=true;recompute();
+  if(t.type==="move")setStatus("Move "+amount.toFixed(1)+" — click or Enter to confirm, Esc to cancel.");
+  else if(t.type==="rotate")setStatus("Rotate "+(amount*180/Math.PI).toFixed(1)+"° — click or Enter to confirm, Esc to cancel.");
+  else setStatus("Scale "+amount.toFixed(3)+" — click or Enter to confirm, Esc to cancel.");
+}
+function finishEditTransform(confirm){
+  if(!editTransform)return;
+  const t=editTransform;
+  if(confirm&&t.changed)pushSnap(t.snap);
+  if(!confirm){
+    const A=state.editable.anchors;
+    for(const o of t.originals){const a=A[o.i];a.x=o.x;a.y=o.y;a.hin={...o.hin};a.hout={...o.hout};}
+  }
+  const label=t.type==="move"?"Move":t.type==="rotate"?"Rotate":"Scale";
+  editTransform=null;syncCursor();buildShapePanel();recompute();
+  setStatus(confirm?label+" confirmed.":label+" cancelled.");
+}
+function beginBoxSelect(){
+  if(state.seedType!=="editable"||state.current.locked||!state.editable)return false;
+  if(editTransform)finishEditTransform(false);
+  boxSelect={waiting:true,start:null,current:null,add:false};syncCursor();draw();
+  setStatus("Box select — drag a box around anchor points. Hold Shift to add.");
+  return true;
+}
+
+cv.addEventListener("wheel",ev=>{
+  ev.preventDefault();
+  const p=canvasPos(ev), before=s2w(p.x,p.y);
+  const k=ev.deltaY<0?1.12:1/1.12;
+  state.view.scale=clamp(state.view.scale*k,0.002,600);
+  const after=s2w(p.x,p.y);
+  state.view.x+=(after.x-before.x)*state.view.scale;
+  state.view.y+=(after.y-before.y)*state.view.scale;
+  draw();
+},{passive:false});
+
+cv.addEventListener("mousedown",ev=>{
+  const p=canvasPos(ev);
+  lastCanvasMouse=p;
+
+  if(editTransform){
+    if(ev.button===0) finishEditTransform(true);
+    else if(ev.button===2) finishEditTransform(false);
+    ev.preventDefault(); return;
+  }
+  if(boxSelect){
+    if(ev.button===2){ boxSelect=null;syncCursor();draw();setStatus("Box select cancelled.");ev.preventDefault();return; }
+    if(ev.button===0){ boxSelect.waiting=false;boxSelect.start=p;boxSelect.current=p;boxSelect.add=ev.shiftKey;draw();ev.preventDefault();return; }
+  }
+  if(ev.button===1 || ev.button===2 || spaceDown){ panning={x:ev.clientX,y:ev.clientY,vx:state.view.x,vy:state.view.y}; ev.preventDefault(); return; }
+
+  if(ev.button===0 && pickPivot){
+    const w=s2w(p.x,p.y), d=OPS[pickPivot.type].pivot;
+    pushHistory();
+    pickPivot.p[d.mode]="custom";
+    pickPivot.p[d.x]=Math.round(w.x); pickPivot.p[d.y]=Math.round(w.y);
+    pickPivot=null; buildStack(); recompute(); setStatus("Pivot placed.");
+    ev.preventDefault(); return;
+  }
+
+  if(ev.button===0){
+    const hit=editHit(p);
+    if(hit){
+      if(hit.part==="anchor"){
+        const selected=selectedAnchorIndices(),wasSelected=selected.includes(hit.index);
+        if(ev.shiftKey){
+          if(wasSelected){ setAnchorSelection(selected.filter(i=>i!==hit.index));buildShapePanel();draw();ev.preventDefault();return; }
+          setAnchorSelection([...selected,hit.index],hit.index);
+        }else if(!wasSelected) setAnchorSelection([hit.index],hit.index);
+        else state.editSelection=hit;
+      }else{
+        if(ev.shiftKey) setAnchorSelection([...selectedAnchorIndices(),hit.index],hit.index);
+        else setAnchorSelection([hit.index],hit.index);
+        state.editSelection=hit;
+      }
+      const w=s2w(p.x,p.y);editDrag={...hit,last:w,snap:snapshot(),targets:hit.part==="anchor"?selectedAnchorIndices():[hit.index]};
+      buildShapePanel();draw();ev.preventDefault();return;}
+    if(state.seedType==="editable"){state.editSelection=null;state.editSelected=[];buildShapePanel();draw();}
+  }
+
+  if(ev.button===0){
+    for(const op of pivotOps()){
+      const d=OPS[op.type].pivot, s=w2s({x:op.p[d.x], y:op.p[d.y]});
+      if(Math.hypot(s.x-p.x, s.y-p.y)<=11){
+        pivotDrag={op, d, snap:snapshot()}; ev.preventDefault(); return;
+      }
+    }
+  }
+
+  if(ev.button===0 && state.seedType==="freehand"){
+    drawing.active=true; drawing.pts=[s2w(p.x,p.y)];
+  }
+});
+window.addEventListener("mousemove",ev=>{
+  const r=cv.getBoundingClientRect();
+  if(ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom) lastCanvasMouse=canvasPos(ev);
+  if(editTransform){ updateEditTransform(lastCanvasMouse||{x:r.width/2,y:r.height/2}); return; }
+  if(boxSelect&&!boxSelect.waiting&&boxSelect.start){boxSelect.current=canvasPos(ev);draw();return;}
+  if(panning){ state.view.x=panning.vx+(ev.clientX-panning.x); state.view.y=panning.vy+(ev.clientY-panning.y); draw(); return; }
+  if(editDrag){const p=canvasPos(ev),w=s2w(p.x,p.y),a=state.editable.anchors[editDrag.index],dx=w.x-editDrag.last.x,dy=w.y-editDrag.last.y;
+    if(editDrag.part==="anchor"){for(const i of editDrag.targets){const q=state.editable.anchors[i];q.x+=dx;q.y+=dy;q.hin.x+=dx;q.hin.y+=dy;q.hout.x+=dx;q.hout.y+=dy;}}
+    else {a[editDrag.part]={x:w.x,y:w.y};if(a.mode==="smooth"){const other=editDrag.part==="hin"?"hout":"hin";
+      const vx=w.x-a.x,vy=w.y-a.y,L=Math.hypot(vx,vy)||1,old=Math.hypot(a[other].x-a.x,a[other].y-a.y)||L;
+      a[other]={x:a.x-vx/L*old,y:a.y-vy/L*old};}}
+    editDrag.last=w;recompute();return;}
+  if(pivotDrag){ const p=canvasPos(ev), w=s2w(p.x,p.y);
+    pivotDrag.op.p[pivotDrag.d.x]=Math.round(w.x);
+    pivotDrag.op.p[pivotDrag.d.y]=Math.round(w.y);
+    recompute(); return; }
+  if(drawing.active){ const p=canvasPos(ev), q=s2w(p.x,p.y);
+    const L=drawing.pts[drawing.pts.length-1];
+    if(!L || Math.hypot(q.x-L.x,q.y-L.y)>2/state.view.scale) drawing.pts.push(q);
+    draw(); }
+});
+window.addEventListener("mouseup",()=>{
+  if(boxSelect&&!boxSelect.waiting&&boxSelect.start){
+    const a=boxSelect.start,b=boxSelect.current||a,minX=Math.min(a.x,b.x),maxX=Math.max(a.x,b.x),minY=Math.min(a.y,b.y),maxY=Math.max(a.y,b.y);
+    const hits=[];state.editable.anchors.forEach((q,i)=>{const s=w2s(q);if(s.x>=minX&&s.x<=maxX&&s.y>=minY&&s.y<=maxY)hits.push(i);});
+    const picked=boxSelect.add?[...selectedAnchorIndices(),...hits]:hits;
+    boxSelect=null;setAnchorSelection(picked);syncCursor();buildShapePanel();draw();setStatus(hits.length+" point"+(hits.length===1?"":"s")+" box selected.");return;
+  }
+  if(panning){ panning=null; return; }
+  if(editDrag){pushSnap(editDrag.snap);editDrag=null;buildShapePanel();setStatus("Bézier root edited.");return;}
+  if(pivotDrag){ pushSnap(pivotDrag.snap); pivotDrag=null; buildStack(); setStatus("Pivot moved."); return; }
+  if(drawing.active){ drawing.active=false;
+    if(drawing.pts.length>4){ pushHistory(); state.freehand=drawing.pts.slice(); recompute(); setStatus("Freehand captured, "+state.freehand.length+" points."); }
+    drawing.pts=[]; draw(); }
+});
+cv.addEventListener("dblclick",ev=>{
+  if(state.seedType!=="editable"||state.current.locked)return;
+  const p=canvasPos(ev),w=s2w(p.x,p.y),A=state.editable.anchors;if(A.length<2)return;
+  let best=Infinity,at=0;
+  for(let i=0;i<(state.editable.closed?A.length:A.length-1);i++){const a=A[i],b=A[(i+1)%A.length],dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy;
+    const t=clamp(L?((w.x-a.x)*dx+(w.y-a.y)*dy)/L:0,0,1),x=a.x+dx*t,y=a.y+dy*t,d=Math.hypot(w.x-x,w.y-y);
+    if(d<best){best=d;at=i;}}
+  const prev=A[at],next=A[(at+1)%A.length],anchor=autoAnchor(w,prev,next);
+  pushHistory();A.splice(at+1,0,anchor);setAnchorSelection([at+1],at+1);buildShapePanel();recompute();setStatus("Anchor inserted.");
+});
+cv.addEventListener("contextmenu",ev=>ev.preventDefault());
+
+/* ============================================================ number scrubbing */
+function scrubbable(inp, onChange){
+  let drag=null;
+  inp.addEventListener("mousedown",ev=>{
+    if(document.activeElement===inp) return;
+    ev.preventDefault();
+    const step=parseFloat(inp.step)||1;
+    drag={x:ev.clientX, v:parseFloat(inp.value)||0, step, moved:false, snap:snapshot()};
+  });
+  window.addEventListener("mousemove",ev=>{
+    if(!drag) return;
+    const dx=ev.clientX-drag.x;
+    if(Math.abs(dx)>2) drag.moved=true;
+    if(!drag.moved) return;
+    const fine=ev.shiftKey?0.15:1;
+    let v=drag.v + dx*drag.step*fine;
+    const mn=parseFloat(inp.min), mx=parseFloat(inp.max);
+    if(!isNaN(mn)) v=Math.max(mn,v); if(!isNaN(mx)) v=Math.min(mx,v);
+    const dec=(String(drag.step).split(".")[1]||"").length;
+    inp.value = dec? v.toFixed(dec) : Math.round(v);
+    onChange(parseFloat(inp.value));
+  });
+  window.addEventListener("mouseup",()=>{
+    if(!drag) return;
+    if(!drag.moved){ inp.focus(); inp.select(); }
+    else pushSnap(drag.snap);          // the value from before the drag, so undo goes back one scrub
+    drag=null;
+  });
+  inp.addEventListener("input",()=>onChange(parseFloat(inp.value)));
+  inp.addEventListener("blur",()=>inp.blur());
+}
+
+function makeParamRow(spec, get, set){
+  const row=document.createElement("div"); row.className="field";
+  const lab=document.createElement("span"); lab.textContent=spec.label; row.appendChild(lab);
+  if(spec.type==="bool"){
+    const box=document.createElement("input"); box.type="checkbox"; box.checked=!!get();
+    box.style.cssText="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;";
+    box.addEventListener("change",()=>{ pushHistory(); set(box.checked); recompute(); });
+    row.appendChild(box);
+  } else if(spec.type==="opt"){
+    const sel=document.createElement("select");
+    for(const o of spec.opts){ const op=document.createElement("option"); op.value=o; op.textContent=o; sel.appendChild(op); }
+    sel.value=get();
+    sel.addEventListener("change",()=>{ pushHistory(); set(sel.value); recompute(); });
+    row.appendChild(sel);
+  } else {
+    const inp=document.createElement("input"); inp.type="number";
+    inp.min=spec.min; inp.max=spec.max; inp.step=spec.step; inp.value=get();
+    scrubbable(inp, v=>{ if(isNaN(v)) return; set(spec.int?Math.round(v):v); recompute(); });
+    row.appendChild(inp);
+  }
+  return row;
+}
+
+/* ============================================================ object layers */
+function refreshActiveUI(){
+  state.editSelection=null;
+  state.editSelected=[];
+  el("panelShape").classList.toggle("object-locked",!!state.current.locked);
+  el("panelStack").classList.toggle("object-locked",!!state.current.locked);
+  buildLayers(); buildShapePanel(); buildStack(); syncSeedButtons(); recompute();
+}
+function buildLayers(){
+  const list=el("layerList"); if(!list) return; list.innerHTML="";
+  el("layerBadge").textContent=state.objects.length;
+  for(const obj of state.objects.slice().reverse()){
+    const row=document.createElement("div"); row.className="layer-row"+(obj.id===state.activeId?" active":"");
+    row.onclick=()=>{ if(state.activeId===obj.id)return;state.activeId=obj.id;refreshActiveUI();setStatus("Selected "+obj.name+"."); };
+    const eye=document.createElement("button"); eye.title=obj.visible===false?"Show":"Hide"; eye.textContent=obj.visible===false?"○":"●";
+    eye.onclick=ev=>{ev.stopPropagation();pushHistory();obj.visible=obj.visible===false;buildLayers();recompute();};
+    const lock=document.createElement("button"); lock.title=obj.locked?"Unlock":"Lock";lock.textContent=obj.locked?"◆":"◇";
+    lock.onclick=ev=>{ev.stopPropagation();pushHistory();obj.locked=!obj.locked;if(obj.id===state.activeId)refreshActiveUI();else{buildLayers();draw();}};
+    const name=document.createElement("div");name.className="layer-name";name.textContent=obj.name;name.title="Double-click to rename";
+    name.ondblclick=ev=>{ev.stopPropagation();const input=document.createElement("input");input.value=obj.name;name.replaceChildren(input);
+      input.focus();input.select();const done=()=>{const v=input.value.trim();if(v&&v!==obj.name){pushHistory();obj.name=v;}buildLayers();recompute();};
+      input.onblur=done;input.onkeydown=e=>{if(e.key==="Enter")input.blur();if(e.key==="Escape")buildLayers();};};
+    const type=document.createElement("button");type.title=SEEDS[obj.seedType]?.label||obj.seedType;type.textContent=(SEEDS[obj.seedType]?.label||"?")[0];
+    row.append(eye,lock,name,type);list.appendChild(row);
+  }
+}
+el("newLayer").onclick=()=>{pushHistory();const o=makeObject("Object "+(state.objects.length+1));state.objects.push(o);state.activeId=o.id;refreshActiveUI();fitView();setStatus("New object.");};
+el("dupLayer").onclick=()=>{const src=state.current;if(!src)return;pushHistory();const o=JSON.parse(JSON.stringify(cleanObject(src)));
+  o.id=uid("obj");o.name=src.name+" copy";const i=state.objects.indexOf(src);state.objects.splice(i+1,0,o);state.activeId=o.id;refreshActiveUI();setStatus("Object duplicated.");};
+el("delLayer").onclick=()=>{if(state.objects.length<=1){setStatus("A document needs at least one object.");return;}pushHistory();const i=state.objects.indexOf(state.current);
+  state.objects.splice(i,1);state.activeId=state.objects[Math.max(0,i-1)].id;refreshActiveUI();setStatus("Object deleted.");};
+el("layerUp").onclick=()=>{const i=state.objects.indexOf(state.current);if(i>=state.objects.length-1)return;pushHistory();
+  state.objects.splice(i+1,0,state.objects.splice(i,1)[0]);buildLayers();recompute();};
+el("layerDown").onclick=()=>{const i=state.objects.indexOf(state.current);if(i<=0)return;pushHistory();
+  state.objects.splice(i-1,0,state.objects.splice(i,1)[0]);buildLayers();recompute();};
+
+/* ============================================================ shape panel */
+function autoAnchor(q,prev,next){
+  let tx=next.x-prev.x,ty=next.y-prev.y,L=Math.hypot(tx,ty)||1;tx/=L;ty/=L;
+  const span=Math.min(90,Math.hypot(next.x-prev.x,next.y-prev.y)/5);
+  return {x:q.x,y:q.y,hin:{x:q.x-tx*span,y:q.y-ty*span},hout:{x:q.x+tx*span,y:q.y+ty*span},mode:"smooth"};
+}
+function makeCurrentEditable(){
+  const raw=SEEDS[state.seedType].fn(state.seedParams)||[]; if(!raw.length){setStatus("Nothing to convert.");return;}
+  const p=raw[0],count=clamp(Math.round(p.pts.length/45),p.closed?4:3,14),sample=resamplePath(p,count),A=sample.pts;
+  const anchors=A.map((q,i)=>autoAnchor(q,A[p.closed?(i-1+A.length)%A.length:Math.max(0,i-1)],A[p.closed?(i+1)%A.length:Math.min(A.length-1,i+1)]));
+  if(!p.closed){anchors[0].hin={x:anchors[0].x,y:anchors[0].y};anchors[anchors.length-1].hout={x:anchors.at(-1).x,y:anchors.at(-1).y};}
+  pushHistory();state.editable={closed:p.closed,anchors};state.seedType="editable";state.seedParams={closed:p.closed,res:260};
+  refreshActiveUI();setAnchorSelection([0],0);buildShapePanel();draw();setStatus("Root converted to editable Bézier anchors.");
+}
+function deleteEditAnchor(){
+  const root=state.editable,indices=selectedAnchorIndices();if(!root||!indices.length||root.anchors.length<=2)return;
+  if(root.anchors.length-indices.length<2){setStatus("A curve needs at least two anchor points.");return;}
+  pushHistory();for(const i of [...indices].sort((a,b)=>b-a))root.anchors.splice(i,1);
+  setAnchorSelection([]);buildShapePanel();recompute();setStatus(indices.length+" anchor"+(indices.length===1?"":"s")+" removed.");
+}
+function setSelectedMode(mode){
+  const root=state.editable,indices=selectedAnchorIndices();if(!root||!indices.length)return;pushHistory();
+  for(const i of indices)root.anchors[i].mode=mode;
+  buildShapePanel();draw();setStatus(mode==="smooth"?"Handles linked.":"Handles broken.");
+}
+function buildShapePanel(){
+  const spec=SEEDS[state.seedType], body=el("shapeBody");
+  body.innerHTML="";
+  el("shapeBadge").textContent=spec.label.toLowerCase();
+  for(const q of spec.params){
+    if(state.seedParams[q.k]===undefined) state.seedParams[q.k]=q.def;
+    body.appendChild(makeParamRow(q, ()=>state.seedParams[q.k], v=>state.seedParams[q.k]=v));
+  }
+  if(state.seedType==="freehand"){
+    const n=document.createElement("p"); n.className="hintline";
+    n.textContent = state.freehand.length? "Drawn stroke: "+state.freehand.length+" points. Drag in the viewport to redraw."
+                                         : "Drag in the viewport to draw a stroke.";
+    body.appendChild(n);
+  }
+  if(state.seedType==="svg"){
+    const ta=document.createElement("textarea");
+    ta.placeholder='Paste path data (M 0 0 C ...) or a whole <svg> file';
+    ta.value=state.svgSource;
+    ta.addEventListener("change",()=>{ pushHistory(); state.svgSource=ta.value; recompute(); setStatus("SVG parsed."); });
+    body.appendChild(ta);
+    const n=document.createElement("p"); n.className="hintline";
+    n.textContent="Every path in the pasted markup becomes one shape.";
+    body.appendChild(n);
+  }
+  if(state.seedType!=="editable"){
+    const b=document.createElement("button");b.className="btn wide primary";b.style.marginTop="8px";b.textContent="Make root editable";
+    b.onclick=makeCurrentEditable;body.appendChild(b);
+  }else{
+    const note=document.createElement("div");note.className="edit-note";
+    const count=selectedAnchorIndices().length;
+    note.textContent=(count?count+" selected. ":"")+"Click or Shift-click points. B box selects; G moves, R rotates, S scales. Double-click inserts a point.";
+    body.appendChild(note);
+    const row=document.createElement("div");row.className="row";row.style.marginTop="7px";
+    const smooth=document.createElement("button");smooth.className="btn";smooth.textContent="Smooth";smooth.onclick=()=>setSelectedMode("smooth");
+    const corner=document.createElement("button");corner.className="btn";corner.textContent="Broken";corner.onclick=()=>setSelectedMode("corner");
+    const del=document.createElement("button");del.className="btn";del.textContent="Delete selected";del.onclick=deleteEditAnchor;
+    row.append(smooth,corner,del);body.appendChild(row);
+  }
+}
+
+function syncSeedButtons(){
+  document.querySelectorAll(".seedbtn").forEach(b=>b.classList.toggle("on", b.dataset.seed===state.seedType));
+}
+document.querySelectorAll(".seedbtn").forEach(b=>{
+  b.addEventListener("click",()=>{
+    if(b.dataset.seed===state.seedType) return;
+    pushHistory();
+    state.seedType=b.dataset.seed;
+    state.seedParams=defaultParams(SEEDS[state.seedType]);
+    syncSeedButtons(); buildLayers(); buildShapePanel(); recompute();
+    if(!state.paths.length && state.seedType==="freehand") setStatus("Drag in the viewport to draw.");
+    else if(!state.paths.length && state.seedType==="svg") setStatus("Paste some path data in the Shape panel.");
+    else fitView();
+  });
+});
+
+/* ============================================================ operator stack UI */
+function normaliseMirrorParams(op){
+  const p=op.p;
+  if(p.axisX===undefined)p.axisX=p.axis!==undefined?p.axis==="x":true;
+  if(p.axisY===undefined)p.axisY=p.axis==="y";
+  if(p.bisectX===undefined)p.bisectX=false;if(p.bisectY===undefined)p.bisectY=false;
+  if(p.flipX===undefined)p.flipX=false;if(p.flipY===undefined)p.flipY=false;
+  if(p.posX===undefined)p.posX=p.axis==="x"?(p.pos||0):0;
+  if(p.posY===undefined)p.posY=p.axis==="y"?(p.pos||0):0;
+  if(p.keep===undefined)p.keep=true;
+}
+function buildMirrorControls(op){
+  normaliseMirrorParams(op);
+  const p=op.p,grid=document.createElement("div");grid.className="mirror-grid";
+  const addRow=(label,items)=>{
+    const row=document.createElement("div");row.className="mirror-axis-row";
+    const lab=document.createElement("span");lab.textContent=label;
+    const buttons=document.createElement("div");buttons.className="mirror-axis-buttons";
+    for(const item of items){
+      const b=document.createElement("button");b.textContent=item.axis;b.classList.toggle("on",!!p[item.key]);
+      b.disabled=!!item.disabled;b.setAttribute("aria-pressed",String(!!p[item.key]));
+      b.title=item.title||label+" "+item.axis;
+      b.onclick=()=>{pushHistory();p[item.key]=!p[item.key];buildStack();recompute();};
+      buttons.appendChild(b);
+    }
+    row.append(lab,buttons);grid.appendChild(row);
+  };
+  addRow("Axis",[
+    {axis:"X",key:"axisX",title:"Mirror across the X position"},
+    {axis:"Y",key:"axisY",title:"Mirror across the Y position"}]);
+  addRow("Bisect",[
+    {axis:"X",key:"bisectX",disabled:!p.axisX,title:"Cut geometry at the X mirror plane"},
+    {axis:"Y",key:"bisectY",disabled:!p.axisY,title:"Cut geometry at the Y mirror plane"}]);
+  addRow("Flip",[
+    {axis:"X",key:"flipX",disabled:!p.axisX||!p.bisectX,title:"Keep the opposite side of the X bisect"},
+    {axis:"Y",key:"flipY",disabled:!p.axisY||!p.bisectY,title:"Keep the opposite side of the Y bisect"}]);
+  if(p.axisX)grid.appendChild(makeParamRow({k:"posX",label:"Position X",min:-800,max:800,step:1,def:0},()=>p.posX,v=>p.posX=v));
+  if(p.axisY)grid.appendChild(makeParamRow({k:"posY",label:"Position Y",min:-800,max:800,step:1,def:0},()=>p.posY,v=>p.posY=v));
+  grid.appendChild(makeParamRow({k:"keep",label:"Keep original",type:"bool",def:true},()=>p.keep,v=>p.keep=v));
+  return grid;
+}
+function buildStack(){
+  const list=el("stackList"); list.innerHTML="";
+  el("stackBadge").textContent=state.stack.length;
+  state.stack.forEach((op,idx)=>{
+    const def=OPS[op.type]; if(!def) return;
+    const box=document.createElement("div");
+    box.className="op"+(op.on?"":" off")+(op.fold?" collapsed":"");
+
+    const head=document.createElement("div"); head.className="op-head";
+    const dot=document.createElement("button"); dot.className=op.on?"dot":""; dot.title="Mute / unmute";
+    dot.textContent=op.on?"●":"○";
+    dot.onclick=()=>{ pushHistory(); op.on=!op.on; buildStack(); recompute(); };
+    const nm=document.createElement("div"); nm.className="nm"; nm.textContent=(idx+1)+". "+def.label;
+    nm.onclick=()=>{ op.fold=!op.fold; box.classList.toggle("collapsed",op.fold); };
+    const dup=document.createElement("button"); dup.title="Duplicate this operator"; dup.setAttribute("aria-label","Duplicate "+def.label);
+    dup.textContent="⧉";
+    dup.onclick=()=>{
+      pushHistory();
+      const copy=JSON.parse(JSON.stringify(op));
+      copy.id=uid("op");
+      state.stack.splice(idx+1,0,copy);
+      buildStack(); recompute(); setStatus("Duplicated "+def.label+".");
+    };
+    const up=document.createElement("button"); up.title="Move up"; up.textContent="↑";
+    up.onclick=()=>{ if(idx===0) return; pushHistory(); state.stack.splice(idx-1,0,state.stack.splice(idx,1)[0]); buildStack(); recompute(); };
+    const dn=document.createElement("button"); dn.title="Move down"; dn.textContent="↓";
+    dn.onclick=()=>{ if(idx===state.stack.length-1) return; pushHistory(); state.stack.splice(idx+1,0,state.stack.splice(idx,1)[0]); buildStack(); recompute(); };
+    const del=document.createElement("button"); del.className="del"; del.title="Remove"; del.textContent="✕";
+    del.onclick=()=>{ pushHistory(); state.stack.splice(idx,1); buildStack(); recompute(); };
+    head.append(dot,nm);
+    if(def.pivot){
+      const pk=document.createElement("button");
+      pk.className = (pickPivot===op) ? "dot" : "";
+      pk.title="Place the pivot by clicking in the viewport";
+      pk.textContent="⌖";
+      pk.onclick=()=>{
+        if(pickPivot===op){ pickPivot=null; setStatus("Pivot picking cancelled."); }
+        else { pickPivot=op; setStatus("Click in the viewport to place the pivot. Esc cancels."); }
+        buildStack(); draw();
+      };
+      head.appendChild(pk);
+    }
+    head.append(dup,up,dn,del);
+
+    const body=document.createElement("div"); body.className="op-body";
+    if(op.type==="mirror")body.appendChild(buildMirrorControls(op));
+    else for(const q of def.params){
+      if(op.p[q.k]===undefined) op.p[q.k]=q.def;
+      body.appendChild(makeParamRow(q, ()=>op.p[q.k], v=>op.p[q.k]=v));
+    }
+    const randomise=document.createElement("button");
+    randomise.className="btn wide op-randomise";
+    randomise.textContent="Randomise values";
+    randomise.onclick=()=>{ pushHistory(); randomiseOp(op); buildStack(); recompute(); };
+    body.appendChild(randomise);
+    box.append(head,body); list.appendChild(box);
+  });
+  syncCursor();
+}
+
+const addSel=el("addOpSel");
+for(const k of OP_ORDER){ const o=document.createElement("option"); o.value=k; o.textContent=OPS[k].label; addSel.appendChild(o); }
+el("addOp").onclick=()=>{
+  pushHistory();
+  const t=addSel.value;
+  state.stack.push({id:uid("op"), type:t, on:true, fold:false, p:defaultParams(OPS[t])});
+  buildStack(); recompute(); setStatus("Added "+OPS[t].label+".");
+};
+
+/* ============================================================ randomising */
+function randomiseOp(op,rng){
+  const r=rng||Math.random, def=OPS[op.type];
+  for(const q of def.params){
+    if(q.k==="pivot"||q.k==="px"||q.k==="py") continue;              // a placed pivot survives shuffling
+    if(q.type==="bool"){ op.p[q.k]= r()<0.5; continue; }
+    if(q.type==="opt"){ op.p[q.k]= q.opts[Math.floor(r()*q.opts.length)]; continue; }
+    if(q.k==="n" || q.k==="res"){ continue; }                      // leave resolution alone
+    let v;
+    if(q.k==="count"||q.k==="copies"||q.k==="cycles"||q.k==="freq"||q.k==="it"||q.k==="sides"||q.k==="points"){
+      v = q.min + r()*Math.min(q.max-q.min, q.k==="it"?6:14);       // keep counts sane
+    } else {
+      // bias toward the middle so shapes stay legible
+      const t=(r()+r()+r())/3;
+      v = q.min + t*(q.max-q.min);
+    }
+    op.p[q.k]= q.int? Math.round(v) : Math.round(v*100)/100;
+  }
+}
+function shuffle(){
+  if(!state.stack.length){ setStatus("Nothing to shuffle, add an operator first."); return; }
+  pushHistory();
+  for(const op of state.stack) if(op.on) randomiseOp(op);
+  buildStack(); recompute(); setStatus("Shuffled.");
+}
+const FUN_OPS=["wave","roughen","lobes","twist","bulge","taper","skew","offset","quantize","radial","linear","mirror","chaikin","smooth","spread","stamp","stitch","interpolate"];
+const FUN_SEEDS=["circle","polygon","star","superellipse","rect"];
+function surprise(){
+  pushHistory();
+  state.seedType=FUN_SEEDS[Math.floor(Math.random()*FUN_SEEDS.length)];
+  state.seedParams=defaultParams(SEEDS[state.seedType]);
+  for(const q of SEEDS[state.seedType].params){
+    if(q.k==="res"||q.type==="bool"||q.type==="opt") continue;
+    state.seedParams[q.k]= q.int? Math.round(q.min+Math.random()*(q.max-q.min)*0.4+q.min*0)
+                                : Math.round((q.min+Math.random()*(q.max-q.min)*0.4)*100)/100;
+  }
+  state.seedParams.r = state.seedParams.r? clamp(state.seedParams.r,80,220) : state.seedParams.r;
+  const n=2+Math.floor(Math.random()*3);
+  const pool=FUN_OPS.slice();
+  state.stack=[];
+  for(let i=0;i<n;i++){
+    const t=pool.splice(Math.floor(Math.random()*pool.length),1)[0];
+    const op={id:uid("op"), type:t, on:true, fold:true, p:defaultParams(OPS[t])};
+    randomiseOp(op);
+    state.stack.push(op);
+  }
+  // a repeat at the end is usually what makes it interesting
+  if(!state.stack.some(o=>o.type==="radial"||o.type==="linear")){
+    const t=Math.random()<0.6?"radial":"linear";
+    const op={id:uid("op"), type:t, on:true, fold:true, p:defaultParams(OPS[t])};
+    randomiseOp(op); state.stack.push(op);
+  }
+  syncSeedButtons(); buildLayers(); buildShapePanel(); buildStack(); recompute(); fitView();
+  setStatus("Surprise: "+SEEDS[state.seedType].label+" + "+state.stack.length+" operators.");
+}
+
+/* ============================================================ starters */
+const PRESETS = {
+  "Flower":{ seed:"circle", sp:{r:145,res:420}, st:[
+    ["lobes",{count:8,amp:0.18,phase:0,sharp:1}], ["linear",{count:4,dx:0,dy:0,scale:0.86,rot:0}],
+    ["smooth",{amt:0.3,it:2}] ]},
+  "Gear":{ seed:"circle", sp:{r:155,res:540}, st:[
+    ["offset",{dist:-22,copies:2,keep:true}], ["lobes",{count:18,amp:0.06,phase:0,sharp:3}], ["chaikin",{it:1}] ]},
+  "Ripple rings":{ seed:"circle", sp:{r:62,res:360}, st:[
+    ["wave",{amp:4.5,cycles:12,phase:0}], ["linear",{count:7,dx:0,dy:0,scale:1.15,rot:0}] ]},
+  "Wobble blob":{ seed:"circle", sp:{r:160,res:340}, st:[
+    ["roughen",{amp:34,freq:7,seed:12}], ["smooth",{amt:0.5,it:5}], ["bulge",{amp:0.3,power:1.6}] ]},
+  "Sunburst":{ seed:"polygon", sp:{sides:3,r:30,rot:-90,res:14}, st:[
+    ["taper",{amt:0.45,axis:"y"}], ["xform",{tx:0,ty:-175,rot:0,sx:1,sy:1}],
+    ["radial",{count:12,radius:0,spin:0,scale:1,arc:360,pivot:"custom",px:0,py:0}] ]},
+  "Braid":{ seed:"line", sp:{len:430,ang:0,res:320}, st:[
+    ["wave",{amp:22,cycles:4,phase:0}], ["offset",{dist:11,copies:1,keep:true}],
+    ["linear",{count:4,dx:0,dy:78,scale:1,rot:0}] ]},
+  "Shard cluster":{ seed:"polygon", sp:{sides:5,r:32,rot:-90,res:8}, st:[
+    ["jitter",{amt:6,seed:5}], ["taper",{amt:0.55,axis:"y"}], ["xform",{tx:0,ty:-175,rot:0,sx:1,sy:1}],
+    ["radial",{count:8,radius:0,spin:10,scale:0.98,arc:360,pivot:"custom",px:0,py:0}] ]},
+  "Pixel arch":{ seed:"arc", sp:{r:180,sweep:180,start:180,res:320}, st:[
+    ["quantize",{grid:22,stair:true}] ]},
+  "Coral":{ seed:"circle", sp:{r:125,res:420}, st:[
+    ["roughen",{amp:15,freq:9,seed:3}], ["lobes",{count:5,amp:0.16,phase:0,sharp:1.2}],
+    ["chaikin",{it:3}] ]},
+  "Fan vault":{ seed:"line", sp:{len:220,ang:-90,res:100}, st:[
+    ["xform",{tx:0,ty:-140,rot:0,sx:1,sy:1}],
+    ["radial",{count:9,radius:0,spin:0,scale:1,arc:120,pivot:"custom",px:0,py:0}] ]},
+  "Brick arch":{ seed:"arc", sp:{r:210,sweep:180,start:180,res:360}, st:[
+    ["stamp",{shape:"brick",spacing:36,size:12,aspect:2.15,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Iron ladder":{ seed:"line", sp:{len:470,ang:90,res:300}, st:[
+    ["offset",{dist:70,copies:1,keep:true}], ["wave",{amp:34,cycles:3,phase:0}],
+    ["stitch",{count:16,shift:0,bow:0,pair:"neighbours",keep:true}] ]},
+  "Stone rosette":{ seed:"circle", sp:{r:155,res:420}, st:[
+    ["lobes",{count:8,amp:0.16,phase:0,sharp:1.1}],
+    ["stamp",{shape:"diamond",spacing:27,size:8.5,aspect:1.1,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Tracery field":{ seed:"arc", sp:{r:195,sweep:180,start:180,res:320}, st:[
+    ["offset",{dist:-32,copies:3,keep:true}],
+    ["stitch",{count:10,shift:0,bow:0,pair:"neighbours",keep:true}] ]},
+
+  "Voussoir arch":{ seed:"arc", sp:{r:220,sweep:180,start:180,res:360}, st:[
+    ["stamp",{shape:"brick",spacing:39,size:11,aspect:2.35,rotate:90,normal:0,alternate:false,keep:false}] ]},
+  "Dentil band":{ seed:"line", sp:{len:500,ang:0,res:260}, st:[
+    ["stamp",{shape:"brick",spacing:34,size:10,aspect:1.65,rotate:90,normal:0,alternate:false,keep:false}] ]},
+  "Beaded moulding":{ seed:"arc", sp:{r:215,sweep:180,start:180,res:320}, st:[
+    ["stamp",{shape:"circle",spacing:31,size:9,aspect:1,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Brick wave":{ seed:"line", sp:{len:520,ang:0,res:400}, st:[
+    ["wave",{amp:42,cycles:3,phase:0}],
+    ["stamp",{shape:"brick",spacing:35,size:10,aspect:2,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Hex halo":{ seed:"circle", sp:{r:160,res:420}, st:[
+    ["lobes",{count:6,amp:0.08,phase:0,sharp:1}],
+    ["stamp",{shape:"hexagon",spacing:34,size:9,aspect:1,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Petal rosette":{ seed:"superellipse", sp:{rx:14,ry:38,n:2.5,res:100}, st:[
+    ["xform",{tx:0,ty:-155,rot:0,sx:1,sy:1}],
+    ["radial",{count:12,radius:0,spin:0,scale:1,arc:360,pivot:"custom",px:0,py:0}] ]},
+  "Scalloped border":{ seed:"arc", sp:{r:38,sweep:180,start:180,res:100}, st:[
+    ["linear",{count:8,dx:80,dy:0,scale:1,rot:0}] ]},
+  "Lancet ribs":{ seed:"lancet", sp:{w:190,h:390,shoulder:0.64,res:300}, st:[
+    ["linear",{count:4,dx:0,dy:0,scale:0.84,rot:0}] ]},
+  "Window fan":{ seed:"line", sp:{len:170,ang:-90,res:90}, st:[
+    ["xform",{tx:0,ty:-118,rot:0,sx:1,sy:1}],
+    ["radial",{count:7,radius:0,spin:0,scale:1,arc:78,pivot:"custom",px:0,py:0}] ]},
+  "Chevron course":{ seed:"polygon", sp:{sides:3,r:16,rot:-90,res:10}, st:[
+    ["taper",{amt:0.35,axis:"y"}],
+    ["linear",{count:13,dx:34,dy:0,scale:1,rot:180}] ]},
+  "Iron crown":{ seed:"star", sp:{points:3,r:18,inner:38,rot:-90,res:1}, st:[
+    ["taper",{amt:0.35,axis:"y"}],
+    ["linear",{count:12,dx:54,dy:0,scale:1,rot:0}],
+    ["xform",{tx:0,ty:0,rot:0,sx:1,sy:1.65}] ]},
+  "Quatrefoil family":{ seed:"circle", sp:{r:145,res:420}, st:[
+    ["lobes",{count:4,amp:0.22,phase:0,sharp:1}],
+    ["linear",{count:4,dx:0,dy:0,scale:0.82,rot:0}] ]},
+  "Fish-scale course":{ seed:"arc", sp:{r:28,sweep:180,start:180,res:80}, st:[
+    ["linear",{count:8,dx:60,dy:0,scale:1,rot:0}],
+    ["linear",{count:3,dx:30,dy:52,scale:1,rot:0}] ]},
+  "Column flutes":{ seed:"line", sp:{len:430,ang:90,res:220}, st:[
+    ["linear",{count:9,dx:26,dy:0,scale:1,rot:0}] ]},
+  "Coping stones":{ seed:"arc", sp:{r:265,sweep:120,start:210,res:320}, st:[
+    ["stamp",{shape:"brick",spacing:46,size:13,aspect:2.25,rotate:0,normal:0,alternate:false,keep:false}] ]},
+
+  "Ashlar ring":{ seed:"circle", sp:{r:165,res:420}, st:[
+    ["stamp",{shape:"brick",spacing:39,size:11,aspect:2.1,rotate:90,normal:0,alternate:false,keep:false}] ]},
+  "Crenellated band":{ seed:"superellipse", sp:{rx:14,ry:9,n:8,res:40}, st:[
+    ["linear",{count:14,dx:39,dy:0,scale:1,rot:0}] ]},
+  "Tile medallions":{ seed:"circle", sp:{r:21,res:80}, st:[
+    ["linear",{count:6,dx:58,dy:0,scale:1,rot:0}],
+    ["linear",{count:3,dx:0,dy:58,scale:1,rot:0}] ]},
+  "Trefoil family":{ seed:"circle", sp:{r:145,res:420}, st:[
+    ["lobes",{count:3,amp:0.22,phase:0,sharp:1}],
+    ["linear",{count:4,dx:0,dy:0,scale:0.8,rot:0}] ]},
+  "Lancet arcade":{ seed:"lancet", sp:{w:88,h:220,shoulder:0.64,res:220}, st:[
+    ["linear",{count:6,dx:118,dy:0,scale:1,rot:0}] ]},
+  "Rose spokes":{ seed:"line", sp:{len:120,ang:-90,res:70}, st:[
+    ["xform",{tx:0,ty:-112,rot:0,sx:1,sy:1}],
+    ["radial",{count:16,radius:0,spin:0,scale:1,arc:360,pivot:"custom",px:0,py:0}] ]},
+  "Diamond halo":{ seed:"circle", sp:{r:155,res:420}, st:[
+    ["stamp",{shape:"diamond",spacing:34,size:8,aspect:1.2,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Leaf wreath":{ seed:"superellipse", sp:{rx:11,ry:30,n:2.4,res:80}, st:[
+    ["xform",{tx:0,ty:-148,rot:24,sx:1,sy:1}],
+    ["radial",{count:14,radius:0,spin:0,scale:1,arc:360,pivot:"custom",px:0,py:0}] ]},
+  "Wave rails":{ seed:"line", sp:{len:500,ang:0,res:360}, st:[
+    ["offset",{dist:42,copies:2,keep:true}],
+    ["wave",{amp:27,cycles:4,phase:0}] ]},
+  "Spear row":{ seed:"star", sp:{points:3,r:16,inner:38,rot:-90,res:1}, st:[
+    ["xform",{tx:0,ty:0,rot:0,sx:1,sy:1.8}],
+    ["linear",{count:12,dx:54,dy:0,scale:1,rot:0}] ]},
+  "Pearl wave":{ seed:"line", sp:{len:520,ang:0,res:380}, st:[
+    ["wave",{amp:35,cycles:3,phase:0}],
+    ["stamp",{shape:"circle",spacing:29,size:7,aspect:1,rotate:0,normal:0,alternate:false,keep:false}] ]},
+  "Star chain":{ seed:"star", sp:{points:4,r:16,inner:48,rot:-90,res:1}, st:[
+    ["linear",{count:13,dx:42,dy:0,scale:1,rot:0}] ]},
+  "Chain border":{ seed:"superellipse", sp:{rx:22,ry:13,n:2.5,res:80}, st:[
+    ["linear",{count:10,dx:52,dy:0,scale:1,rot:0}] ]},
+  "Petal mandala":{ seed:"superellipse", sp:{rx:10,ry:28,n:2.5,res:80}, st:[
+    ["xform",{tx:0,ty:-150,rot:0,sx:1,sy:1}],
+    ["radial",{count:12,radius:0,spin:0,scale:1,arc:360,pivot:"custom",px:0,py:0}],
+    ["linear",{count:2,dx:0,dy:0,scale:0.72,rot:15}] ]},
+  "Nested diamonds":{ seed:"polygon", sp:{sides:4,r:165,rot:45,res:40}, st:[
+    ["linear",{count:5,dx:0,dy:0,scale:0.82,rot:0}] ]}
+};
+function loadPreset(name){
+  const P=PRESETS[name]; if(!P) return;
+  pushHistory();
+  state.seedType=P.seed;
+  state.seedParams=Object.assign(defaultParams(SEEDS[P.seed]), P.sp);
+  state.stack=P.st.map(([t,p])=>({id:uid("op"), type:t, on:true, fold:true, p:Object.assign(defaultParams(OPS[t]),p)}));
+  syncSeedButtons(); buildLayers(); buildShapePanel(); buildStack(); recompute(); fitView();
+  setStatus("Loaded starter: "+name);
+}
+const PRESET_GROUPS = [
+  {name:"Masonry", items:["Pixel arch","Brick arch","Stone rosette","Voussoir arch","Dentil band","Brick wave","Hex halo","Fish-scale course","Coping stones","Ashlar ring","Crenellated band","Tile medallions"]},
+  {name:"Tracery", items:["Fan vault","Tracery field","Petal rosette","Lancet ribs","Window fan","Quatrefoil family","Trefoil family","Lancet arcade","Rose spokes","Diamond halo"]},
+  {name:"Ironwork", items:["Braid","Iron ladder","Iron crown","Leaf wreath","Wave rails","Spear row"]},
+  {name:"Borders", items:["Beaded moulding","Scalloped border","Chevron course","Column flutes","Pearl wave","Star chain","Chain border"]},
+  {name:"Form exploration", items:["Flower","Gear","Ripple rings","Wobble blob","Sunburst","Shard cluster","Coral","Petal mandala","Nested diamonds"]}
+];
+(function(){ const box=el("presetList");
+  for(const group of PRESET_GROUPS){
+    const section=document.createElement("div"); section.className="preset-group";
+    const heading=document.createElement("div"); heading.className="preset-category";
+    heading.innerHTML="<span>"+group.name+"</span><small>"+group.items.length+"</small>";
+    const grid=document.createElement("div"); grid.className="grid2";
+    for(const k of group.items){ if(!PRESETS[k]) continue;
+      const b=document.createElement("button"); b.className="btn"; b.textContent=k;
+      b.onclick=()=>loadPreset(k); grid.appendChild(b);
+    }
+    section.append(heading,grid); box.appendChild(section);
+  }
+})();
+
+/* ============================================================ export */
+function simplify(pts,tol,closed){
+  if(tol<=0 || pts.length<4) return pts;
+  const keep=new Array(pts.length).fill(false);
+  keep[0]=keep[pts.length-1]=true;
+  const stack=[[0,pts.length-1]];
+  const d2=(p,a,b)=>{ const dx=b.x-a.x, dy=b.y-a.y, L=dx*dx+dy*dy;
+    let t = L>0 ? ((p.x-a.x)*dx+(p.y-a.y)*dy)/L : 0; t=clamp(t,0,1);
+    const cx=a.x+dx*t, cy=a.y+dy*t; return Math.hypot(p.x-cx,p.y-cy); };
+  while(stack.length){
+    const [i,j]=stack.pop(); let best=-1,bi=-1;
+    for(let k=i+1;k<j;k++){ const d=d2(pts[k],pts[i],pts[j]); if(d>best){best=d;bi=k;} }
+    if(best>tol && bi>0){ keep[bi]=true; stack.push([i,bi],[bi,j]); }
+  }
+  const out=pts.filter((_,i)=>keep[i]);
+  return out.length>=(closed?3:2)? out : pts;
+}
+
+const fx = v => (Math.round(v*1000)/1000);
+function polyD(pts,closed){
+  let d="M "+fx(pts[0].x)+" "+fx(pts[0].y);
+  for(let i=1;i<pts.length;i++) d+=" L "+fx(pts[i].x)+" "+fx(pts[i].y);
+  return d+(closed?" Z":"");
+}
+function bezierD(pts,closed,tension){
+  const n=pts.length;
+  if(n<3) return polyD(pts,closed);
+  const P=i=> closed ? pts[((i%n)+n)%n] : pts[clamp(i,0,n-1)];
+  let d="M "+fx(pts[0].x)+" "+fx(pts[0].y);
+  const last = closed? n : n-1;
+  for(let i=0;i<last;i++){
+    const p0=P(i-1), p1=P(i), p2=P(i+1), p3=P(i+2);
+    const c1={x:p1.x+(p2.x-p0.x)/6*tension, y:p1.y+(p2.y-p0.y)/6*tension};
+    const c2={x:p2.x-(p3.x-p1.x)/6*tension, y:p2.y-(p3.y-p1.y)/6*tension};
+    d+=" C "+fx(c1.x)+" "+fx(c1.y)+", "+fx(c2.x)+" "+fx(c2.y)+", "+fx(p2.x)+" "+fx(p2.y);
+  }
+  return d+(closed?" Z":"");
+}
+
+function buildSvg(){
+  const ps=state.paths;
+  if(!ps.length) return null;
+  const size=parseFloat(el("exSize").value)||200;
+  const margin=parseFloat(el("exMargin").value)||0;
+  const tol=parseFloat(el("exSimplify").value)||0;
+  const smooth=el("exSmooth").checked;
+  const tension=parseFloat(el("exTension").value);
+  const wantFill=el("exFill").checked;
+
+  const bb=bbox(ps);
+  const inner=Math.max(1,size-margin*2);
+  const k=inner/Math.max(bb.w,bb.h);
+  const docW=bb.w*k+margin*2, docH=bb.h*k+margin*2;
+  const map=q=>({x:(q.x-bb.minX)*k+margin, y:(q.y-bb.minY)*k+margin});
+
+  let body="", kept=0;
+  const xmlName=s=>String(s||"object").replace(/[^a-zA-Z0-9_-]+/g,"_").replace(/^([0-9])/,"_$1");
+  for(const obj of state.objects){ if(obj.visible===false)continue;
+    const paths=state.objectPaths.get(obj.id)||[];if(!paths.length)continue;
+    body+='  <g id="'+xmlName(obj.name)+'" data-shaper-object="'+obj.id+'">\n';
+    paths.forEach((p,i)=>{
+      let pts=p.pts.map(map);
+      pts=simplify(pts, tol, p.closed);
+      if(pts.length<2) return;
+      const d = smooth? bezierD(pts,p.closed,isNaN(tension)?1:tension) : polyD(pts,p.closed);
+      const paint = (p.closed && wantFill) ? 'fill="#000000"' : 'fill="none" stroke="#000000" stroke-width="0.5"';
+      body += '    <path id="'+xmlName(obj.name)+'_'+String(i+1).padStart(3,"0")+'" '+paint+' d="'+d+'"/>\n';
+      kept++;
+    });
+    body+="  </g>\n";
+  }
+  if(!kept) return null;
+  const svg = '<?xml version="1.0" encoding="UTF-8"?>\n'+
+    '<svg xmlns="http://www.w3.org/2000/svg" version="1.1"\n'+
+    '     width="'+fx(docW)+'mm" height="'+fx(docH)+'mm"\n'+
+    '     viewBox="0 0 '+fx(docW)+' '+fx(docH)+'">\n'+
+    '  <!-- Ren\'s Shaper 3: independent object groups -->\n'+ body + '</svg>\n';
+  return {svg, count:kept};
+}
+
+function downloadSvg(){
+  const r=buildSvg();
+  if(!r){ setStatus("Nothing to export."); return; }
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([r.svg],{type:"image/svg+xml"}));
+  a.download="rens-shaper-3-"+stamp+".svg"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  setStatus("Exported "+r.count+" paths.");
+}
+el("dlSvg").onclick=downloadSvg;
+el("exportBtn").onclick=downloadSvg;
+el("copySvg").onclick=()=>{
+  const r=buildSvg(); if(!r){ setStatus("Nothing to copy."); return; }
+  const fail=()=>setStatus("Clipboard blocked, use Download instead.");
+  try{ navigator.clipboard.writeText(r.svg).then(()=>setStatus("SVG copied to clipboard."), fail); }
+  catch(e){ fail(); }
+};
+
+/* recipe save / load */
+el("saveJson").onclick=()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([snapshot()],{type:"application/json"}));
+  a.download="rens-shaper-3-document.json"; a.click(); setStatus("Document saved.");
+};
+el("loadJson").onclick=()=>el("fileIn").click();
+el("fileIn").onchange=ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ pushHistory(); restore(rd.result); fitView(); setStatus("Recipe loaded."); }
+                  catch(e){ setStatus("That file did not parse."); } };
+  rd.readAsText(f); ev.target.value="";
+};
+
+/* ============================================================ autosave */
+function saveLocal(){ try{ localStorage.setItem("rensShaper3", snapshot()); }catch(e){} }
+function loadLocal(){ try{ const s=localStorage.getItem("rensShaper3"); if(s){ restore(s); return true; } }catch(e){} return false; }
+
+/* ============================================================ chrome */
+el("undoBtn").onclick=undo;
+el("redoBtn").onclick=redo;
+el("resetViewBtn").onclick=fitView;
+el("shuffleBtn").onclick=shuffle;
+el("surpriseBtn").onclick=surprise;
+el("hintX").onclick=()=>el("hint").classList.add("hide");
+el("fillBtn").onclick=()=>{ state.show.fill=!state.show.fill; el("fillBtn").classList.toggle("on",state.show.fill); draw(); };
+el("ptsBtn").onclick=()=>{ state.show.points=!state.show.points; el("ptsBtn").classList.toggle("on",state.show.points); draw(); };
+el("checkBtn").onclick=()=>{
+  const result=findIntersections(state.paths);
+  state.issues=result.points;
+  el("checkBtn").classList.toggle("on",result.points.length>0);
+  if(!result.points.length) setStatus("Clean: no interior crossings or overlapping runs.");
+  else setStatus((result.truncated?"300+":String(result.points.length))+" intersections / overlaps highlighted.");
+  draw();
+};
+document.querySelectorAll(".panel-head").forEach(h=>h.addEventListener("click",ev=>{
+  if(ev.target!==h && ev.target.className!=="badge") return;
+  h.parentElement.classList.toggle("collapsed"); }));
+
+el("help").innerHTML=`<h2>Ren's Shaper 3</h2>
+<p class="small" style="max-width:760px">A document now contains independent layered objects. Each object has its own root
+curve and operator stack. Choose <b>Make root editable</b> to turn a seed into Bézier anchors. Click or
+<b>Shift-click</b> anchors to select them, use <b>B</b> for box select, then <b>G</b> to move, <b>R</b> to rotate,
+or <b>S</b> to scale. Click or Enter confirms; right-click or Esc cancels. Double-click inserts a point and Delete
+removes the selected points.</p>
+<div class="col"><h3>New lattice operators</h3>
+<p class="small" style="max-width:360px"><b>Stamp along path</b> distributes bricks, diamonds, triangles, hexagons or
+circles by true path distance. <b>Stitch between paths</b> grows crossbars between pairs of curves.
+<b>Interpolate paths</b> creates smooth intermediate curve families.</p></div>
+<div class="col"><h3>Keys</h3><table>
+<tr><td><span class="kbd">R</span></td><td>Shuffle the numbers in the current stack</td></tr>
+<tr><td><span class="kbd">Shift R</span></td><td>Throw the stack away, build a random one</td></tr>
+<tr><td><span class="kbd">E</span></td><td>Export SVG</td></tr>
+<tr><td><span class="kbd">F</span></td><td>Fill on / off</td></tr>
+<tr><td><span class="kbd">P</span></td><td>Points on / off</td></tr>
+<tr><td><span class="kbd">Home</span></td><td>Fit view</td></tr>
+<tr><td><span class="kbd">Ctrl Z</span></td><td>Undo</td></tr>
+<tr><td><span class="kbd">Ctrl Shift Z</span></td><td>Redo</td></tr>
+<tr><td><span class="kbd">H</span> / <span class="kbd">Esc</span></td><td>This panel</td></tr>
+<tr><td>Wheel</td><td>Zoom</td></tr>
+<tr><td>Middle or right drag</td><td>Pan</td></tr>
+</table>
+<h3>Pivots</h3>
+<p class="small" style="max-width:340px">Radial repeat spins around the centre of whatever is fed into it. Set its
+<b>Pivot</b> to <i>custom</i> to place it yourself, or hit the <b>⌖</b> button on the operator and click in the
+viewport. Once placed it draws as an orange crosshair you can drag straight in the viewport, and it survives
+shuffling so you can randomise everything else around a fixed point.</p></div>
+<div class="col"><h3>Order matters</h3>
+<p class="small" style="max-width:340px">The stack runs top to bottom, so <b>Roughen</b> then <b>Offset</b> gives you
+parallel ragged bands, while <b>Offset</b> then <b>Roughen</b> roughens each band separately. Repeats
+(<b>Radial</b>, <b>Linear</b>) multiply everything above them, so putting one early is expensive and putting one
+late is usually what you want.</p>
+<h3>Into Blender</h3>
+<p class="small" style="max-width:340px">File ▸ Import ▸ Scalable Vector Graphics. Each path becomes its own curve
+object inside a collection named after the file. They arrive small, so scale up first. Then Object Data ▸ Geometry ▸
+Extrude for depth, Bevel ▸ Round for an edge, and Fill Mode ▸ Both to cap it. Open paths (Arc, Line) stay as open
+curves, which is what you want if you are going to use them as bevel profiles or taper objects.</p></div>`;
+el("helpBtn").onclick=()=>el("help").classList.toggle("show");
+
+window.addEventListener("keydown",ev=>{
+  const t=ev.target.tagName;
+  if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT"){ if(ev.key==="Enter") ev.target.blur(); return; }
+  if(ev.code==="Space"){ spaceDown=true; }
+  const k=ev.key.toLowerCase();
+  if(ev.ctrlKey && k==="z"){ ev.preventDefault(); ev.shiftKey?redo():undo(); return; }
+  if(ev.ctrlKey||ev.metaKey||ev.altKey) return;
+  if(editTransform){
+    if(ev.key==="Enter"){ev.preventDefault();finishEditTransform(true);}
+    else if(ev.key==="Escape"){ev.preventDefault();finishEditTransform(false);}
+    return;
+  }
+  if(boxSelect){
+    if(ev.key==="Escape"||k==="b"){ev.preventDefault();boxSelect=null;syncCursor();draw();setStatus("Box select cancelled.");}
+    return;
+  }
+  if((ev.key==="Delete"||ev.key==="Backspace")&&state.seedType==="editable"&&selectedAnchorIndices().length){
+    ev.preventDefault();deleteEditAnchor();return;
+  }
+  if(state.seedType==="editable"&&!state.current.locked&&(k==="g"||k==="r"||k==="s"||k==="b")){
+    ev.preventDefault();
+    if(k==="b")beginBoxSelect();
+    else beginEditTransform(k==="g"?"move":k==="r"?"rotate":"scale");
+    return;
+  }
+  if(k==="r"){ ev.preventDefault(); ev.shiftKey?surprise():shuffle(); }
+  else if(k==="e"){ ev.preventDefault(); downloadSvg(); }
+  else if(k==="f"){ el("fillBtn").click(); }
+  else if(k==="p"){ el("ptsBtn").click(); }
+  else if(k==="h"){ el("helpBtn").click(); }
+  else if(ev.key==="Escape"){ el("help").classList.remove("show");
+    if(pickPivot){ pickPivot=null; buildStack(); draw(); setStatus("Pivot picking cancelled."); } }
+  else if(ev.key==="Home"){ ev.preventDefault(); fitView(); }
+});
+window.addEventListener("keyup",ev=>{ if(ev.code==="Space") spaceDown=false; });
+
+/* ============================================================ boot */
+function boot(){
+  if(!loadLocal()){
+    state.seedParams=defaultParams(SEEDS.circle);
+    loadPreset("Flower");
+  } else {
+    buildLayers(); buildShapePanel(); buildStack(); syncSeedButtons(); recompute();
+  }
+  resizeStage();
+  fitView();
+  setStatus("Ready. Press Shift+R if you want it to surprise you.");
+}
+boot();
+</script>
+</body>
+</html>

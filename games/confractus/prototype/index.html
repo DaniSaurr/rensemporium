@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>confraxus!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="800" height="800" style="border:1px solid #d3d3d3; display:block; margin:auto; position:absolute; top:0; bottom:0; left:0; right:0;">
+Your browser does not support the HTML canvas tag.</canvas>
+
+    <script>
+    const canvas = document.getElementById("myCanvas");
+    const ctx = canvas.getContext("2d");
+    let debug = false;
+    let mouse_position = [0,0];
+    let gameObjects = [];
+    let player;
+    let ball;
+    let eye_offset_X = 0;
+    let eye_offset_Y = 0;
+    let global_offset = [];
+    let mult = 1.0; 
+    let score = 0;
+    let enemySpawnInterval = null;
+    let gameOver = false;
+    let finalScore = 0; 
+    let lastSpawnTop = null;
+    let lastTime = 0;
+
+    var rightPressed = false;
+    var leftPressed = false;
+    var upPressed = false;
+    var downPressed = false;
+
+    canvas.addEventListener("mousemove", mouseMove);
+    canvas.addEventListener("mousedown", mouseDown);
+    document.addEventListener("keydown", keyDownHandler, false);
+    document.addEventListener("keyup", keyUpHandler, false);
+
+    function keyDownHandler(e) {
+        if ("code" in e) {
+            switch (e.code) {
+                case "Unidentified":
+                    break;
+                case "ArrowRight":
+                case "Right":
+                case "KeyD":
+                    rightPressed = true;
+                    return;
+                case "ArrowLeft":
+                case "Left":
+                case "KeyA":
+                    leftPressed = true;
+                    return;
+                case "ArrowUp":
+                case "Up":
+                case "KeyW":
+                    upPressed = true;
+                    return;
+                case "ArrowDown":
+                case "Down":
+                case "KeyS":
+                    downPressed = true;
+                    return;
+                case "Space":
+                    if (gameOver) resetGame();
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        if (e.keyCode == 39) {
+            rightPressed = true;
+        } else if (e.keyCode == 37) {
+            leftPressed = true;
+        }
+
+        if (e.keyCode == 40) {
+            downPressed = true;
+        } else if (e.keyCode == 38) {
+            upPressed = true;
+        } else if (e.keyCode == 32 && gameOver) {
+            resetGame();
+        }
+    }
+
+    function keyUpHandler(e) {
+        if ("code" in e) {
+            switch (e.code) {
+                case "Unidentified":
+                    break;
+                case "ArrowRight":
+                case "Right":
+                case "KeyD":
+                    rightPressed = false;
+                    return;
+                case "ArrowLeft":
+                case "Left":
+                case "KeyA":
+                    leftPressed = false;
+                    return;
+                case "ArrowUp":
+                case "Up":
+                case "KeyW":
+                    upPressed = false;
+                    return;
+                case "ArrowDown":
+                case "Down":
+                case "KeyS":
+                    downPressed = false;
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        if (e.keyCode == 39) {
+            rightPressed = false;
+        } else if (e.keyCode == 37) {
+            leftPressed = false;
+        }
+
+        if (e.keyCode == 40) {
+            downPressed = false;
+        } else if (e.keyCode == 38) {
+            upPressed = false;
+        }
+    }
+
+    function mouseMove(event){
+      mouse_position[0] = event.offsetX;
+      mouse_position[1] = event.offsetY;
+      if(player){
+        player.setFacingDirection();
+      }
+    }
+
+    function mouseDown(event){
+      console.log("click");
+      ball.launch();
+    }
+
+    class Brick {
+      constructor(x, y, w, h, colour="purple") {
+        this.position = [x, y];
+        this.size = [w, h];
+        this.colour = colour;
+      }
+
+      update(dt) {
+        // bricks don’t move silly
+      }
+
+      draw() {
+        ctx.fillStyle = this.colour;
+        ctx.fillRect(this.position[0], this.position[1], this.size[0], this.size[1]);
+        
+        if(debug){
+          ctx.strokeStyle = "lime";
+          ctx.strokeRect(this.position[0], this.position[1], this.size[0], this.size[1]);
+        }
+      }
+    }
+
+    class Triangle {
+      constructor(position,size,colour,type)
+      {
+        this.position = position;
+        this.size = size;
+        this.colour = colour;
+        this.type = type;
+      }
+      update(dt)
+      {
+
+      }
+      draw()
+      {
+        if(this.type == "equilateral")
+        {
+          ctx.beginPath();
+          ctx.fillStyle = this.colour;
+          ctx.moveTo(this.position[0]-this.size/2, this.position[1]+this.size/2);
+          ctx.lineTo(this.position[0]+this.size/2,this.position[1]+this.size/2);
+          ctx.lineTo(this.position[0],this.position[1]-this.size);
+          ctx.lineTo(this.position[0]-this.size/2, this.position[1]+this.size/2);
+          ctx.fill();
+        }
+      }
+    }
+
+    class Player {
+      constructor(position,size,colour,)
+      {
+        this.position = position;
+        this.size = size;
+        this.colour = colour;
+        this.speed = 5;
+        this.facing = [,];
+        this.keyBeingPressed =0;
+      }
+
+      update(dt)
+      {
+        let dx = (rightPressed ? 1 : 0) - (leftPressed ? 1 : 0);
+        let dy = (downPressed ? 1 : 0) - (upPressed ? 1 : 0);
+
+        if (dx !== 0 && dy !== 0) {
+          dx *= Math.SQRT1_2;
+          dy *= Math.SQRT1_2;
+        }
+
+        this.position[0] += dx * this.speed * dt * 60;
+        this.position[1] += dy * this.speed * dt * 60;
+      }
+
+      setFacingDirection()
+      {
+        if(mouse_position[0] < canvas.width/2){ this.facing[0] = "left"; eye_offset_X = -6; }
+        if(mouse_position[0] > canvas.width/2){ this.facing[0] = "right"; eye_offset_X = 6; }
+        if(mouse_position[1] < canvas.height/2){ this.facing[1] = "up"; eye_offset_Y = -3; }
+        if(mouse_position[1] > canvas.height/2){ this.facing[1] = "down"; eye_offset_Y = 3; }
+      }
+
+      draw()
+      {
+        ctx.beginPath();
+        ctx.fillStyle = this.colour;
+        ctx.fillRect(this.position[0],this.position[1],this.size,this.size);
+
+        ctx.fillStyle = "black";
+        ctx.fillRect(this.position[0]+eye_offset_X+this.size/5,this.position[1]+eye_offset_Y+this.size/4,this.size/5,this.size/3);
+        ctx.fillRect(this.position[0]+eye_offset_X+this.size-(this.size/5)-this.size/5,this.position[1]+eye_offset_Y+this.size/4,this.size/5,this.size/3);
+      }
+    }
+
+    class EnemyTriangle {
+      constructor(position, size, colour="orange") {
+        this.position = position;
+        this.size = size;
+        this.colour = colour;
+        this.speed = 2;
+        this.alive = true;
+      }
+
+      update(dt) {
+        if (!this.alive) return;
+
+        let px = player.position[0] + player.size / 2;
+        let py = player.position[1] + player.size / 2;
+
+        let dx = px - (this.position[0] + this.size / 2);
+        let dy = py - (this.position[1] + this.size / 2);
+        let len = Math.sqrt(dx*dx + dy*dy) || 1;
+
+        dx /= len;
+        dy /= len;
+
+        this.position[0] += dx * this.speed * dt * 60;
+        this.position[1] += dy * this.speed * dt * 60;
+
+        let bx = ball.position[0];
+        let by = ball.position[1];
+        let closestX = Math.max(this.position[0], Math.min(bx, this.position[0] + this.size));
+        let closestY = Math.max(this.position[1], Math.min(by, this.position[1] + this.size));
+        let distX = bx - closestX;
+        let distY = by - closestY;
+
+        if(distX*distX + distY*distY < ball.radius * ball.radius){
+          if(this.alive){
+            this.alive = false;
+            ball.velocity[0] *= -1;
+            ball.velocity[1] *= -1;
+            mult += 1;
+            score += mult * 1;
+          }
+        }
+
+        let playerCenterX = player.position[0] + player.size/2;
+        let playerCenterY = player.position[1] + player.size/2;
+        let playerDistX = playerCenterX - (this.position[0] + this.size/2);
+        let playerDistY = playerCenterY - (this.position[1] + this.size/2);
+        let playerDist = Math.sqrt(playerDistX*playerDistX + playerDistY*playerDistY);
+
+        if(playerDist < this.size/2 + player.size/2){
+          endGame();
+        }
+      }
+
+      draw() {
+        if (!this.alive) return;
+
+        let cx = this.position[0] + this.size / 2;
+        let cy = this.position[1] + this.size / 2;
+
+        let px = player.position[0] + player.size / 2;
+        let py = player.position[1] + player.size / 2;
+        let angle = Math.atan2(py - cy, px - cx);
+
+        let tip = [this.size / 2, 0];
+        let bl  = [-this.size / 2, -this.size / 2];
+        let br  = [-this.size / 2, this.size / 2];
+
+        function rotatePoint(pt, a) {
+          let x = pt[0] * Math.cos(a) - pt[1] * Math.sin(a) + cx;
+          let y = pt[0] * Math.sin(a) + pt[1] * Math.cos(a) + cy;
+          return [x, y];
+        }
+
+        let v0 = rotatePoint(tip, angle);
+        let v1 = rotatePoint(bl, angle);
+        let v2 = rotatePoint(br, angle);
+
+        ctx.beginPath();
+        ctx.moveTo(v0[0], v0[1]);
+        ctx.lineTo(v1[0], v1[1]);
+        ctx.lineTo(v2[0], v2[1]);
+        ctx.closePath();
+        ctx.fillStyle = this.colour;
+        ctx.fill();
+
+        if (debug) {
+          ctx.strokeStyle = "red";
+          ctx.strokeRect(this.position[0], this.position[1], this.size, this.size);
+        }
+      }
+    }
+
+    class Ball {
+      constructor(radius, colour) {
+        this.radius = radius;
+        this.colour = colour;
+        this.position = [0,0];
+        this.velocity = [0,0];
+        this.attached = true;
+        this.speed = 9;
+      }
+
+      launch() {
+        if(!this.attached) return;
+
+        let dx = mouse_position[0] - this.position[0];
+        let dy = mouse_position[1] - this.position[1];
+        let len = Math.sqrt(dx*dx + dy*dy) || 1;
+
+        this.velocity[0] = (dx/len) * this.speed;
+        this.velocity[1] = (dy/len) * this.speed;
+
+        this.attached = false;
+      }
+
+      update(dt) {
+        for(let obj of gameObjects){
+          if(obj instanceof Brick){
+            if(ballRectCollision(this, obj)){
+              gameObjects.splice(gameObjects.indexOf(obj),1);
+            }
+          }
+        }
+
+        if(this.attached) {
+          mult = 0;
+
+          let px = player.position[0] + player.size/2;
+          let py = player.position[1] + player.size/2;
+
+          let dx = mouse_position[0] - px;
+          let dy = mouse_position[1] - py;
+
+          let len = Math.sqrt(dx*dx + dy*dy) || 1;
+          dx /= len;
+          dy /= len;
+
+          let dist = player.size/2 + this.radius + 2;
+          this.position[0] = px + dx * dist;
+          this.position[1] = py + dy * dist;
+
+          return;
+        }
+
+        this.position[0] += this.velocity[0] * dt * 60;
+        this.position[1] += this.velocity[1] * dt * 60;
+
+        if(this.position[0] - this.radius < 0 || this.position[0] + this.radius > canvas.width) {
+          this.velocity[0] *= -1;
+        }
+        if(this.position[1] - this.radius < 0 || this.position[1] + this.radius > canvas.height) {
+          this.velocity[1] *= -1;
+        }
+
+        let px = player.position[0] + player.size/2;
+        let py = player.position[1] + player.size/2;
+
+        let dx = this.position[0] - px;
+        let dy = this.position[1] - py;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+
+        if(dist < player.size/2 + this.radius) {
+          this.attached = true;
+          this.velocity = [0,0];
+          mult = 0;
+        }
+      }
+
+      draw() {
+        if(debug){
+          ctx.beginPath();
+          ctx.moveTo(this.position[0], this.position[1]);
+          ctx.lineTo(
+            this.position[0] + this.velocity[0] * 10,
+            this.position[1] + this.velocity[1] * 10
+          );
+          ctx.strokeStyle = "red";
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(this.position[0], this.position[1], this.radius, 0, Math.PI*2);
+        ctx.fillStyle = this.colour;
+        ctx.fill();
+      }
+    }
+
+    startGame();
+    requestAnimationFrame(gameLoop);
+
+    function startGame()
+    {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      populateEnvironment(50);
+      makeNewPlayer();
+
+      ball = new Ball(20, "blue");
+      gameObjects.push(ball);
+      createTestBricks(10,600);
+      createTestBricks(10,0);
+
+      if(enemySpawnInterval !== null)
+      {
+        clearInterval(enemySpawnInterval);
+        enemySpawnInterval = null;
+      }
+
+      enemySpawnInterval = setInterval(spawnEnemy, 2000);
+    }
+
+    function resetGame()
+    {
+      gameObjects = [];
+      score = 0;
+      mult = 1;
+      gameOver = false;
+      finalScore = 0;
+      lastSpawnTop = null;
+      lastTime = 0;
+
+      startGame();
+    }
+
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      let deltaTime = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      deltaTime = Math.min(deltaTime, 0.05);
+
+      update(deltaTime);
+      requestAnimationFrame(gameLoop);
+    }
+
+    function makeNewPlayer()
+    {
+      player = new Player([canvas.width/2,canvas.height/2], 30, "red");
+      gameObjects.push(player);
+    }
+
+    function update(dt)
+    {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updategameObjects(dt);
+      drawgameObjects();
+      drawUI();
+    }
+
+    function updategameObjects(dt) {
+      if(gameOver) return;
+
+      for(let obj of gameObjects){
+        obj.update(dt);
+      }
+
+      gameObjects = gameObjects.filter(obj => !(obj instanceof EnemyTriangle && !obj.alive));
+
+      let bricksLeft = gameObjects.some(obj => obj instanceof Brick);
+      if(!bricksLeft){
+        endGame();
+      }
+    }
+
+    function endGame() 
+    {
+      if(gameOver) return;
+      gameOver = true;
+      finalScore = score;
+      stopSpawning();
+    }
+
+    function populateEnvironment(amount)
+    {
+      for(let i = 0; i < amount; i++)
+      {
+        //tri = new Triangle([randomRange(0,canvas.width),randomRange(0,canvas.height)],randomRange(40,70),"green","equilateral");
+        //gameObjects.push(tri);
+      }
+    }
+
+    function drawgameObjects()
+    {
+      for(let i = 0; i < gameObjects.length; i++)
+      {
+        gameObjects[i].draw();
+      }
+    }
+
+    function randomRange(min, max)
+    {
+      return Math.floor(Math.random()*(max-min+1))+min;
+    }
+
+    function createTestBricks(positionx, positiony) {
+      let rows = 4;
+      let cols = 7;
+      let brickWidth = 100;
+      let brickHeight = 40;
+      let padding = 10;
+      let offsetX = positionx;
+      let offsetY = positiony;
+
+      for(let r = 0; r < rows; r++){
+        for(let c = 0; c < cols; c++){
+          let x = offsetX + c * (brickWidth + padding);
+          let y = offsetY + r * (brickHeight + padding);
+          let brick = new Brick(x, y, brickWidth, brickHeight);
+          gameObjects.push(brick);
+        }
+      }
+    }
+
+    function drawUI() {
+      ctx.save();
+      ctx.fillStyle = "black";
+      ctx.font = "18px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText("Mult: " + mult.toFixed(0), 10, 25);
+      ctx.fillText("Score: " + score.toFixed(0), 10, 45);
+      ctx.restore();
+
+      if(gameOver){
+        ctx.save();
+        ctx.fillStyle = "red";
+        ctx.font = "60px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2 - 40);
+        ctx.fillStyle = "orange";
+        ctx.font = "48px Arial";
+        ctx.fillText("Score: " + finalScore, canvas.width/2, canvas.height/2 + 20);
+        ctx.restore();
+      }
+    }
+
+    function stopSpawning()
+    {
+      if(enemySpawnInterval !== null)
+      {
+        clearInterval(enemySpawnInterval);
+        enemySpawnInterval = null;
+      }
+    }
+
+    function spawnEnemy() {
+      if(gameOver) return;
+      let x = Math.random() * (canvas.width - 50);
+
+      let spawnTop;
+
+      do {
+        spawnTop = Math.random() < 0.5;
+      } while (spawnTop === lastSpawnTop);
+
+      lastSpawnTop = spawnTop;
+
+      let y = spawnTop
+        ? -50 - Math.random() * 150
+        : canvas.height + Math.random() * 150;
+
+      gameObjects.push(new EnemyTriangle([x, y], 40, "yellow"));
+    }
+
+    function ballRectCollision(ball, rect){
+      let rx = rect.position[0];
+      let ry = rect.position[1];
+      let rw = rect.size[0];
+      let rh = rect.size[1];
+
+      let closestX = Math.max(rx, Math.min(ball.position[0], rx + rw));
+      let closestY = Math.max(ry, Math.min(ball.position[1], ry + rh));
+
+      let dx = ball.position[0] - closestX;
+      let dy = ball.position[1] - closestY;
+
+      if(dx*dx + dy*dy < ball.radius*ball.radius){
+        if(Math.abs(dx) > Math.abs(dy)){
+          ball.velocity[0] *= -1;
+        } else {
+          ball.velocity[1] *= -1;
+        }
+        return true;
+      }
+
+      return false;
+    }
+
+    </script>
+  </body>
+</html>

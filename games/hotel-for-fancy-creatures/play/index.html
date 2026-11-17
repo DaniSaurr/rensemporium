@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hotel for fancy creatures</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        background: #101018;
+      }
+
+      #canvasStack {
+        position: relative;
+        width: 1024px;
+        height: 1024px;
+        margin: 8px;
+      }
+
+      #canvasStack canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        margin: 0;
+      }
+
+      #myCanvas { background: #fcfbff; }
+
+      #overlayCanvas {
+        background: transparent;
+        cursor: default;
+      }
+
+      /* roomRender.js expects these controls to exist; the game drives them
+         through roomRenderAPI instead, so they stay hidden. */
+      #controls { display: none; }
+    </style>
+  </head>
+
+  <body>
+    <div id="controls">
+      <select id="viewModeInput">
+        <option value="grid">grid</option>
+        <option value="single" selected>single</option>
+      </select>
+      <input id="colsInput" type="number" min="1" max="12" value="1">
+      <input id="rowsInput" type="number" min="1" max="12" value="1">
+      <input id="seedInput" type="number" min="0" step="1" value="0">
+      <button id="prevSeedBtn" type="button">previous</button>
+      <button id="nextSeedBtn" type="button">next</button>
+      <button id="randomSeedBtn" type="button">random</button>
+      <input id="randomB" type="checkbox" checked>
+      <input id="randomE" type="checkbox" checked>
+      <input id="randomN" type="checkbox" checked>
+      <input id="randomM" type="checkbox" checked>
+      <input id="bodyConstellation" type="checkbox" checked>
+    </div>
+
+    <div id="canvasStack">
+      <canvas id="myCanvas" width="1024" height="1024"></canvas>
+      <canvas id="overlayCanvas" width="1024" height="1024"></canvas>
+    </div>
+
+    <script src="roomRender.js?v=2"></script>
+    <script src="game-core.js?v=2"></script>
+    <script src="game-world.js?v=2"></script>
+    <script src="game-systems.js?v=2"></script>
+  </body>
+</html>

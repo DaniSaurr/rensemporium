@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>character test 3</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        background: #f7f4fb;
+      }
+
+      #controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        color: #333;
+      }
+
+      canvas {
+        border: 1px solid #d3d3d3;
+        background: #fcfbff;
+        margin: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <label>
+        cols
+        <input id="colsInput" type="number" min="1" max="12" value="7" style="width:60px;">
+      </label>
+
+      <label>
+        rows
+        <input id="rowsInput" type="number" min="1" max="12" value="7" style="width:60px;">
+      </label>
+
+      <label><input id="randomB" type="checkbox" checked> random B</label>
+      <label><input id="randomE" type="checkbox" checked> random E</label>
+      <label><input id="randomN" type="checkbox" checked> random N</label>
+      <label><input id="randomM" type="checkbox" checked> random M</label>
+    </div>
+
+    <canvas id="myCanvas" width="1024" height="1024">
+      Your browser does not support the HTML canvas tag.
+    </canvas>
+
+    <script>
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const colsInput = document.getElementById("colsInput");
+      const rowsInput = document.getElementById("rowsInput");
+
+      const randomBInput = document.getElementById("randomB");
+      const randomEInput = document.getElementById("randomE");
+      const randomNInput = document.getElementById("randomN");
+      const randomMInput = document.getElementById("randomM");
+
+      const DEFAULT_FEATURES = {
+        B: "triangle",
+        E: "square",
+        N: "circle",
+        M: "v"
+      };
+
+      function getControls() {
+        return {
+          cols: parseInt(colsInput.value, 10),
+          rows: parseInt(rowsInput.value, 10),
+          randomize: {
+            B: randomBInput.checked,
+            E: randomEInput.checked,
+            N: randomNInput.checked,
+            M: randomMInput.checked
+          }
+        };
+      }
+
+      function createRNG(seed) {
+        let s = seed;
+        return function() {
+          s = Math.sin(s * 9999) * 10000;
+          return s - Math.floor(s);
+        };
+      }
+
+      function range(rng, min, max) {
+        return min + rng() * (max - min);
+      }
+
+      let shapes = [];
+
+      class DriftyShape {
+        constructor(x, y, colour) {
+          this.originX = x;
+          this.originY = y;
+          this.x = x;
+          this.y = y;
+          this.colour = colour;
+
+          this.driftAmount = 1.2;
+          this.driftSpeedX = 0.35;
+          this.driftSpeedY = 0.3;
+          this.timeOffset = Math.random() * 1000;
+
+          this.rotation = 0;
+          this.scaleX = 1;
+          this.scaleY = 1;
+        }
+
+        update(time) {
+          const t = time * 0.001 + this.timeOffset;
+          this.x = this.originX + Math.sin(t * this.driftSpeedX) * this.driftAmount;
+          this.y = this.originY + Math.cos(t * this.driftSpeedY) * this.driftAmount;
+        }
+
+        draw() {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.rotation);
+          ctx.scale(this.scaleX, this.scaleY);
+          this.drawSelf();
+          ctx.restore();
+        }
+
+        drawSelf() {}
+      }
+
+      class Square extends DriftyShape {
+        constructor(x, y, width, height, colour, renderMode = "fill") {
+          super(x, y, colour);
+          this.width = width;
+          this.height = height;
+          this.renderMode = renderMode;
+          this.strokeWidth = 4;
+        }
+
+        drawSelf() {
+          if (this.renderMode === "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.lineWidth = this.strokeWidth;
+            ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
+          } else {
+            ctx.fillStyle = this.colour;
+            ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+          }
+        }
+      }
+
+      class Triangle extends DriftyShape {
+        constructor(x, y, size, colour, renderMode = "fill") {
+          super(x, y, colour);
+          this.size = size;
+          this.renderMode = renderMode;
+          this.strokeWidth = 4;
+        }
+
+        drawSelf() {
+          const half = this.size / 2;
+
+          ctx.beginPath();
+          ctx.moveTo(0, -half);
+          ctx.lineTo(-half, half);
+          ctx.lineTo(half, half);
+          ctx.closePath();
+
+          if (this.renderMode === "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.lineWidth = this.strokeWidth;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = this.colour;
+            ctx.fill();
+          }
+        }
+      }
+
+      class Circle extends DriftyShape {
+        constructor(x, y, radius, colour, renderMode = "fill") {
+          super(x, y, colour);
+          this.radius = radius;
+          this.renderMode = renderMode;
+          this.strokeWidth = 4;
+        }
+
+        drawSelf() {
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+
+          if (this.renderMode === "stroke") {
+            ctx.strokeStyle = this.colour;
+            ctx.lineWidth = this.strokeWidth;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = this.colour;
+            ctx.fill();
+          }
+        }
+      }
+
+      class LineShape extends DriftyShape {
+        constructor(x, y, segments, thickness, colour) {
+          super(x, y, colour);
+          this.segments = segments;
+          this.thickness = thickness;
+        }
+
+        drawSelf() {
+          ctx.strokeStyle = this.colour;
+          ctx.lineWidth = this.thickness;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          this.segments.forEach(segment => {
+            if (segment.length < 2) return;
+
+            ctx.beginPath();
+            ctx.moveTo(segment[0][0], segment[0][1]);
+
+            for (let i = 1; i < segment.length; i++) {
+              ctx.lineTo(segment[i][0], segment[i][1]);
+            }
+
+            ctx.stroke();
+          });
+        }
+      }
+
+      class ArcShape extends DriftyShape {
+        constructor(x, y, radiusX, radiusY, startAngle, endAngle, thickness, colour) {
+          super(x, y, colour);
+          this.radiusX = radiusX;
+          this.radiusY = radiusY;
+          this.startAngle = startAngle;
+          this.endAngle = endAngle;
+          this.thickness = thickness;
+        }
+
+        drawSelf() {
+          ctx.strokeStyle = this.colour;
+          ctx.lineWidth = this.thickness;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.radiusX, this.radiusY, 0, this.startAngle, this.endAngle, false);
+          ctx.stroke();
+        }
+      }
+
+      class FaceHead extends Circle {
+        constructor(x, y, radius, colour) {
+          super(x, y, radius, colour, "fill");
+          this.driftAmount = 1.8;
+          this.driftSpeedX = 0.28;
+          this.driftSpeedY = 0.22;
+        }
+      }
+
+      function pastelColour(rng) {
+        const hue = Math.floor(rng() * 360);
+        const sat = 55 + rng() * 20;
+        const light = 78 + rng() * 10;
+        return `hsl(${hue}, ${sat}%, ${light}%)`;
+      }
+
+      const COMMON_WEIGHT = 10;
+      const UNCOMMON_WEIGHT = 4;
+
+      const FEATURE_POOLS = {
+        B: [
+          { name: "triangle", weight: COMMON_WEIGHT },
+          { name: "invertedTriangle", weight: COMMON_WEIGHT },
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "diamond", weight: COMMON_WEIGHT },
+          { name: "thickHorizontalLine", weight: COMMON_WEIGHT },
+          { name: "v", weight: COMMON_WEIGHT },
+          { name: "invertedV", weight: COMMON_WEIGHT },
+
+          { name: "doubleCircle", weight: UNCOMMON_WEIGHT },
+          { name: "cShape", weight: UNCOMMON_WEIGHT },
+          { name: "uBrow", weight: UNCOMMON_WEIGHT },
+          { name: "leftSlant", weight: UNCOMMON_WEIGHT },
+          { name: "rightSlant", weight: UNCOMMON_WEIGHT },
+          { name: "straightAcross", weight: UNCOMMON_WEIGHT },
+          { name: "catEarBrows", weight: UNCOMMON_WEIGHT }
+        ],
+        E: [
+          { name: "square", weight: COMMON_WEIGHT },
+          { name: "circle", weight: COMMON_WEIGHT },
+          { name: "invertedTriangle", weight: COMMON_WEIGHT },
+          { name: "triangle", weight: COMMON_WEIGHT },
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "verticalLine", weight: COMMON_WEIGHT },
+          { name: "v", weight: COMMON_WEIGHT },
+          { name: "invertedV", weight: COMMON_WEIGHT },
+
+          { name: "snakeEye", weight: UNCOMMON_WEIGHT },
+          { name: "catEye", weight: UNCOMMON_WEIGHT },
+          { name: "plusEye", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeHorizontalDot", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeVerticalDot", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeHorizontal", weight: UNCOMMON_WEIGHT },
+          { name: "ellipseEyeVertical", weight: UNCOMMON_WEIGHT },
+          { name: "cartoonHighlightEye", weight: UNCOMMON_WEIGHT },
+          { name: "bracketEye", weight: UNCOMMON_WEIGHT }
+        ],
+        N: [
+          { name: "circle", weight: COMMON_WEIGHT },
+          { name: "triangle", weight: COMMON_WEIGHT },
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "invertedTriangle", weight: COMMON_WEIGHT },
+          { name: "verticalLine", weight: COMMON_WEIGHT },
+          { name: "wideV", weight: COMMON_WEIGHT },
+          { name: "sideTriangle", weight: COMMON_WEIGHT },
+
+          { name: "uNose", weight: UNCOMMON_WEIGHT },
+          { name: "wideUNose", weight: UNCOMMON_WEIGHT },
+          { name: "cNoseLeft", weight: UNCOMMON_WEIGHT },
+          { name: "closedCNose", weight: UNCOMMON_WEIGHT },
+          { name: "pillNoseHorizontal", weight: UNCOMMON_WEIGHT },
+          { name: "pillNoseVertical", weight: UNCOMMON_WEIGHT },
+          { name: "pigNose", weight: UNCOMMON_WEIGHT },
+          { name: "catFace", weight: UNCOMMON_WEIGHT },
+          { name: "dotNose", weight: UNCOMMON_WEIGHT }
+        ],
+        M: [
+          { name: "horizontalLine", weight: COMMON_WEIGHT },
+          { name: "doublePeak", weight: COMMON_WEIGHT },
+          { name: "doubleTrough", weight: COMMON_WEIGHT },
+          { name: "v", weight: COMMON_WEIGHT },
+          { name: "invertedV", weight: COMMON_WEIGHT },
+          { name: "circle", weight: COMMON_WEIGHT },
+          { name: "vWithTail", weight: COMMON_WEIGHT },
+
+          { name: "frogSmile", weight: UNCOMMON_WEIGHT },
+          { name: "frogFrown", weight: UNCOMMON_WEIGHT },
+          { name: "fangLine", weight: UNCOMMON_WEIGHT },
+          { name: "doubleFang", weight: UNCOMMON_WEIGHT },
+          { name: "cheekMouth", weight: UNCOMMON_WEIGHT }
+        ]
+      };
+
+      function weightedChoice(pool, rng) {
+        const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+        let roll = rng() * totalWeight;
+
+        for (const item of pool) {
+          if (roll < item.weight) return item.name;
+          roll -= item.weight;
+        }
+
+        return pool[pool.length - 1].name;
+      }
+
+      function isLineFeature(featureName) {
+        return [
+          "horizontalLine",
+          "thickHorizontalLine",
+          "verticalLine",
+          "v",
+          "invertedV",
+          "wideV",
+          "doublePeak",
+          "doubleTrough",
+          "vWithTail",
+
+          "cShape",
+          "uBrow",
+          "leftSlant",
+          "rightSlant",
+          "straightAcross",
+          "bracketEye",
+          "uNose",
+          "wideUNose",
+          "cNoseLeft",
+          "closedCNose",
+          "frogSmile",
+          "frogFrown",
+          "cheekMouth"
+        ].includes(featureName);
+      }
+
+      function chooseStyleForFeature(featureName, rng) {
+        if (isLineFeature(featureName)) {
+          return {
+            thicknessMode: rng() < 0.5 ? "regular" : "double"
+          };
+        }
+
+        return {
+          renderMode: rng() < 0.5 ? "fill" : "stroke"
+        };
+      }
+
+      function getRowLayout(cx, cy, headRadius) {
+        return {
+          B: {
+            left:   { x: cx - headRadius * 0.36, y: cy - headRadius * 0.42 },
+            right:  { x: cx + headRadius * 0.36, y: cy - headRadius * 0.42 }
+          },
+          E: {
+            left:   { x: cx - headRadius * 0.36, y: cy - headRadius * 0.08 },
+            right:  { x: cx + headRadius * 0.36, y: cy - headRadius * 0.08 }
+          },
+          N: {
+            center: { x: cx, y: cy + headRadius * 0.18 }
+          },
+          M: {
+            center: { x: cx, y: cy + headRadius * 0.48 }
+          }
+        };
+      }
+
+      function applyPartDrift(part, indexOffset = 0, rng) {
+        part.driftAmount = 0.35 + rng() * 0.45;
+        part.driftSpeedX = 0.12 + rng() * 0.12;
+        part.driftSpeedY = 0.1 + rng() * 0.12;
+        part.timeOffset = rng() * 1000 + indexOffset * 30;
+      }
+
+      function lineThickness(headRadius, style, baseMultiplier = 1) {
+        const base = Math.max(4, headRadius * 0.055 * baseMultiplier);
+        return style.thicknessMode === "double" ? base * 2 : base;
+      }
+
+      function createFeatureAt(featureName, x, y, headRadius, colour, style, rowName, featureScale = 1, slotSide = "center") {
+        const parts = [];
+        const s = featureScale;
+        const thickness = lineThickness(headRadius * s, style, 1);
+
+        if (featureName === "triangle") {
+          const triangle = new Triangle(x, y, headRadius * 0.28 * s, colour, style.renderMode);
+          parts.push(triangle);
+        }
+
+        if (featureName === "invertedTriangle") {
+          const triangle = new Triangle(x, y, headRadius * 0.28 * s, colour, style.renderMode);
+          triangle.rotation = Math.PI;
+          parts.push(triangle);
+        }
+
+        if (featureName === "sideTriangle") {
+          const triangle = new Triangle(x, y, headRadius * 0.26 * s, colour, style.renderMode);
+          triangle.rotation = Math.PI / 2;
+          parts.push(triangle);
+        }
+
+        if (featureName === "square") {
+          const square = new Square(x, y, headRadius * 0.28 * s, headRadius * 0.28 * s, colour, style.renderMode);
+          parts.push(square);
+        }
+
+        if (featureName === "diamond") {
+          const square = new Square(x, y, headRadius * 0.28 * s, headRadius * 0.28 * s, colour, style.renderMode);
+          square.rotation = Math.PI / 4;
+          parts.push(square);
+        }
+
+        if (featureName === "circle") {
+          const circle = new Circle(x, y, headRadius * 0.12 * s, colour, style.renderMode);
+          if (rowName === "E") circle.radius = headRadius * 0.13 * s;
+          if (rowName === "M") {
+            circle.radius = headRadius * 0.15 * s;
+            circle.scaleX = 1.15;
+            circle.scaleY = 0.9;
+          }
+          parts.push(circle);
+        }
+
+        if (featureName === "horizontalLine") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.18 * s, 0], [headRadius * 0.18 * s, 0]]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "thickHorizontalLine") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.2 * s, 0], [headRadius * 0.2 * s, 0]]],
+            lineThickness(headRadius * s, style, 1.6), colour
+          ));
+        }
+
+        if (featureName === "verticalLine") {
+          parts.push(new LineShape(
+            x, y,
+            [[[0, -headRadius * 0.18 * s], [0, headRadius * 0.18 * s]]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "v") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.18 * s, -headRadius * 0.08 * s], [0, headRadius * 0.16 * s], [headRadius * 0.18 * s, -headRadius * 0.08 * s]]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "invertedV") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.18 * s, headRadius * 0.08 * s], [0, -headRadius * 0.16 * s], [headRadius * 0.18 * s, headRadius * 0.08 * s]]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "wideV") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.28 * s, -headRadius * 0.05 * s], [0, headRadius * 0.16 * s], [headRadius * 0.28 * s, -headRadius * 0.05 * s]]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "doublePeak") {
+          parts.push(new LineShape(
+            x, y,
+            [[
+              [-headRadius * 0.26 * s, headRadius * 0.1 * s],
+              [-headRadius * 0.12 * s, -headRadius * 0.14 * s],
+              [0, headRadius * 0.08 * s],
+              [headRadius * 0.12 * s, -headRadius * 0.14 * s],
+              [headRadius * 0.26 * s, headRadius * 0.1 * s]
+            ]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "doubleTrough") {
+          parts.push(new LineShape(
+            x, y,
+            [[
+              [-headRadius * 0.26 * s, -headRadius * 0.1 * s],
+              [-headRadius * 0.12 * s, headRadius * 0.14 * s],
+              [0, -headRadius * 0.08 * s],
+              [headRadius * 0.12 * s, headRadius * 0.14 * s],
+              [headRadius * 0.26 * s, -headRadius * 0.1 * s]
+            ]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "vWithTail") {
+          parts.push(new LineShape(
+            x, y,
+            [
+              [[-headRadius * 0.18 * s, -headRadius * 0.08 * s], [0, headRadius * 0.12 * s], [headRadius * 0.18 * s, -headRadius * 0.08 * s]],
+              [[0, headRadius * 0.12 * s], [0, headRadius * 0.28 * s]]
+            ],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "doubleCircle") {
+          parts.push(new Circle(x, y, headRadius * 0.11 * s, colour, style.renderMode));
+        }
+
+        if (featureName === "cShape") {
+          const arc = new ArcShape(
+            x, y,
+            headRadius * 0.09 * s,
+            headRadius * 0.14 * s,
+            Math.PI / 2,
+            Math.PI * 1.5,
+            thickness,
+            colour
+          );
+          arc.rotation = Math.PI / 2;
+          parts.push(arc);
+        }
+
+        if (featureName === "uBrow") {
+          const arc = new ArcShape(
+            x, y,
+            headRadius * 0.13 * s,
+            headRadius * 0.08 * s,
+            0,
+            Math.PI,
+            thickness,
+            colour
+          );
+          parts.push(arc);
+        }
+
+        if (featureName === "leftSlant") {
+          const seg = slotSide === "left"
+            ? [[[-headRadius * 0.14 * s, headRadius * 0.08 * s], [headRadius * 0.14 * s, -headRadius * 0.08 * s]]]
+            : [[[-headRadius * 0.14 * s, -headRadius * 0.08 * s], [headRadius * 0.14 * s, headRadius * 0.08 * s]]];
+          parts.push(new LineShape(x, y, seg, thickness, colour));
+        }
+
+        if (featureName === "rightSlant") {
+          const seg = slotSide === "left"
+            ? [[[-headRadius * 0.14 * s, -headRadius * 0.08 * s], [headRadius * 0.14 * s, headRadius * 0.08 * s]]]
+            : [[[-headRadius * 0.14 * s, headRadius * 0.08 * s], [headRadius * 0.14 * s, -headRadius * 0.08 * s]]];
+          parts.push(new LineShape(x, y, seg, thickness, colour));
+        }
+
+        if (featureName === "straightAcross") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.22 * s, 0], [headRadius * 0.22 * s, 0]]],
+            thickness, colour
+          ));
+        }
+
+        if (featureName === "catEarBrows") {
+          const tri = new Triangle(x, y, headRadius * 0.34 * s, colour, style.renderMode);
+          tri.rotation = slotSide === "left" ? -Math.PI / 10 : Math.PI / 10;
+          parts.push(tri);
+        }
+
+        if (featureName === "snakeEye") {
+          const eye = new Circle(x, y, headRadius * 0.14 * s, colour, style.renderMode);
+          parts.push(eye);
+          parts.push(new LineShape(
+            x, y,
+            [[[0, -headRadius * 0.14 * s], [0, headRadius * 0.14 * s]]],
+            Math.max(2, thickness * 0.75), colour
+          ));
+        }
+
+        if (featureName === "catEye") {
+          const eye = new Circle(x, y, headRadius * 0.14 * s, colour, style.renderMode);
+          parts.push(eye);
+          const pupil = new Circle(x, y, headRadius * 0.055 * s, colour, "stroke");
+          pupil.scaleY = 1.8;
+          parts.push(pupil);
+        }
+
+        if (featureName === "plusEye") {
+          parts.push(new LineShape(
+            x, y,
+            [
+              [[-headRadius * 0.12 * s, 0], [headRadius * 0.12 * s, 0]],
+              [[0, -headRadius * 0.12 * s], [0, headRadius * 0.12 * s]]
+            ],
+            lineThickness(headRadius * s, style, 1.5), colour
+          ));
+        }
+
+        if (featureName === "ellipseEyeHorizontalDot" || featureName === "ellipseEyeVerticalDot" ||
+            featureName === "ellipseEyeHorizontal" || featureName === "ellipseEyeVertical") {
+          const eye = new Circle(x, y, headRadius * 0.12 * s, colour, style.renderMode);
+          if (featureName.includes("Horizontal")) {
+            eye.scaleX = 1.7;
+            eye.scaleY = 0.95;
+          } else {
+            eye.scaleX = 0.95;
+            eye.scaleY = 1.55;
+          }
+          parts.push(eye);
+
+          if (featureName.includes("Dot")) {
+            const dot = new Circle(x, y, headRadius * 0.03 * s, colour, "fill");
+            parts.push(dot);
+          }
+        }
+
+        if (featureName === "cartoonHighlightEye") {
+          const eye = new Circle(x, y, headRadius * 0.14 * s, colour, "fill");
+          parts.push(eye);
+          const highlight = new Circle(
+            x - headRadius * 0.045 * s,
+            y - headRadius * 0.045 * s,
+            headRadius * 0.045 * s,
+            "#ffffff",
+            "fill"
+          );
+          parts.push(highlight);
+        }
+
+        if (featureName === "bracketEye") {
+          const arc = new ArcShape(
+            x, y,
+            headRadius * 0.06 * s,
+            headRadius * 0.14 * s,
+            Math.PI / 2,
+            Math.PI * 1.5,
+            thickness,
+            colour
+          );
+          arc.rotation = slotSide === "left" ? 0 : Math.PI;
+          parts.push(arc);
+        }
+
+        if (featureName === "uNose") {
+          parts.push(new ArcShape(
+            x, y,
+            headRadius * 0.1 * s,
+            headRadius * 0.07 * s,
+            0,
+            Math.PI,
+            thickness,
+            colour
+          ));
+        }
+
+        if (featureName === "wideUNose") {
+          parts.push(new ArcShape(
+            x, y,
+            headRadius * 0.15 * s,
+            headRadius * 0.065 * s,
+            0,
+            Math.PI,
+            thickness,
+            colour
+          ));
+        }
+
+        if (featureName === "cNoseLeft") {
+          const arc = new ArcShape(
+            x, y,
+            headRadius * 0.07 * s,
+            headRadius * 0.11 * s,
+            Math.PI / 2,
+            Math.PI * 1.5,
+            thickness,
+            colour
+          );
+          arc.rotation = -Math.PI / 2;
+          parts.push(arc);
+        }
+
+        if (featureName === "closedCNose") {
+          const arc = new ArcShape(
+            x, y,
+            headRadius * 0.07 * s,
+            headRadius * 0.11 * s,
+            Math.PI / 2,
+            Math.PI * 1.5,
+            thickness,
+            colour
+          );
+          arc.rotation = -Math.PI / 2;
+          parts.push(arc);
+          parts.push(new LineShape(
+            x - headRadius * 0.04 * s, y,
+            [[[0, -headRadius * 0.08 * s], [0, headRadius * 0.08 * s]]],
+            Math.max(2, thickness * 0.7), colour
+          ));
+        }
+
+        if (featureName === "pillNoseHorizontal" || featureName === "pillNoseVertical") {
+          const pill = new Circle(x, y, headRadius * 0.08 * s, colour, style.renderMode);
+          if (featureName === "pillNoseHorizontal") {
+            pill.scaleX = 1.8;
+            pill.scaleY = 0.9;
+          } else {
+            pill.scaleX = 0.9;
+            pill.scaleY = 1.8;
+          }
+          parts.push(pill);
+        }
+
+        if (featureName === "pigNose") {
+          parts.push(new Circle(x - headRadius * 0.06 * s, y, headRadius * 0.032 * s, colour, "fill"));
+          parts.push(new Circle(x + headRadius * 0.06 * s, y, headRadius * 0.032 * s, colour, "fill"));
+          parts.push(new Circle(x, y, headRadius * 0.12 * s, colour, "stroke"));
+        }
+
+        if (featureName === "dotNose") {
+          parts.push(new Circle(x - headRadius * 0.04 * s, y, headRadius * 0.022 * s, colour, "fill"));
+          parts.push(new Circle(x + headRadius * 0.04 * s, y, headRadius * 0.022 * s, colour, "fill"));
+        }
+
+        if (featureName === "frogSmile") {
+          parts.push(new ArcShape(
+            x, y,
+            headRadius * 0.18 * s,
+            headRadius * 0.08 * s,
+            0,
+            Math.PI,
+            thickness,
+            colour
+          ));
+        }
+
+        if (featureName === "frogFrown") {
+          parts.push(new ArcShape(
+            x, y,
+            headRadius * 0.18 * s,
+            headRadius * 0.08 * s,
+            Math.PI,
+            Math.PI * 2,
+            thickness,
+            colour
+          ));
+        }
+
+        if (featureName === "fangLine") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.16 * s, 0], [headRadius * 0.16 * s, 0]]],
+            thickness, colour
+          ));
+        
+          const leftFang = new Triangle(
+            x - headRadius * 0.14 * s,
+            y + headRadius * 0.06 * s,
+            headRadius * 0.08 * s,
+            colour,
+            "fill"
+          );
+          leftFang.rotation = Math.PI;
+        
+          const rightFang = new Triangle(
+            x + headRadius * 0.14 * s,
+            y + headRadius * 0.06 * s,
+            headRadius * 0.08 * s,
+            colour,
+            "fill"
+          );
+          rightFang.rotation = Math.PI;
+        
+          parts.push(leftFang, rightFang);
+        }
+
+        if (featureName === "doubleFang") {
+          const left = new Triangle(x - headRadius * 0.05 * s, y + headRadius * 0.04 * s, headRadius * 0.1 * s, colour, "fill");
+          const right = new Triangle(x + headRadius * 0.05 * s, y + headRadius * 0.04 * s, headRadius * 0.1 * s, colour, "fill");
+          parts.push(left, right);
+        }
+
+        if (featureName === "cheekMouth") {
+          parts.push(new LineShape(
+            x, y,
+            [[[-headRadius * 0.11 * s, 0], [headRadius * 0.11 * s, 0]]],
+            thickness, colour
+          ));
+
+          const leftCheek = new ArcShape(
+            x - headRadius * 0.17 * s, y,
+            headRadius * 0.035 * s, headRadius * 0.07 * s,
+            Math.PI / 2, Math.PI * 1.5,
+            Math.max(2, thickness * 0.8), colour
+          );
+          leftCheek.rotation = 0;
+
+          const rightCheek = new ArcShape(
+            x + headRadius * 0.17 * s, y,
+            headRadius * 0.035 * s, headRadius * 0.07 * s,
+            Math.PI / 2, Math.PI * 1.5,
+            Math.max(2, thickness * 0.8), colour
+          );
+          rightCheek.rotation = Math.PI;
+
+          parts.push(leftCheek, rightCheek);
+        }
+
+        return parts;
+      }
+
+      function addFeatureParts(parts, rng) {
+        parts.forEach((part, index) => {
+          applyPartDrift(part, index, rng);
+          shapes.push(part);
+        });
+      }
+
+      function makeFaceAt(cx, cy, headRadius, featureScale, headColour, controls, rng) {
+        const head = new FaceHead(cx, cy, headRadius, headColour);
+        head.timeOffset = rng() * 1000;
+        shapes.push(head);
+
+        const faceColour = "#222";
+        const layout = getRowLayout(cx, cy, headRadius);
+
+        const bFeature = controls.randomize.B ? weightedChoice(FEATURE_POOLS.B, rng) : DEFAULT_FEATURES.B;
+        const bStyle = chooseStyleForFeature(bFeature, rng);
+        addFeatureParts(createFeatureAt(bFeature, layout.B.left.x, layout.B.left.y, headRadius, faceColour, bStyle, "B", featureScale, "left"), rng);
+        addFeatureParts(createFeatureAt(bFeature, layout.B.right.x, layout.B.right.y, headRadius, faceColour, bStyle, "B", featureScale, "right"), rng);
+
+        const eFeature = controls.randomize.E ? weightedChoice(FEATURE_POOLS.E, rng) : DEFAULT_FEATURES.E;
+        const eStyle = chooseStyleForFeature(eFeature, rng);
+        addFeatureParts(createFeatureAt(eFeature, layout.E.left.x, layout.E.left.y, headRadius, faceColour, eStyle, "E", featureScale, "left"), rng);
+        addFeatureParts(createFeatureAt(eFeature, layout.E.right.x, layout.E.right.y, headRadius, faceColour, eStyle, "E", featureScale, "right"), rng);
+
+        const nFeature = controls.randomize.N ? weightedChoice(FEATURE_POOLS.N, rng) : DEFAULT_FEATURES.N;
+        const nStyle = chooseStyleForFeature(nFeature, rng);
+        addFeatureParts(createFeatureAt(nFeature, layout.N.center.x, layout.N.center.y, headRadius, faceColour, nStyle, "N", featureScale, "center"), rng);
+
+        const mFeature = controls.randomize.M ? weightedChoice(FEATURE_POOLS.M, rng) : DEFAULT_FEATURES.M;
+        const mStyle = chooseStyleForFeature(mFeature, rng);
+        addFeatureParts(createFeatureAt(mFeature, layout.M.center.x, layout.M.center.y, headRadius, faceColour, mStyle, "M", featureScale, "center"), rng);
+      }
+
+      function populateGrid() {
+        shapes = [];
+
+        const controls = getControls();
+        const cols = Math.max(1, controls.cols);
+        const rows = Math.max(1, controls.rows);
+
+        const padX = cols === 1 ? 40 : 80;
+        const padY = rows === 1 ? 40 : 80;
+        const minX = padX;
+        const maxX = canvas.width - padX;
+        const minY = padY;
+        const maxY = canvas.height - padY;
+
+        let xPositions = [];
+        let yPositions = [];
+
+        if (cols === 1) {
+          xPositions = [canvas.width / 2];
+        } else {
+          const stepX = (maxX - minX) / (cols - 1);
+          for (let col = 0; col < cols; col++) {
+            xPositions.push(minX + col * stepX);
+          }
+        }
+
+        if (rows === 1) {
+          yPositions = [canvas.height / 2];
+        } else {
+          const stepY = (maxY - minY) / (rows - 1);
+          for (let row = 0; row < rows; row++) {
+            yPositions.push(minY + row * stepY);
+          }
+        }
+
+        let positionSeed = 1;
+
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cx = xPositions[col];
+            const cy = yPositions[row];
+
+            const identityRng = createRNG(positionSeed);
+            const sizeRng = createRNG(positionSeed * 2);
+            const featureRng = createRNG(positionSeed * 3);
+
+            const radius = range(sizeRng, 65, 70);
+            const featureScale = range(featureRng, 0.7, 1.05);
+            const colour = pastelColour(identityRng);
+
+            makeFaceAt(cx, cy, radius, featureScale, colour, controls, identityRng);
+            positionSeed++;
+          }
+        }
+      }
+
+      function update(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        shapes.forEach(shape => {
+          shape.update(time);
+          shape.draw();
+        });
+
+        requestAnimationFrame(update);
+      }
+
+      function gameStart() {
+        populateGrid();
+        requestAnimationFrame(update);
+      }
+
+      [
+        colsInput,
+        rowsInput,
+        randomBInput,
+        randomEInput,
+        randomNInput,
+        randomMInput
+      ].forEach(input => {
+        input.addEventListener("change", populateGrid);
+        input.addEventListener("input", populateGrid);
+      });
+
+      gameStart();
+    </script>
+  </body>
+</html>

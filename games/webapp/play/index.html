@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>game!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+
+    <script>
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    var gradient = ctx.createLinearGradient(0,0,200,0)
+    var radialGradient = ctx.createRadialGradient(75, 50, 5, 90, 60, 200);
+    var userSize = 42;
+    var clickNum = 0;
+
+    canvas.addEventListener('click', handleClick);
+    function handleClick()
+    {
+      if(clickNum <= 5)
+      {
+        ctx.globalAlpha = 10;
+        clickNum++;
+        ctx.fillStyle = "black";
+        ctx.font = "100px Comic Sans MS";
+        ctx.fillText("click again!", 600, 400);
+      }
+      else
+      {
+        ctx.fillStyle = "white";
+        ctx.fillText("good job!", 500, 600);
+        ctx.fillRect(0,0,100,100);
+        clickNum++;
+        ctx.fillStyle = "black"
+        ctx.fillText(clickNum, 20,40);
+      }
+      ctx.font = "50px Comic Sans MS";
+    // function handleClick()
+    // {
+    //
+    // }
+
+    }
+    function drawRectangle(x, y, width, height, colour)
+    {
+      ctx.fillStyle = colour;
+      ctx.fillRect(x,y,width,height);
+    }
+    function drawCheckerboard(squareSize)
+    {
+      var isWhite = true;
+      var width = canvas.width;
+      var height = canvas.height;
+      var numCols = width / squareSize;
+      var numRows = height / squareSize;
+      for (var row = 0; row < numRows; row++)
+      {
+        for (var col = 0; col < numCols; col++)
+        {
+          var x = col * squareSize;
+          var y = row * squareSize;
+          if(isWhite)
+          {
+            drawRectangle(x,y,squareSize,squareSize, "#d1d1e0");
+          }
+          else
+          {
+            drawRectangle(x,y,squareSize,squareSize, "#196666");
+          }
+          isWhite = !isWhite;
+        }
+        isWhite = !isWhite;
+      }
+    }
+
+    drawCheckerboard(120);
+    ctx.lineWidth = 10;
+    gradient.addColorStop(0, "white");
+    gradient.addColorStop(1, "green");
+    radialGradient.addColorStop(0, "black");
+    radialGradient.addColorStop(1, "white");
+    ctx.fillStyle = "#ff3333";
+    ctx.fillRect(0,0,600,800,"red");
+    ctx.fillStyle = "#red";
+    ctx.fillRect(0,0,600,800);
+    ctx.fillStyle = "#33adff";
+    ctx.fillRect(600,0,600,400);
+    ctx.fillStyle = "black";
+    ctx.moveTo(0,0);
+    ctx.lineTo(1200,800);
+    ctx.moveTo(600, 800);
+    ctx.lineTo(600,400);
+    ctx.lineTo(700,400);
+    ctx.lineTo(500,400);
+
+    ctx.stroke();
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(600,400,300, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(600,400,260, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(10,10,150,80);
+    ctx.fillStyle = radialGradient;
+    ctx.fillRect(10, 90, 150, 80);
+    ctx.fillStyle = "#ffffe6";
+    ctx.font = "50px Comic Sans MS";
+    ctx.fillText("hello world", 200, 500);
+    ctx.fillStyle = "#ffff00";
+    ctx.fillText("hello world", 200, 550);
+    ctx.fillStyle = "#e6e600";
+    ctx.fillText("hello world", 200, 600);
+    ctx.fillStyle = "#999900";
+    ctx.fillText("hello world", 200, 650);
+    ctx.fillStyle = "#333300";
+    ctx.fillText("hello world", 200, 700);
+
+    ctx.clearRect(100,700, 300, 300);
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = "green"
+    ctx.fillRect(290,500,600,236);
+    ctx.globalAlpha = 0.7;
+
+    ctx.translate(500, -400);
+    ctx.rotate((45 * Math.PI) / 180);
+    ctx.fillStyle = "pink";
+    ctx.fillRect(500,230,300,300);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    function getInputValue()
+    {
+      ctx.globalAlpha = 1;
+      let userSize = document.getElementById("number").value;
+      drawCheckerboard(userSize);
+    }
+
+    </script>
+  <input id="number" type="number" value="43" />
+  <button onclick="getInputValue()">CLICK ME</button>
+  </body>
+
+</html>

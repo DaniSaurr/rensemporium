@@ -1,0 +1,366 @@
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>triangles!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="1200" height="800" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+    <script>
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d")
+      canvas.addEventListener('mousemove', mouseMove);
+      canvas.addEventListener('click', handleClick);
+      const gameObjects = [];
+      const walls = [];
+      let mousePos = [];
+      let boxcount = 0;
+      let curser = {
+        size: 5,
+        colour: "blue",
+      }
+      const gravity = 10;
+      class GameObject
+      {
+        constructor(name, x,y, width, height,colour,speed)
+        {
+          this.name = name;
+          this.x = x;
+          this.y = y;
+          this.colour = colour;
+          this.secondColour =
+          this.width = width;
+          this.height = height;
+          this.static = false;
+          this.speed = speed;
+          this.direction = "left";
+          this.jumping = false;
+          this.action = "moving";
+          this.animate = "idle";
+          this.t = 0;
+          this.eyeY = this.height / 2;
+          this.eyeHeight = -1 * (this.height / 5);
+          this.leftEyeX = this.width / 4;
+          this.rightEyeX = (this.width / 4) + (this.width / 3);
+        }
+        draw()
+        {
+          ctx.fillStyle = this.colour;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+          if(this.direction == "left" && this.action == "moving")
+          {
+            this.leftEyeX = this.width / 8;
+            this.rightEyeX = this.width / 2;
+          }
+          else if(this.direction == "right" && this.action == "moving")
+          {
+            this.leftEyeX = this.width / 3;
+            this.rightEyeX = this.width - (this.width / 3);
+          }
+          else{
+            this.leftEyeX = this.width / 4;
+            this.rightEyeX = (this.width / 4) + (this.width / 3);
+          }
+          ctx.fillStyle = "black";
+          ctx.fillRect(this.x + this.leftEyeX, this.y + this.eyeY, this.height / 8, this.eyeHeight);
+          ctx.fillRect(this.x + this.rightEyeX, this.y + this.eyeY, this.height / 8, this.eyeHeight);
+
+          ctx.font = "15px Comic Sans MS"
+          ctx.fillStyle = "white"
+          // ctx.strokeText(this.name, this.x,this.y-3);
+          // ctx.fillText(this.name, this.x,this.y-3);
+        }
+        randomizeDirection()
+        {
+          let diceRoll = randomRange(1,2)
+          if(diceRoll == 1)
+          {
+            this.direction = "right";
+          }
+          else{
+            this.direction = "left";
+          }
+        }
+        doAnimation()
+        {
+          switch(this.animate)
+          {
+            case "idle":
+              let diceRoll = randomRange(1,500);
+              if(diceRoll == 1)
+              {
+                this.animate = "eyeClose";
+              }
+              else
+              {
+                this.animate = "idle";
+              }
+              break;
+            case "eyeClose":
+              if(this.eyeHeight < 1)
+              {
+                this.eyeHeight += 4;
+              }
+              else {
+                this.animate = "eyeOpen"
+              }
+              break;
+            case "eyeOpen":
+              let eyeSize = -1 * (this.height / 5);
+              if(this.eyeHeight > eyeSize)
+              {
+                this.eyeHeight -=4;
+              }
+              else{
+                this.animate = "idle";
+              }
+
+          }
+        }
+        decideAction()
+        {
+          let diceRoll = randomRange(1,3);
+          switch(diceRoll)
+          {
+            case 1: this.action = "jumping";
+            break;
+            case 2: this.action = "moving";
+            break;
+            case 3: this.action = "stopping"
+          }
+          this.action = "jumping";
+        }
+        doAction()
+        {
+          switch(this.action)
+          {
+            case "moving":
+              this.t += 1;
+              if(this.t>randomRange(150,300))
+              {
+                this.t = 0;
+                let diceRoll = randomRange(1,2)
+                if(diceRoll == 1)
+                {
+                  this.randomizeDirection();
+                  this.action = "moving";
+                }
+                else
+                {
+                  this.action = "stopping";
+                }
+              }
+                if(checkCollision(this, leftWall))
+                  {
+                    this.direction = "right";
+                  }
+                  if(checkCollision(this, rightWall))
+                  {
+                    this.direction = "left";
+                  }
+                  if(checkCollision(this, floor)&& this.static == false)
+                  {
+                    if(this.direction == "right"){
+                      this.x += this.speed;
+                    }
+                    else{
+                      this.x -= this.speed;
+                    }
+                  }
+
+              break;
+            case "stopping":
+              this.t += 1;
+              if(this.t>randomRange(10,50))
+              {
+                this.t = 0;
+                let diceRoll = randomRange(1,4)
+                if(diceRoll == 1)
+                {
+                  this.action = "moving"
+                }
+                else if(diceRoll == 2)
+                {
+                  this.action = "stopping"
+                }
+                else{
+                  this.action = "jumping"
+                }
+              }
+              break;
+            case "jumping":
+              this.t += 1;
+              if(this.t>10)
+              {
+                this.t = 0;
+                this.action = "stopping"
+              }
+              else {
+                this.randomizeDirection();
+                this.y -= this.speed * randomRange(1,3.5);
+              }
+              break;
+            case "falling":
+              this.t += 1;
+              if(this.t>500)
+              {
+                this.t = 0;
+                this.decideAction();
+              }
+              break;
+          }
+        }
+        Gravity()
+        {
+          if(this.action != "jumping")
+          {
+            if(!checkCollision(this, floor))
+            {
+              this.y += gravity;
+            }
+          }
+
+        }
+      }
+      class Wall
+      {
+        constructor(name, x,y, width, height,colour,speed)
+        {
+          this.name = name;
+          this.x = x;
+          this.y = y;
+          this.colour = colour;
+          this.width = width;
+          this.height = height;
+          this.static = false;
+          this.speed = speed;
+          this.direction = "left";
+          this.jumping = false;
+        }
+        draw()
+        {
+          ctx.fillStyle = this.colour;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+
+          ctx.font = "15px Comic Sans MS"
+          ctx.fillStyle = "white"
+        }
+      }
+      gameStart();
+
+      function mouseMove(event){
+        mousePos[0] = event.offsetX;
+        mousePos[1] = event.offsetY;
+      }
+      let leftWall = new Wall("leftWall", 0,0, 50, canvas.height, "orange", 0);
+      let rightWall = new Wall("rightWall", canvas.width - 50 ,-50, canvas.height, canvas.height, "orange", 0);
+      let floor = new Wall("floor",0,canvas.height -50, canvas.width, 50,"orange",0)
+      leftWall.static = true;
+      rightWall.static = true;
+      floor.static = true;
+      walls.push(floor);
+      walls.push(leftWall);
+      walls.push(rightWall);
+
+
+      function gameStart() {
+        //initialise the game state
+
+        update();
+      }
+      function update()
+      {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        ctx.fillStyle = "grey"
+        ctx.fillRect(0,0,1200,1200);
+        ctx.fillStyle = "black"
+        drawAllObjects();
+        displayCurser();
+
+        window.requestAnimationFrame(update);
+      }
+      function displayCurser()
+      {
+        ctx.fillStyle = curser.colour;
+        ctx.fillRect(mousePos[0] - curser.size / 2, mousePos[1] - curser.size / 2, curser.size, curser.size);
+      }
+      function handleClick(event)
+      {
+        if(boxcount < 7)
+        {
+          boxcount++;
+          let name = String("box" + boxcount);
+          let obj = new GameObject(name,randomRange(60,1100),0, randomRange(50, 80), randomRange(80, 100), randomColour(), randomRange(1,5))
+          obj.jumping = true;
+          gameObjects.push(obj);
+        }
+
+      }
+      function drawAllObjects()
+      {
+        for(let i = 0; i < gameObjects.length; i++)
+        {
+          gameObjects[i].doAnimation();
+          gameObjects[i].doAction();
+          gameObjects[i].Gravity();
+
+          gameObjects[i].draw();
+        }
+        for(let i = 0; i < walls.length; i++)
+        {
+          walls[i].draw();
+        }
+      }
+
+      function checkCollision(box1, box2)
+      {
+        //define a bunch of local vars for the top right and bottom left of each box
+        let b1tr = {
+          x: box1.x,
+          y: box1.y
+        }
+        let b1bl = {
+          x: box1.x + box1.width,
+          y: box1.y + box1.height
+        }
+        let b2tr = {
+          x: box2.x,
+          y: box2.y
+        }
+        let b2bl = {
+          x: box2.x + box2.width,
+          y: box2.y + box2.height
+        }
+
+        //actually check if the boxes are overlappy
+        if(b2tr.x <= b1bl.x &&
+           b2bl.x >= b1tr.x &&
+           b2tr.y <= b1bl.y &&
+           b2bl.y >= b1tr.y)
+        {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+      //utility functions
+      function randomRange(min, max) {
+        return Math.floor(Math.random()*(max-min+1))+min;
+      }
+      function randomColour() {
+        let num = Math.floor(Math.random()*(16777215-1+1))+1;
+        return '#'+num.toString(16);
+      }
+      function isBetween(number, lowerBound, upperBound) {
+        return number >= lowerBound && number <= upperBound;
+      }
+
+    </script>
+  </body>
+</html>

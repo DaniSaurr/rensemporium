@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rensem Ripper 3</title>
+<style>
+  :root{
+    /* Blender-inspired dark theme */
+    --bg:#1d1d1d;            /* viewport / editor background */
+    --region:#303030;        /* header, toolbar, properties region */
+    --panel:#2d2d2d;         /* panel body */
+    --panel-head:#3a3a3a;    /* panel header strip */
+    --widget:#4a4a4a;        /* buttons */
+    --widget-hi:#5c5c5c;     /* button hover */
+    --field:#232323;         /* input fields */
+    --line:#151515;          /* borders */
+    --line-soft:#3d3d3d;
+    --text:#e6e6e6;
+    --muted:#9a9a9a;
+    --accent:#4772b3;        /* Blender blue (active / toggled) */
+    --accent-hi:#5b88cc;
+    --select:#e8912b;        /* selection orange */
+    --x:#cc4b4b; --y:#5fbf60;
+    --headers:#dfe4ee;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",Inter,Roboto,-apple-system,system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;}
+
+  /* ---- overall shell: header / body(toolbar+viewport+props) / statusbar ---- */
+  #app{height:100vh;display:grid;grid-template-rows:38px 1fr 24px;overflow:hidden;}
+  #topbar{display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--region);border-bottom:1px solid var(--line);}
+  #body{display:grid;grid-template-columns:74px 1fr minmax(340px,34vw);overflow:hidden;}
+  #statusbar{display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--region);border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+
+  /* ---- top bar ---- */
+  .brand{font-weight:600;letter-spacing:.3px;color:var(--headers);font-size:15px;white-space:nowrap;}
+  .brand small{color:var(--accent-hi);font-weight:600;}
+  .topspacer{flex:1;}
+  .tabs{display:flex;gap:2px;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:2px;}
+  .tab{background:transparent;border:none;color:var(--muted);padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;}
+  .tab:hover{color:var(--text);}
+  .tab.tab-on{background:var(--accent);color:#fff;}
+  .topbtn{background:var(--widget);border:1px solid var(--line);color:var(--text);width:30px;height:26px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+  .topbtn:hover{background:var(--widget-hi);}
+  .topbtn.on{background:var(--accent);border-color:var(--accent-hi);}
+  .topbtn svg{width:16px;height:16px;}
+  .donate{display:flex;gap:6px;}
+  .donate a{font-size:11px;text-decoration:none;color:var(--text);background:var(--widget);border:1px solid var(--line);
+    padding:4px 9px;border-radius:5px;white-space:nowrap;}
+  .donate a:hover{background:var(--widget-hi);border-color:var(--accent);}
+
+  /* ---- left toolbar ---- */
+  #toolbar{background:var(--region);border-right:1px solid var(--line);padding:6px 0;display:flex;flex-direction:column;
+    align-items:center;gap:3px;overflow-y:auto;}
+  #toolbar .grp{display:flex;flex-direction:column;gap:3px;width:100%;align-items:center;}
+  #toolbar .sep{width:46px;height:1px;background:var(--line-soft);margin:5px 0;}
+  .tbtn{width:60px;padding:7px 2px 5px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--muted);
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;}
+  .tbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .tbtn .lbl{font-size:10px;letter-spacing:.2px;}
+  .tbtn:hover{background:var(--widget);color:var(--text);}
+  .tbtn.on{background:var(--accent);color:#fff;border-color:var(--accent-hi);}
+  #toolSeg,#selSeg{display:contents;}  /* engine targets buttons inside these ids */
+
+  /* ---- viewport ---- */
+  #stageWrap{position:relative;background:var(--bg);overflow:hidden;}
+  #stage{display:block;width:100%;height:100%;background:
+    repeating-conic-gradient(#1a1a1a 0% 25%, #202020 0% 50%) 50% / 26px 26px;cursor:crosshair;}
+  #modeBadge{position:absolute;right:12px;top:12px;background:rgba(20,20,20,.86);border:1px solid var(--accent);
+    padding:5px 11px;color:#fff;font-family:ui-monospace,Consolas,monospace;font-size:12px;border-radius:5px;pointer-events:none;}
+  #hint{position:absolute;left:12px;bottom:12px;background:rgba(20,20,20,.82);border:1px solid var(--line-soft);
+    padding:8px 11px;color:var(--text);font-size:11.5px;max-width:640px;line-height:1.5;border-radius:6px;}
+  #hint .x{float:right;margin-left:10px;cursor:pointer;color:var(--muted);}
+  #hint.hide{display:none;}
+
+  /* ---- properties (N-panel) ---- */
+  #props{background:var(--region);border-left:1px solid var(--line);overflow-y:auto;padding:8px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--panel-head);cursor:pointer;
+    user-select:none;font-weight:600;color:var(--headers);font-size:12.5px;}
+  .panel-head::before{content:"";width:0;height:0;border-left:5px solid var(--muted);border-top:4px solid transparent;
+    border-bottom:4px solid transparent;transform:rotate(90deg);transition:transform .12s;}
+  .panel.collapsed .panel-head::before{transform:rotate(0deg);}
+  .panel-head .badge{margin-left:auto;font-weight:400;color:var(--muted);font-size:11px;}
+  .panel-body{padding:10px;}
+  .panel.collapsed .panel-body{display:none;}
+
+  h1{display:none;}
+  .hintline{font-size:11.5px;color:var(--muted);line-height:1.5;margin:6px 0 0;}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+
+  /* widgets */
+  .btn{background:var(--widget);color:var(--text);border:1px solid var(--line);padding:7px 10px;border-radius:5px;
+    cursor:pointer;font-size:12px;flex:1;text-align:center;white-space:nowrap;}
+  .btn:hover{background:var(--widget-hi);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.primary{background:var(--accent);border-color:var(--accent-hi);color:#fff;}
+  .btn.primary:hover{background:var(--accent-hi);}
+  .btn.wide{flex:none;width:100%;}
+  .buttonish{display:inline-block;text-align:center;}
+  label{display:block;margin:0;color:var(--text);}
+
+  .field{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0;font-size:12px;}
+  .field > span{color:var(--muted);}
+  .field.col{flex-direction:column;align-items:stretch;gap:3px;}
+  .field.col > span{font-size:11px;}
+  input[type="number"],input[type="text"],select{background:var(--field);color:var(--text);border:1px solid var(--line);
+    padding:6px 8px;font-size:12px;border-radius:5px;width:100%;}
+  .field input[type="number"]{width:96px;text-align:center;cursor:ew-resize;}
+  input[type="number"]:hover{border-color:var(--accent);}
+  input[type="number"]:focus,input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent-hi);cursor:text;}
+  select{cursor:pointer;}
+  .check{display:flex;align-items:center;gap:8px;margin:7px 0;cursor:pointer;font-size:12px;}
+  .check input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+
+  /* segmented (size mode) */
+  .seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:7px 0;}
+  .seg button{flex:1;background:var(--field);border:none;color:var(--muted);padding:7px 4px;cursor:pointer;font-size:12px;border-right:1px solid var(--line);}
+  .seg button:last-child{border-right:none;}
+  .seg button:hover{color:var(--text);}
+  .seg button.on{background:var(--accent);color:#fff;}
+
+  /* preview canvases */
+  .previewCv{width:100%;background:
+    repeating-conic-gradient(#141414 0% 25%, #1c1c1c 0% 50%) 50% / 16px 16px;
+    border:1px solid var(--line);display:block;border-radius:5px;}
+  .kbd{font-family:ui-monospace,Consolas,monospace;background:var(--field);border:1px solid var(--line-soft);
+    border-radius:4px;padding:1px 6px;color:var(--accent-hi);font-size:11px;}
+
+  /* lists */
+  #sourceList,.tileList{display:flex;flex-direction:column;gap:6px;}
+  .card{border:1px solid var(--line);background:var(--field);padding:6px;cursor:pointer;position:relative;border-radius:5px;}
+  .card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
+  .thumb{width:100%;height:64px;object-fit:contain;background:#000;border:1px solid var(--line);margin-bottom:4px;border-radius:3px;}
+  .tileThumb{width:64px;height:48px;object-fit:contain;background:#000;border:1px solid var(--line);border-radius:3px;}
+  .tileCard{display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:center;}
+  .xbtn{position:absolute;top:4px;right:4px;background:#3a1414;border:1px solid #6a2b2b;color:#ff9b9b;padding:0 7px;border-radius:4px;line-height:1.6;}
+  .xbtn:hover{background:#511a1a;}
+  .small{font-size:11.5px;color:var(--muted);line-height:1.45;}
+  .danger{color:#ff8888;} .ok{color:#8fe6a8;} .mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;}
+
+  /* help overlay */
+  #help{position:absolute;inset:0;background:rgba(15,15,15,.95);display:none;padding:30px;overflow:auto;}
+  #help.show{display:block;}
+  #help h2{font-size:18px;color:var(--headers);}
+  #help table{border-collapse:collapse;margin-top:8px;}
+  #help td{padding:4px 16px 4px 0;vertical-align:top;font-size:12.5px;}
+  #help .col{display:inline-block;vertical-align:top;margin-right:44px;}
+
+  ::-webkit-scrollbar{width:12px;height:12px;}
+  ::-webkit-scrollbar-thumb{background:#464646;border:3px solid var(--region);border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:#585858;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ TOP BAR ============ -->
+  <header id="topbar">
+    <div class="brand">Rensem&nbsp;Ripper&nbsp;<small>3</small></div>
+    <div class="tabs" title="Viewport contents">
+      <button id="viewSourceBtn" class="tab tab-on">Source</button>
+      <button id="viewAtlasBtn" class="tab">Atlas</button>
+    </div>
+    <button id="undoBtn" class="topbtn" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button id="redoBtn" class="topbtn" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+    <button id="resetViewBtn" class="topbtn" title="Reset zoom &amp; pan (Home)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg></button>
+    <button id="gizmoBtn" class="topbtn on" title="Show / hide transform gizmo (N)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V7"/><path d="m8 11 4-4 4 4"/><path d="M4 20h16"/></svg></button>
+    <div class="topspacer"></div>
+    <button id="helpBtn" class="topbtn" title="Keyboard shortcuts (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg></button>
+    <div class="donate">
+      <a href="https://paypal.me/rensemripper" target="_blank" rel="noopener">💛 PayPal</a>
+      <a href="https://revolut.me/dmcloughlin151" target="_blank" rel="noopener">💸 Revolut</a>
+    </div>
+  </header>
+
+  <div id="body">
+
+    <!-- ============ LEFT TOOLBAR ============ -->
+    <nav id="toolbar">
+      <div class="grp" id="toolSeg">
+        <button class="tbtn on" data-tool="select" title="Select / transform (Tab)">
+          <svg viewBox="0 0 24 24"><path d="M5 3l7 17 2.5-6.5L21 11 5 3z"/></svg>
+          <span class="lbl">Select</span>
+        </button>
+        <button class="tbtn" data-tool="draw" title="Draw polygon corners (Tab)">
+          <svg viewBox="0 0 24 24"><path d="M14 3l7 7-9 9-5 1 1-5 6-6z"/><path d="M13 4l7 7"/></svg>
+          <span class="lbl">Draw</span>
+        </button>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="grp" id="selSeg" title="Selection mode">
+        <button class="tbtn" data-sel="vertex" title="Vertex select (1)">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1"/><circle cx="4" cy="4" r="2.4" fill="currentColor"/><circle cx="20" cy="4" r="2.4" fill="currentColor"/><circle cx="4" cy="20" r="2.4" fill="currentColor"/><circle cx="20" cy="20" r="2.4" fill="currentColor"/></svg>
+          <span class="lbl">Vertex</span>
+        </button>
+        <button class="tbtn on" data-sel="face" title="Face select (2)">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1" fill="currentColor" stroke="none" opacity=".55"/><rect x="4" y="4" width="16" height="16" rx="1"/></svg>
+          <span class="lbl">Face</span>
+        </button>
+        <button class="tbtn" data-sel="all" title="Select all (3)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span class="lbl">All</span>
+        </button>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="grp">
+        <button class="tbtn" id="grabBtn" title="Grab / move (G)">
+          <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg>
+          <span class="lbl">Move</span>
+        </button>
+        <button class="tbtn" id="rotateBtn" title="Rotate (R)">
+          <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.3 5.6"/><path d="M4 20v-4h4"/></svg>
+          <span class="lbl">Rotate</span>
+        </button>
+        <button class="tbtn" id="scaleBtn" title="Scale (S)">
+          <svg viewBox="0 0 24 24"><path d="M4 4h6M4 4v6M4 4l7 7"/><rect x="12" y="12" width="8" height="8" rx="1"/></svg>
+          <span class="lbl">Scale</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ============ VIEWPORT ============ -->
+    <main id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="modeBadge">SELECT · face</div>
+      <div id="hint"><span class="x" id="hintClose" title="Dismiss">✕</span>Drag &amp; drop images (or a folder) here — works in Firefox too. <span class="kbd">Tab</span> switches Draw / Select · set <b>Vertices</b> in the panel · scroll = zoom · middle-drag = pan · <span class="kbd">H</span> = shortcuts.</div>
+      <div id="help"></div>
+    </main>
+
+    <!-- ============ PROPERTIES ============ -->
+    <aside id="props">
+
+      <div class="panel">
+        <div class="panel-head">Reference Images</div>
+        <div class="panel-body">
+          <div class="row">
+            <label class="btn buttonish" for="imageInput">+ Add images
+              <input id="imageInput" type="file" accept="image/*" multiple hidden>
+            </label>
+            <button class="btn" id="folderBtn" title="Native folder picker (Chromium / desktop)">Add folder…</button>
+          </div>
+          <div class="row" style="margin-top:6px;">
+            <button class="btn" id="prevSrcBtn">‹ Prev</button>
+            <button class="btn" id="nextSrcBtn">Next ›</button>
+          </div>
+          <div id="sourceList" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Polygon &amp; Transform</div>
+        <div class="panel-body">
+          <div class="field"><span>Vertices (3–12)</span><input id="vertexCount" type="number" value="4" min="3" max="12"></div>
+          <div class="hintline">4 = perspective quad mapped to a rectangle. 3 or 5+ = tri / n-gon: shape is kept, aligned to a dashed bounding quad, and everything outside the outline is masked transparent.</div>
+          <div class="hintline" style="margin-top:8px;">Transform: <span class="kbd">G</span> move · <span class="kbd">S</span> scale · <span class="kbd">R</span> rotate · <span class="kbd">X</span>/<span class="kbd">Y</span> axis · type a number for exact · <span class="kbd">Enter</span> confirm · <span class="kbd">Esc</span> cancel.</div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn" id="duplicateBtn" title="Shift+D">Duplicate</button>
+            <button class="btn" id="clearDrawingBtn">Clear points</button>
+            <button class="btn" id="deleteQuadBtn" title="Del">Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Live Preview</div>
+        <div class="panel-body">
+          <canvas id="preview" class="previewCv" width="336" height="180" style="height:34vh;"></canvas>
+          <div id="previewInfo" class="small" style="margin-top:6px;">No polygon selected.</div>
+        </div>
+      </div>
+
+      <div class="panel collapsed">
+        <div class="panel-head">Seamless / Seams</div>
+        <div class="panel-body">
+          <div class="field"><span>Seam mode</span>
+            <select id="seamMode" style="width:auto;min-width:120px;">
+              <option value="none">None</option>
+              <option value="horizontal">Horizontal</option>
+              <option value="vertical">Vertical</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+          <div class="grid2">
+            <label class="field col"><span>Blend width px</span><input id="blendWidth" type="number" value="32" min="0"></label>
+            <label class="field col"><span>Blend radius</span><input id="blendRadius" type="number" value="1" min="0.1" max="6" step="0.1"></label>
+            <label class="field col"><span>Preview repeat X</span><input id="seamGridX" type="number" value="2" min="1" max="8"></label>
+            <label class="field col"><span>Preview repeat Y</span><input id="seamGridY" type="number" value="2" min="1" max="8"></label>
+          </div>
+          <div class="hintline">Offsets the tile so edges meet in the middle, then feathers the seam. A clean repeating grid below means it's gone.</div>
+          <canvas id="seamPreview" class="previewCv" width="336" height="150" style="height:170px;margin-top:8px;"></canvas>
+        </div>
+      </div>
+
+      <div class="panel collapsed">
+        <div class="panel-head">De-light</div>
+        <div class="panel-body">
+          <label class="check"><input id="delightOn" type="checkbox"><span>Flatten lighting / shadows</span></label>
+          <div class="grid2">
+            <label class="field col"><span>Amount %</span><input id="delightAmt" type="number" value="70" min="0" max="100"></label>
+            <label class="field col"><span>Spread %</span><input id="delightSpread" type="number" value="30" min="1" max="80"></label>
+          </div>
+          <div class="hintline">Removes large-scale shadows / highlights so rips re-light correctly in-engine. Spread = size of lighting flattened. Runs before seam &amp; quantize.</div>
+        </div>
+      </div>
+
+      <div class="panel collapsed">
+        <div class="panel-head">Colour Quantize</div>
+        <div class="panel-body">
+          <label class="check"><input id="quantOn" type="checkbox"><span>Quantize palette (median-cut)</span></label>
+          <div class="field"><span>Colours</span><input id="quantColors" type="number" value="16" min="2" max="256"></div>
+          <div class="hintline">Reduces each tile to a fixed palette — good for retro / pixel-art atlases.</div>
+          <canvas id="quantPreview" class="previewCv" width="336" height="120" style="height:120px;margin-top:8px;"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Atlas</div>
+        <div class="panel-body">
+          <div class="field"><span>Preset</span>
+            <select id="presetSel" style="width:auto;min-width:150px;">
+              <option value="game1k">Game · 1024 auto · pad 2</option>
+              <option value="pixel512">Pixel · 512 fixed · no smooth</option>
+              <option value="big2k">Large · 2048 auto · pad 4</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="seg" id="sizeSeg">
+            <button data-size="auto" class="on">Auto height</button>
+            <button data-size="fixed">Fixed</button>
+          </div>
+          <div class="grid2">
+            <label class="field col"><span>Width</span><input id="atlasWidth" type="number" value="1024" min="1"></label>
+            <label class="field col"><span>Height</span><input id="atlasHeight" type="number" value="1024" min="1"></label>
+          </div>
+          <div class="field"><span>Padding</span><input id="padding" type="number" value="2" min="0"></div>
+          <label class="check"><input id="bleedEdges" type="checkbox" checked><span>Bleed edges into padding</span></label>
+          <canvas id="atlasPreview" class="previewCv" width="336" height="160" style="height:160px;margin-top:8px;"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Make &amp; Export</div>
+        <div class="panel-body">
+          <div class="row">
+            <button class="btn primary" id="extractAllBtn" title="E">Extract all</button>
+            <button class="btn primary" id="packBtn" title="P">Pack</button>
+          </div>
+          <div class="row" style="margin-top:6px;">
+            <button class="btn" id="exportPngBtn">PNG</button>
+            <button class="btn" id="exportJpgBtn">JPG</button>
+            <button class="btn" id="exportJsonBtn">JSON</button>
+          </div>
+          <div class="field" style="margin-top:8px;"><span>Background</span>
+            <select id="bgSel" style="width:auto;min-width:130px;">
+              <option value="transparent">Transparent</option>
+              <option value="black">Black</option>
+              <option value="magenta">Magenta</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel collapsed">
+        <div class="panel-head">Project</div>
+        <div class="panel-body">
+          <div class="row">
+            <button class="btn" id="saveBtn">Save now</button>
+            <button class="btn" id="clearSavedBtn">Clear saved data</button>
+          </div>
+          <div class="hintline">Auto-saves to this browser's local storage each time you finish a polygon. Other changes (edits, settings, deletions) need a manual Save.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Extracted Textures <span class="badge" id="tileCount"></span></div>
+        <div class="panel-body">
+          <div id="tileList" class="tileList"></div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ============ STATUS BAR ============ -->
+  <footer id="statusbar">
+    <span id="status" class="mono">Ready.</span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   Rensem Ripper 3  —  Blender-inspired GUI
+   Engine (warp / seam / de-light / quantize / atlas / save)
+   carried over unchanged from v2; only the shell is new.
+   ============================================================ */
+
+const state = {
+  mode: "source",
+  tool: "select",                 // draw | select
+  selMode: "face",                // vertex | face | all
+  sources: [],
+  activeSourceId: null,
+  selectedQuadId: null,
+  selectedVert: null,             // {quadId, index}
+  drawingPoints: [],
+  modal: null,                    // {op, startImg, pivot, axis, targets, orig}
+  view: { drawX:0, drawY:0, scale:1, imgW:0, imgH:0 },
+  cam: { zoom:1, panX:0, panY:0 },
+  atlasCam: { zoom:1, panX:0, panY:0 },
+  vertexCount: 4,
+  panning: null,
+  showGizmo: true,
+  pendingDrag: null,
+  history: [],
+  future: [],
+  extractedTiles: [],
+  selectedTileId: null,
+  atlasCanvas: document.createElement("canvas"),
+  atlas: { width:1024, height:1024, sizeMode:"auto", padding:2, bleedEdges:true,
+           background:"transparent", lastFits:true },
+  seamGrid: { x:2, y:2 },        // preview repeat (global, preview-only)
+  quant:{ enabled:false, colors:16 },
+  delight:{ enabled:false, amount:0.7, spread:30 }
+};
+
+const $ = id => document.getElementById(id);
+const el = {};
+["stage","stageWrap","hint","help","modeBadge","imageInput","folderBtn","sourceList",
+ "tileList","prevSrcBtn","nextSrcBtn","viewSourceBtn","viewAtlasBtn","clearDrawingBtn",
+ "deleteQuadBtn","duplicateBtn","extractAllBtn","packBtn","exportPngBtn","exportJpgBtn","exportJsonBtn",
+ "atlasWidth","atlasHeight","padding","bleedEdges","seamMode","blendWidth","blendRadius",
+ "quantOn","quantColors","presetSel","bgSel","status","preview","previewInfo",
+ "seamPreview","quantPreview","atlasPreview","seamGridX","seamGridY",
+ "delightOn","delightAmt","delightSpread","vertexCount","saveBtn","clearSavedBtn"].forEach(k=>el[k]=$(k));
+const ctx = el.stage.getContext("2d");
+
+/* ---------------- helpers ---------------- */
+function uid(p){ return p+"_"+Math.random().toString(36).slice(2,9); }
+const SEAM_DEF={ mode:"none", width:32, radius:1 };               // per-quad seam default
+function quadSeam(q){ if(!q) return SEAM_DEF; if(!q.seam) q.seam={...SEAM_DEF}; return q.seam; }
+function activeQuad(){ const s=activeSource(); return selectedQuad() || (s && s.quads[0]) || null; }
+function tileQuad(t){ if(!t) return null; const s=state.sources.find(s=>s.id===t.sourceId); return s? s.quads.find(q=>q.id===t.quadId)||null : null; }
+function syncSeamControls(){ const s=quadSeam(activeQuad()); el.seamMode.value=s.mode; el.blendWidth.value=s.width; el.blendRadius.value=s.radius; }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function activeSource(){ return state.sources.find(s=>s.id===state.activeSourceId)||null; }
+function activeSourceIndex(){ return state.sources.findIndex(s=>s.id===state.activeSourceId); }
+function selectedQuad(){ const s=activeSource(); return s? s.quads.find(q=>q.id===state.selectedQuadId)||null : null; }
+function selectedTile(){ return state.extractedTiles.find(t=>t.id===state.selectedTileId)||null; }
+function setStatus(m){ el.status.textContent=m; }
+function updateBadge(){
+  if(state.modal){ el.modeBadge.textContent = state.modal.op.toUpperCase()+(state.modal.axis?(" "+state.modal.axis.toUpperCase()):"")+(state.modal.numBuf?(" "+state.modal.numBuf):""); return; }
+  el.modeBadge.textContent = state.tool.toUpperCase()+(state.tool==="select"?(" · "+state.selMode):"");
+}
+
+function resizeStage(){
+  const r = el.stageWrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio||1;
+  el.stage.width = Math.max(1,Math.floor(r.width*dpr));
+  el.stage.height= Math.max(1,Math.floor(r.height*dpr));
+  el.stage.style.width=r.width+"px"; el.stage.style.height=r.height+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+window.addEventListener("resize",resizeStage);
+function resetView(){
+  if(state.mode==="atlas") state.atlasCam={zoom:1,panX:0,panY:0};
+  else state.cam={zoom:1,panX:0,panY:0};
+}
+
+/* ---------------- image loading ---------------- */
+el.imageInput.addEventListener("change", async e=>{
+  const files = Array.from(e.target.files||[]);
+  for(const f of files) await addSourceFile(f);
+  e.target.value="";
+  renderSourceList(); draw();
+  setStatus("Loaded "+state.sources.length+" source(s).");
+});
+el.folderBtn.addEventListener("click", async ()=>{
+  // Progressive enhancement: File System Access API (Chromium / desktop build).
+  if(!window.showDirectoryPicker){ setStatus("Folder picker needs the desktop build or a Chromium browser. Drag & drop a folder, or use + Add images."); return; }
+  try{
+    const dir = await window.showDirectoryPicker();
+    for await (const entry of dir.values()){
+      if(entry.kind==="file" && /\.(png|jpe?g|gif|webp|bmp)$/i.test(entry.name)){
+        await addSourceFile(await entry.getFile());
+      }
+    }
+    renderSourceList(); draw(); setStatus("Folder loaded: "+state.sources.length+" source(s).");
+  }catch(err){ /* user cancelled */ }
+});
+
+// Drag & drop import — works in every browser including Firefox (no File System Access API needed).
+el.stageWrap.addEventListener("dragover", e=>{ e.preventDefault(); });
+el.stageWrap.addEventListener("drop", async e=>{
+  e.preventDefault();
+  const files=[];
+  if(e.dataTransfer.items && e.dataTransfer.items.length){
+    const items=Array.from(e.dataTransfer.items);
+    for(const item of items){
+      if(item.kind!=="file") continue;
+      const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;   // supported in Firefox too
+      if(entry && entry.isDirectory) await walkDir(entry, files);
+      else { const f=item.getAsFile(); if(f) files.push(f); }
+    }
+  } else {
+    files.push(...Array.from(e.dataTransfer.files||[]));
+  }
+  const imgs=files.filter(f=>/^image\//.test(f.type)||/\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name));
+  for(const f of imgs) await addSourceFile(f);
+  renderSourceList(); draw();
+  setStatus("Dropped "+imgs.length+" image(s).");
+});
+function walkDir(entry, out){
+  return new Promise(resolve=>{
+    const reader=entry.createReader();
+    const readBatch=()=>reader.readEntries(async entries=>{
+      if(!entries.length){ resolve(); return; }
+      for(const en of entries){
+        if(en.isDirectory) await walkDir(en, out);
+        else await new Promise(r=>en.file(f=>{ out.push(f); r(); }));
+      }
+      readBatch();
+    });
+    readBatch();
+  });
+}
+
+function addSourceFile(file){
+  return new Promise(resolve=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      state.sources.push({ id:uid("source"), name:file.name, image:img, url,
+                           width:img.naturalWidth, height:img.naturalHeight, quads:[] });
+      if(!state.activeSourceId) state.activeSourceId = state.sources[state.sources.length-1].id;
+      resolve();
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); console.warn("Could not load",file.name); resolve(); };
+    img.src = url;
+  });
+}
+function removeSource(id){
+  const i = state.sources.findIndex(s=>s.id===id);
+  if(i<0) return;
+  URL.revokeObjectURL(state.sources[i].url);
+  state.sources.splice(i,1);
+  if(state.activeSourceId===id) state.activeSourceId = state.sources[0]?.id||null;
+  renderSourceList(); draw();
+}
+function stepSource(dir){
+  if(!state.sources.length) return;
+  let i = activeSourceIndex(); if(i<0) i=0;
+  i = (i+dir+state.sources.length)%state.sources.length;
+  state.activeSourceId = state.sources[i].id;
+  state.selectedQuadId=null; state.selectedVert=null; resetView();
+  renderSourceList(); syncSeamControls(); draw();
+}
+
+/* ---------------- rendering ---------------- */
+function draw(){
+  const r = el.stage.getBoundingClientRect();
+  ctx.clearRect(0,0,r.width,r.height);
+  if(state.mode==="atlas") drawAtlasView(r.width,r.height);
+  else drawSourceView(r.width,r.height);
+  updateBadge();
+  updatePreview();
+  syncChrome();
+}
+function drawSourceView(w,h){
+  const src = activeSource();
+  if(!src){ ctx.fillStyle="#bbb"; ctx.font="16px sans-serif"; ctx.fillText("Add or drag-drop reference images to begin.",20,35); return; }
+  const m=22;
+  const fit=Math.min((w-m*2)/src.width,(h-m*2)/src.height,1);
+  const scale=fit*state.cam.zoom;
+  const dW=src.width*scale, dH=src.height*scale;
+  const dX=(w-dW)/2+state.cam.panX, dY=(h-dH)/2+state.cam.panY;
+  state.view={drawX:dX,drawY:dY,scale,imgW:src.width,imgH:src.height};
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(src.image,dX,dY,dW,dH);
+  ctx.strokeStyle="#444"; ctx.lineWidth=1; ctx.strokeRect(dX,dY,dW,dH);
+  for(const q of src.quads) drawQuad(q,q.id===state.selectedQuadId);
+  if(state.drawingPoints.length) drawPointChain(state.drawingPoints,"#66e6ff");
+  drawGizmo();
+  ctx.fillStyle="rgba(0,0,0,.7)"; ctx.fillRect(12,12,380,26);
+  ctx.fillStyle="#ddd"; ctx.font="12px ui-monospace,monospace";
+  ctx.fillText(src.name+"  "+src.width+"×"+src.height+"  quads:"+src.quads.length,20,29);
+}
+function imgToScreen(p){ return {x:state.view.drawX+p.x*state.view.scale, y:state.view.drawY+p.y*state.view.scale}; }
+function screenToImg(x,y){ return {x:(x-state.view.drawX)/state.view.scale, y:(y-state.view.drawY)/state.view.scale}; }
+function drawPointChain(points,color){
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2;
+  ctx.beginPath();
+  points.forEach((p,i)=>{ const s=imgToScreen(p); i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y); });
+  ctx.stroke();
+  for(const p of points){ const s=imgToScreen(p); ctx.beginPath(); ctx.arc(s.x,s.y,5,0,7); ctx.fill(); }
+  ctx.restore();
+}
+function drawQuad(quad,selected){
+  const pts=quad.points.map(imgToScreen);
+  ctx.save(); ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.closePath();
+  const faceSel = selected && state.selMode==="face";
+  const selCol = faceSel ? "#e8912b" : "#ff66cc";   // selected face is orange
+  ctx.fillStyle=selected?(faceSel?"rgba(232,145,43,.18)":"rgba(255,102,204,.18)"):"rgba(102,230,255,.11)";
+  ctx.strokeStyle=selected?selCol:"#66e6ff"; ctx.lineWidth=selected?3:2;
+  ctx.fill(); ctx.stroke();
+  if(pts.length!==4){                               // dashed bounding/align quad for tri & n-gon shapes
+    const align=polyAlign(quad.points).map(imgToScreen);
+    ctx.save(); ctx.setLineDash([5,4]); ctx.strokeStyle="rgba(255,255,255,.45)"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(align[0].x,align[0].y);
+    for(let i=1;i<4;i++) ctx.lineTo(align[i].x,align[i].y);
+    ctx.closePath(); ctx.stroke(); ctx.restore();
+  }
+  pts.forEach((p,i)=>{
+    const vSel = state.selMode==="vertex" && state.selectedVert &&
+                 state.selectedVert.quadId===quad.id && state.selectedVert.index===i;
+    ctx.fillStyle = vSel?"#e8912b":(selected?selCol:"#66e6ff");
+    ctx.beginPath(); ctx.arc(p.x,p.y,vSel?8:6,0,7); ctx.fill();
+    ctx.fillStyle="#111"; ctx.font="10px ui-monospace,monospace"; ctx.fillText(String(i+1),p.x-3,p.y+3);
+  });
+  const c=pts.reduce((a,p)=>({x:a.x+p.x/pts.length,y:a.y+p.y/pts.length}),{x:0,y:0});
+  ctx.fillStyle="rgba(0,0,0,.65)"; ctx.fillRect(c.x-45,c.y-10,90,18);
+  ctx.fillStyle="#fff"; ctx.font="11px ui-monospace,monospace"; ctx.fillText(quad.rawWidth+"×"+quad.rawHeight,c.x-34,c.y+3);
+  ctx.restore();
+}
+function atlasGeom(w,h){
+  const m=22, fit=Math.min((w-m*2)/state.atlasCanvas.width,(h-m*2)/state.atlasCanvas.height,1);
+  const scale=fit*state.atlasCam.zoom;
+  const dw=state.atlasCanvas.width*scale, dh=state.atlasCanvas.height*scale;
+  const dx=(w-dw)/2+state.atlasCam.panX, dy=(h-dh)/2+state.atlasCam.panY;
+  return {scale,dx,dy,dw,dh};
+}
+function drawAtlasView(w,h){
+  if(!state.atlasCanvas.width){ ctx.fillStyle="#bbb"; ctx.font="16px sans-serif"; ctx.fillText("Extract and pack to preview the atlas.",20,35); return; }
+  const {scale,dx,dy,dw,dh}=atlasGeom(w,h);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(state.atlasCanvas,dx,dy,dw,dh);
+  ctx.strokeStyle=state.atlas.lastFits?"#66e6ff":"#e8912b"; ctx.lineWidth=1; ctx.strokeRect(dx,dy,dw,dh);
+  for(const t of state.extractedTiles){
+    if(t.overflow) continue;
+    ctx.strokeStyle=t.id===state.selectedTileId?"#ff66cc":"rgba(255,255,255,.35)";
+    ctx.strokeRect(dx+t.packedX*scale,dy+t.packedY*scale,t.width*scale,t.height*scale);
+  }
+  ctx.fillStyle="rgba(0,0,0,.7)"; ctx.fillRect(12,12,440,26);
+  ctx.fillStyle=state.atlas.lastFits?"#ddd":"#e8912b"; ctx.font="12px ui-monospace,monospace";
+  ctx.fillText("atlas "+state.atlasCanvas.width+"×"+state.atlasCanvas.height+"  tiles:"+state.extractedTiles.length+(state.atlas.lastFits?"":"  overflow"),20,29);
+}
+
+/* ---------------- pointer ---------------- */
+el.stage.addEventListener("pointerdown", ev=>{
+  if(ev.button===1){                                     // middle button = pan (Source & Atlas)
+    const cam = state.mode==="atlas" ? state.atlasCam : state.cam;
+    state.panning={x:ev.clientX,y:ev.clientY,panX:cam.panX,panY:cam.panY,mode:state.mode};
+    el.stage.setPointerCapture(ev.pointerId); ev.preventDefault(); return;
+  }
+  if(ev.button!==0) return;                            // only left button below
+  if(state.modal){ if(!state.modal.viaMouse) commitModal(); return; }  // keyboard modal: click confirms
+  if(state.mode!=="source") return;
+  const src=activeSource(); if(!src) return;
+  const {x,y}=eventCanvasPos(ev);
+  const p=screenToImg(x,y);
+
+  // 1) gizmo parts (Select tool, something selected, gizmo visible)
+  if(state.tool==="select" && state.showGizmo){
+    const g=hitTestGizmo(x,y);
+    if(g){ beginMouseTransform(g, p, ev); return; }
+  }
+  // 2) existing vertex handles are editable in ANY mode (left-click edits vertices)
+  const hit=hitTestHandle(x,y,src);
+  if(hit){
+    state.selectedQuadId=hit.quad.id;
+    state.selectedVert={quadId:hit.quad.id,index:hit.index};
+    if(state.tool!=="select") setTool("select");       // auto-exit Draw
+    if(state.selMode!=="vertex") setSelMode("vertex");  // clicking a corner = edit that vertex, any mode
+    state.pendingDrag={kind:"vertex",startImg:p};
+    el.stage.setPointerCapture(ev.pointerId);
+    renderSourceList(); syncSeamControls(); draw(); return;
+  }
+  // 3) Draw tool: drop corner points (only on empty image area)
+  if(state.tool==="draw"){
+    if(p.x<0||p.y<0||p.x>src.width||p.y>src.height) return;
+    state.drawingPoints.push({x:clamp(p.x,0,src.width),y:clamp(p.y,0,src.height)});
+    if(state.drawingPoints.length===state.vertexCount){
+      pushHistory();
+      const points=state.drawingPoints.slice();
+      const sz=estimateRectSize(polyAlign(points));
+      const quad={id:uid("quad"),points,rawWidth:sz.w,rawHeight:sz.h,seam:{...SEAM_DEF}};
+      src.quads.push(quad);
+      state.selectedQuadId=quad.id; state.drawingPoints=[];
+      setStatus("Polygon added: "+sz.w+"×"+sz.h); renderSourceList(); syncSeamControls();
+      saveSession(true);
+    }
+    draw(); return;
+  }
+  // 4) Select tool: pick a quad (and allow drag-move when not in vertex mode)
+  const q=hitTestQuad(p,src);
+  if(q){
+    state.selectedQuadId=q.id; state.selectedVert=null;
+    if(state.selMode!=="vertex"){ state.pendingDrag={kind:"face",startImg:p}; el.stage.setPointerCapture(ev.pointerId); }
+  } else {
+    state.selectedQuadId=null; state.selectedVert=null;
+  }
+  renderSourceList(); syncSeamControls(); draw();
+});
+el.stage.addEventListener("pointermove", ev=>{
+  if(state.panning){
+    const cam = state.panning.mode==="atlas" ? state.atlasCam : state.cam;
+    cam.panX=state.panning.panX+(ev.clientX-state.panning.x);
+    cam.panY=state.panning.panY+(ev.clientY-state.panning.y);
+    draw(); return;
+  }
+  const {x,y}=eventCanvasPos(ev);
+  // start a drag-move once the pointer has moved past a small threshold
+  if(state.pendingDrag && !state.modal){
+    const sp=imgToScreen(state.pendingDrag.startImg);
+    if(Math.hypot(x-sp.x,y-sp.y)>4){
+      pushHistory();
+      startModal("grab",{startImg:state.pendingDrag.startImg, viaMouse:true});
+      if(!state.modal){ state.pendingDrag=null; return; }
+    } else return;
+  }
+  if(!state.modal || state.modal.numBuf) return;       // numeric entry overrides the mouse
+  applyModal(screenToImg(x,y));
+  draw();
+});
+el.stage.addEventListener("pointerup", ev=>{
+  if(state.panning){ state.panning=null; try{ el.stage.releasePointerCapture(ev.pointerId); }catch(e){} return; }
+  if(state.modal && state.modal.viaMouse) commitModal();
+  state.pendingDrag=null;
+  try{ el.stage.releasePointerCapture(ev.pointerId); }catch(e){}
+});
+el.stage.addEventListener("contextmenu", ev=>{          // right-click: cancel transform → cancel draw → nothing
+  if(state.modal){ ev.preventDefault(); cancelModal(); return; }
+  if(state.drawingPoints.length){ ev.preventDefault(); state.drawingPoints=[]; setStatus("Draw cancelled."); draw(); return; }
+});
+el.stage.addEventListener("wheel", ev=>{
+  ev.preventDefault();
+  const {x,y}=eventCanvasPos(ev);
+  const f=ev.deltaY<0 ? 1.15 : 1/1.15;
+  if(state.mode==="source"){
+    const src=activeSource(); if(!src) return;
+    const before=screenToImg(x,y);
+    state.cam.zoom=clamp(state.cam.zoom*f,1,40);
+    if(state.cam.zoom===1){ state.cam.panX=0; state.cam.panY=0; }
+    draw();                                   // refresh state.view with new scale
+    const scr=imgToScreen(before);            // keep the point under the cursor anchored
+    if(state.cam.zoom>1){ state.cam.panX+=x-scr.x; state.cam.panY+=y-scr.y; }
+    draw();
+  } else if(state.mode==="atlas"){
+    if(!state.atlasCanvas.width) return;
+    const r=el.stage.getBoundingClientRect();
+    const before=atlasGeom(r.width,r.height);
+    const beforeImg={x:(x-before.dx)/before.scale, y:(y-before.dy)/before.scale};
+    state.atlasCam.zoom=clamp(state.atlasCam.zoom*f,1,40);
+    if(state.atlasCam.zoom===1){ state.atlasCam.panX=0; state.atlasCam.panY=0; }
+    draw();
+    const after=atlasGeom(r.width,r.height);
+    const scrX=after.dx+beforeImg.x*after.scale, scrY=after.dy+beforeImg.y*after.scale;
+    if(state.atlasCam.zoom>1){ state.atlasCam.panX+=x-scrX; state.atlasCam.panY+=y-scrY; }
+    draw();
+  }
+}, {passive:false});
+
+function eventCanvasPos(ev){ const r=el.stage.getBoundingClientRect(); return {x:ev.clientX-r.left,y:ev.clientY-r.top}; }
+function hitTestHandle(sx,sy,src){
+  for(const quad of src.quads) for(let i=0;i<quad.points.length;i++){
+    const sp=imgToScreen(quad.points[i]);
+    if(Math.hypot(sp.x-sx,sp.y-sy)<12) return {quad,index:i};
+  }
+  return null;
+}
+function hitTestQuad(p,src){
+  for(let i=src.quads.length-1;i>=0;i--) if(pointInPoly(p,src.quads[i].points)) return src.quads[i];
+  return null;
+}
+function pointInPoly(p,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>p.y)!==(yj>p.y))&&(p.x<(xj-xi)*(p.y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+/* ---------------- history (undo / redo) ---------------- */
+function snapshotQuads(){ return JSON.stringify(state.sources.map(s=>({id:s.id, quads:s.quads}))); }
+function restoreQuads(snap){
+  const byId={}; JSON.parse(snap).forEach(s=>byId[s.id]=s.quads);
+  for(const s of state.sources) if(byId[s.id]) s.quads=byId[s.id];
+  const src=activeSource();
+  if(src && !src.quads.some(q=>q.id===state.selectedQuadId)){ state.selectedQuadId=null; state.selectedVert=null; }
+  renderSourceList(); syncSeamControls();
+}
+function pushHistory(){ state.history.push(snapshotQuads()); if(state.history.length>60) state.history.shift(); state.future.length=0; }
+function undo(){ if(!state.history.length){ setStatus("Nothing to undo."); return; } state.future.push(snapshotQuads()); restoreQuads(state.history.pop()); setStatus("Undo."); draw(); }
+function redo(){ if(!state.future.length){ setStatus("Nothing to redo."); return; } state.history.push(snapshotQuads()); restoreQuads(state.future.pop()); setStatus("Redo."); draw(); }
+
+/* ---------------- gizmo (mouse move + rotate) ---------------- */
+const GZ={ arm:54, ring:40, hit:9 };
+function selectionPivot(){
+  const targets=transformTargets(); if(!targets.length) return null;
+  let cx=0,cy=0,n=0;
+  for(const t of targets) for(const i of t.indices){ cx+=t.quad.points[i].x; cy+=t.quad.points[i].y; n++; }
+  return {x:cx/n, y:cy/n};
+}
+function drawGizmo(){
+  if(!state.showGizmo || state.tool!=="select") return;
+  const piv=selectionPivot(); if(!piv) return;
+  const c=imgToScreen(piv);
+  ctx.save();
+  ctx.strokeStyle="#e8912b"; ctx.globalAlpha=.85; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(c.x,c.y,GZ.ring,0,Math.PI*2); ctx.stroke();   // rotate ring
+  ctx.globalAlpha=1;
+  drawArrow(c.x,c.y,c.x+GZ.arm,c.y,"#cc4b4b");                          // X (red)
+  drawArrow(c.x,c.y,c.x,c.y-GZ.arm,"#5fbf60");                          // Y (green, up)
+  ctx.fillStyle="#66e6ff"; ctx.fillRect(c.x-5,c.y-5,10,10);             // free-move
+  ctx.restore();
+}
+function drawArrow(x0,y0,x1,y1,col){
+  ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  const a=Math.atan2(y1-y0,x1-x0);
+  ctx.beginPath(); ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-9*Math.cos(a-0.4), y1-9*Math.sin(a-0.4));
+  ctx.lineTo(x1-9*Math.cos(a+0.4), y1-9*Math.sin(a+0.4));
+  ctx.closePath(); ctx.fill();
+}
+function distToSeg(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay, L=dx*dx+dy*dy;
+  let t=L?((px-ax)*dx+(py-ay)*dy)/L:0; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(px-(ax+dx*t), py-(ay+dy*t));
+}
+function hitTestGizmo(sx,sy){
+  if(!state.showGizmo) return null;
+  const piv=selectionPivot(); if(!piv) return null;
+  const c=imgToScreen(piv);
+  if(Math.hypot(sx-c.x,sy-c.y)<8) return "move-free";
+  if(distToSeg(sx,sy,c.x,c.y,c.x+GZ.arm,c.y)<GZ.hit) return "move-x";
+  if(distToSeg(sx,sy,c.x,c.y,c.x,c.y-GZ.arm)<GZ.hit) return "move-y";
+  if(Math.abs(Math.hypot(sx-c.x,sy-c.y)-GZ.ring)<GZ.hit) return "rotate";
+  return null;
+}
+function beginMouseTransform(part, startImg, ev){
+  const map={ "move-free":["grab",null], "move-x":["grab","x"], "move-y":["grab","y"], "rotate":["rotate",null] };
+  const [op,axis]=map[part];
+  pushHistory();
+  startModal(op,{startImg, axis, viaMouse:true});
+  if(!state.modal){ state.history.pop(); return; }
+  el.stage.setPointerCapture(ev.pointerId);
+}
+
+/* ---------------- modal transforms (Blender-style) ---------------- */
+function transformTargets(){
+  const src=activeSource(); if(!src) return [];
+  if(state.selMode==="all") return src.quads.map(q=>({quad:q,indices:q.points.map((_,i)=>i)}));
+  const q=selectedQuad(); if(!q) return [];
+  if(state.selMode==="vertex" && state.selectedVert) return [{quad:q,indices:[state.selectedVert.index]}];
+  return [{quad:q,indices:q.points.map((_,i)=>i)}];
+}
+function startModal(op, opts={}){
+  if(state.mode!=="source"||state.tool!=="select") return;
+  const targets=transformTargets();
+  if(!targets.length){ setStatus("Select something first ("+state.selMode+" mode)."); return; }
+  let cx=0,cy=0,n=0;
+  const orig={};
+  for(const t of targets){
+    orig[t.quad.id]=t.quad.points.map(p=>({x:p.x,y:p.y}));
+    for(const i of t.indices){ cx+=t.quad.points[i].x; cy+=t.quad.points[i].y; n++; }
+  }
+  const pivot={x:cx/n,y:cy/n};
+  // startImg anchors the delta origin: pivot for keyboard, mousedown point for drag/gizmo
+  let scaleRef=0;
+  if(op==="scale" && !opts.startImg){
+    for(const t of targets) for(const i of t.indices) scaleRef+=dist(t.quad.points[i],pivot);
+    scaleRef/=n;
+  }
+  state.modal={op, startImg:opts.startImg?{...opts.startImg}:{...pivot}, pivot, axis:opts.axis||null,
+               targets, orig, viaMouse:!!opts.viaMouse, numBuf:"", scaleRef};
+  setStatus(op+": drag, or type a value · X/Y lock · Enter/click confirm · Esc / right-click cancel");
+  draw();
+}
+// shared per-point application; params carry the computed amount
+function applyTransform(params){
+  const m=state.modal, src=activeSource();
+  for(const t of m.targets){
+    const o=m.orig[t.quad.id];
+    for(const i of t.indices){
+      let np;
+      if(m.op==="grab") np={x:o[i].x+params.dx, y:o[i].y+params.dy};
+      else if(m.op==="scale") np={x:m.pivot.x+(o[i].x-m.pivot.x)*params.fx, y:m.pivot.y+(o[i].y-m.pivot.y)*params.fy};
+      else { const ox=o[i].x-m.pivot.x, oy=o[i].y-m.pivot.y;
+             np={x:m.pivot.x+ox*Math.cos(params.ang)-oy*Math.sin(params.ang), y:m.pivot.y+ox*Math.sin(params.ang)+oy*Math.cos(params.ang)}; }
+      t.quad.points[i]={x:clamp(np.x,0,src.width),y:clamp(np.y,0,src.height)};
+    }
+    const sz=estimateRectSize(polyAlign(t.quad.points)); t.quad.rawWidth=sz.w; t.quad.rawHeight=sz.h;
+  }
+}
+function applyModal(cur){
+  const m=state.modal; if(!m) return;
+  let params;
+  if(m.op==="grab"){ let dx=cur.x-m.startImg.x, dy=cur.y-m.startImg.y; if(m.axis==="x")dy=0; if(m.axis==="y")dx=0; params={dx,dy}; }
+  else if(m.op==="scale"){ const d0=Math.max(1,m.scaleRef||dist(m.startImg,m.pivot)), f=dist(cur,m.pivot)/d0; params={fx:m.axis==="y"?1:f, fy:m.axis==="x"?1:f}; }
+  else { params={ang: Math.atan2(cur.y-m.pivot.y,cur.x-m.pivot.x)-Math.atan2(m.startImg.y-m.pivot.y,m.startImg.x-m.pivot.x)}; }
+  applyTransform(params);
+}
+function applyNumeric(){
+  const m=state.modal; if(!m) return;
+  const v=parseFloat(m.numBuf); if(isNaN(v)) return;
+  let params;
+  if(m.op==="grab"){ const a=m.axis||"x"; params={dx:a==="x"?v:0, dy:a==="y"?v:0}; }
+  else if(m.op==="scale"){ params={fx:m.axis==="y"?1:v, fy:m.axis==="x"?1:v}; }
+  else params={ang:v*Math.PI/180};
+  applyTransform(params);
+}
+function commitModal(){ if(!state.modal) return; state.modal=null; state.pendingDrag=null; renderSourceList(); setStatus("Transform applied."); updateBadge(); draw(); }
+function cancelModal(){
+  const m=state.modal; if(!m) return;
+  for(const t of m.targets){ t.quad.points=m.orig[t.quad.id].map(p=>({x:p.x,y:p.y})); const sz=estimateRectSize(polyAlign(t.quad.points)); t.quad.rawWidth=sz.w; t.quad.rawHeight=sz.h; }
+  state.modal=null; state.pendingDrag=null;
+  state.history.pop();   // discard the snapshot pushed when this transform began
+  setStatus("Transform cancelled."); updateBadge(); draw();
+}
+
+/* ---------------- keyboard ---------------- */
+window.addEventListener("keydown", e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  const k=e.key.toLowerCase();
+  // undo / redo (works any time)
+  if((e.ctrlKey||e.metaKey) && k==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+  if((e.ctrlKey||e.metaKey) && k==="y"){ e.preventDefault(); redo(); return; }
+
+  if(state.modal){
+    if(k==="enter"){ commitModal(); e.preventDefault(); return; }
+    if(k==="escape"){ cancelModal(); e.preventDefault(); return; }
+    if(k==="x"||k==="y"){ state.modal.axis=(state.modal.axis===k?null:k); if(state.modal.numBuf) applyNumeric(); updateBadge(); draw(); e.preventDefault(); return; }
+    if(k.length===1 && /[0-9.\-]/.test(k)){ state.modal.numBuf+=k; applyNumeric(); updateBadge(); draw(); e.preventDefault(); return; }
+    if(k==="backspace"){ state.modal.numBuf=state.modal.numBuf.slice(0,-1); state.modal.numBuf?applyNumeric():applyModal(state.modal.pivot); updateBadge(); draw(); e.preventDefault(); return; }
+    return;
+  }
+  if(k==="h"||k==="?"){ el.help.classList.toggle("show"); return; }
+  if(k==="escape"){ el.help.classList.remove("show"); state.drawingPoints=[]; draw(); return; }
+  if(k==="home"){ resetView(); draw(); return; }
+  if(k==="n"){ state.showGizmo=!state.showGizmo; setStatus("Gizmo "+(state.showGizmo?"shown":"hidden")+" (N)"); draw(); return; }
+  if(k==="tab"){ setTool(state.tool==="draw"?"select":"draw"); e.preventDefault(); return; }
+  if(k==="1"){ setSelMode("vertex"); return; }
+  if(k==="2"){ setSelMode("face"); return; }
+  if(k==="3"){ setSelMode("all"); return; }
+  if(k==="a"){
+    if(e.altKey){ state.selectedQuadId=null; state.selectedVert=null; setStatus("Deselected (Alt+A)."); }
+    else { setSelMode("all"); setStatus("All quads selected (A)."); }
+    draw(); return;
+  }
+  if(k==="d" && e.shiftKey){ e.preventDefault(); duplicateSelected(); return; }
+  if(k==="g"||k==="s"||k==="r"){
+    if(state.tool!=="select"){ setStatus("Switch to Select to transform."); return; }
+    if(!transformTargets().length){ setStatus("Select something first."); return; }
+    pushHistory(); startModal(k==="g"?"grab":k==="s"?"scale":"rotate"); return;
+  }
+  if(k==="e"){ extractAll(); return; }
+  if(k==="p"){ packAtlas(); state.mode="atlas"; draw(); return; }
+  if(k==="delete"||k==="backspace"){ deleteSelectedQuad(); return; }
+});
+
+/* ---------------- quad size ---------------- */
+function estimateRectSize(points){
+  const top=dist(points[0],points[1]), right=dist(points[1],points[2]);
+  const bottom=dist(points[3],points[2]), left=dist(points[0],points[3]);
+  return { w:Math.max(1,Math.round((top+bottom)/2)), h:Math.max(1,Math.round((left+right)/2)) };
+}
+
+/* ---------------- polygon alignment (tri / n-gon support) ----------------
+   A 4-point shape IS its own perspective quad. Anything else (3 or 5-12 points)
+   keeps its drawn outline but is perspective-aligned & sized using the axis-aligned
+   bounding quad of those points; the outline is then masked transparent against that. */
+function computeBBoxQuad(points){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of points){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }
+  return [{x:minX,y:minY},{x:maxX,y:minY},{x:maxX,y:maxY},{x:minX,y:maxY}];
+}
+function polyAlign(points){ return points.length===4 ? points : computeBBoxQuad(points); }
+function mat3Invert(M){
+  const [[a,b,c],[d,e,f],[g,h,i]]=M;
+  const A=e*i-f*h, B=-(d*i-f*g), C=d*h-e*g;
+  const D=-(b*i-c*h), E=a*i-c*g, F=-(a*h-b*g);
+  const G=b*f-c*e, H=-(a*f-c*d), I=a*e-b*d;
+  const det=a*A+b*B+c*C;
+  const k = det? 1/det : 0;
+  return [[A*k,D*k,G*k],[B*k,E*k,H*k],[C*k,F*k,I*k]];
+}
+// Inverse of squareToQuad: maps an image-space point back into the quad's unit-square (u,v).
+function imageToUV(quadPts,p){
+  const m=squareToQuad(quadPts);
+  const inv=mat3Invert([[m.a,m.b,m.c],[m.d,m.e,m.f],[m.g,m.h,1]]);
+  const u0=inv[0][0]*p.x+inv[0][1]*p.y+inv[0][2];
+  const v0=inv[1][0]*p.x+inv[1][1]*p.y+inv[1][2];
+  const w0=inv[2][0]*p.x+inv[2][1]*p.y+inv[2][2];
+  return { x:u0/w0, y:v0/w0 };
+}
+// Warp+mask a polygon: perspective-warps using its align quad, then (for non-4-point
+// outlines) cuts everything outside the real outline transparent.
+function warpPolyToRect(srcData,srcW,srcH,poly,outW,outH){
+  const align=polyAlign(poly.points);
+  const canvas=warpQuadToRect(srcData,srcW,srcH,align,outW,outH);
+  if(poly.points.length===4) return canvas;
+  const mc=document.createElement("canvas"); mc.width=outW; mc.height=outH;
+  const mctx=mc.getContext("2d");
+  mctx.drawImage(canvas,0,0);
+  mctx.globalCompositeOperation="destination-in";
+  mctx.beginPath();
+  poly.points.forEach((p,i)=>{
+    const uv=imageToUV(align,p);
+    const x=uv.x*outW, y=uv.y*outH;
+    i?mctx.lineTo(x,y):mctx.moveTo(x,y);
+  });
+  mctx.closePath(); mctx.fillStyle="#000"; mctx.fill();
+  return mc;
+}
+
+/* ---------------- live preview ---------------- */
+// Cache full-res source pixels once per source (reused by preview + extract).
+function getSrcData(src){
+  if(src._data) return src._data;
+  const sc=document.createElement("canvas"); sc.width=src.width; sc.height=src.height;
+  const sctx=sc.getContext("2d",{willReadFrequently:true});
+  sctx.drawImage(src.image,0,0);
+  src._data=sctx.getImageData(0,0,src.width,src.height);
+  return src._data;
+}
+// Warp the active quad once at a capped resolution; shared by every preview window.
+function previewBaseTile(){
+  const src=activeSource();
+  const quad=selectedQuad() || (src && src.quads[0]) || null;
+  if(!src || !quad) return null;
+  const maxDim=360, s=Math.min(1, maxDim/Math.max(quad.rawWidth,quad.rawHeight));
+  const ow=Math.max(1,Math.round(quad.rawWidth*s)), oh=Math.max(1,Math.round(quad.rawHeight*s));
+  let canvas=warpPolyToRect(getSrcData(src),src.width,src.height,quad,ow,oh);
+  if(state.delight.enabled && !state.modal) canvas=delightCanvas(canvas,state.delight.amount,state.delight.spread);
+  return { quad, canvas };
+}
+function fitCanvasToClient(cv){
+  const w=Math.max(1,Math.round(cv.clientWidth)), h=Math.max(1,Math.round(cv.clientHeight));
+  if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }   // keeps the preview crisp at any size
+}
+function fitInto(p,cv,img,smooth){
+  const pad=6, fit=Math.min((cv.width-pad*2)/img.width,(cv.height-pad*2)/img.height);
+  const dw=img.width*fit, dh=img.height*fit, dx=(cv.width-dw)/2, dy=(cv.height-dh)/2;
+  p.imageSmoothingEnabled=smooth; p.drawImage(img,dx,dy,dw,dh);
+  p.strokeStyle="#3a3a3a"; p.strokeRect(dx,dy,dw,dh);
+}
+function updatePreview(){
+  const cv=el.preview; if(!cv) return;
+  fitCanvasToClient(cv);
+  const p=cv.getContext("2d"); p.clearRect(0,0,cv.width,cv.height);
+  const base=previewBaseTile();
+  if(!base){ el.previewInfo.textContent="No polygon selected."; updateAuxPreviews(null,null); return; }
+  const seam=quadSeam(base.quad);
+  let tile=base.canvas;
+  if(seam.mode!=="none") tile=makeSeamless(tile,seam);
+  if(state.quant.enabled && !state.modal) tile=quantizeCanvas(tile,state.quant.colors); // skip during drag
+  fitInto(p,cv,tile,!state.quant.enabled);
+  el.previewInfo.textContent = base.quad.rawWidth+"×"+base.quad.rawHeight+" px"
+    + (state.delight.enabled?" · de-lit"+(state.modal?" (paused)":""):"")
+    + (seam.mode!=="none"?" · seam "+seam.mode:"")
+    + (state.quant.enabled?(" · "+state.quant.colors+" col"+(state.modal?" (paused)":"")):"");
+  updateAuxPreviews(base.canvas, base.quad);
+}
+function updateAuxPreviews(base, quad){
+  const seam=quadSeam(quad);
+  // seamless: tile repeated X×Y so seams are obvious
+  if(el.seamPreview){
+    const cv=el.seamPreview; fitCanvasToClient(cv); const p=cv.getContext("2d"); p.clearRect(0,0,cv.width,cv.height);
+    if(base){
+      const t=seam.mode!=="none"?makeSeamless(base,seam):base;
+      const cols=state.seamGrid.x, rows=state.seamGrid.y;
+      const pad=4, fit=Math.min((cv.width-pad*2)/(t.width*cols),(cv.height-pad*2)/(t.height*rows));
+      const cw=t.width*fit, ch=t.height*fit, ox=(cv.width-cw*cols)/2, oy=(cv.height-ch*rows)/2;
+      p.imageSmoothingEnabled=!state.quant.enabled;
+      for(let j=0;j<rows;j++) for(let i=0;i<cols;i++) p.drawImage(t,ox+i*cw,oy+j*ch,cw,ch);
+    }
+  }
+  // quantize: always show the palette result so it works as a true preview (independent of the export toggle)
+  if(el.quantPreview){
+    const cv=el.quantPreview; fitCanvasToClient(cv); const p=cv.getContext("2d"); p.clearRect(0,0,cv.width,cv.height);
+    if(base){
+      const t=state.modal?base:quantizeCanvas(base,state.quant.colors);   // skip only during a live drag
+      fitInto(p,cv,t,false);
+      if(t._palette && t._palette.length){                                // swatch strip along the bottom
+        const sw=cv.width/t._palette.length;
+        t._palette.forEach((c,i)=>{ p.fillStyle="rgb("+c[0]+","+c[1]+","+c[2]+")"; p.fillRect(i*sw,cv.height-10,sw,10); });
+      }
+    }
+  }
+  // atlas: thumbnail of the packed sheet
+  if(el.atlasPreview){
+    const cv=el.atlasPreview; fitCanvasToClient(cv); const p=cv.getContext("2d"); p.clearRect(0,0,cv.width,cv.height);
+    if(state.atlasCanvas.width) fitInto(p,cv,state.atlasCanvas,false);
+  }
+}
+
+/* ---------------- extraction (perspective warp from v1) ---------------- */
+function extractAll(){
+  state.extractedTiles=[];
+  state.sources.forEach((src,si)=>{
+    const data=getSrcData(src);
+    const base=src.name.replace(/\.[^.]+$/,"");
+    src.quads.forEach((quad,qi)=>{
+      const raw=warpPolyToRect(data,src.width,src.height,quad,quad.rawWidth,quad.rawHeight);
+      const tile={ id:uid("tile"), sourceName:src.name, sourceId:src.id, quadId:quad.id, sourceIndex:si, quadIndex:qi,
+        name:base+"__"+si+"_q"+(qi+1), rawCanvas:raw, canvas:raw,
+        rawWidth:raw.width, rawHeight:raw.height, width:raw.width, height:raw.height,
+        packedX:0, packedY:0, overflow:false, thumb:null };
+      processTile(tile);
+      state.extractedTiles.push(tile);
+    });
+  });
+  if(state.extractedTiles[0]) state.selectedTileId=state.extractedTiles[0].id;
+  packAtlas(); syncSeamControls();
+  setStatus("Extracted "+state.extractedTiles.length+" texture(s).");
+}
+function warpQuadToRect(srcData,srcW,srcH,pts,outW,outH){
+  const canvas=document.createElement("canvas"); canvas.width=outW; canvas.height=outH;
+  const octx=canvas.getContext("2d",{willReadFrequently:true});
+  const out=octx.createImageData(outW,outH);
+  const map=squareToQuad(pts);
+  for(let y=0;y<outH;y++){
+    const v=outH===1?0:y/(outH-1);
+    for(let x=0;x<outW;x++){
+      const u=outW===1?0:x/(outW-1);
+      const sp=mapPoint(map,u,v);
+      const rgba=sampleBilinear(srcData,srcW,srcH,sp.x,sp.y);
+      const di=(y*outW+x)*4;
+      out.data[di]=rgba[0]; out.data[di+1]=rgba[1]; out.data[di+2]=rgba[2]; out.data[di+3]=rgba[3];
+    }
+  }
+  octx.putImageData(out,0,0); return canvas;
+}
+function squareToQuad(p){
+  const x0=p[0].x,y0=p[0].y,x1=p[1].x,y1=p[1].y,x2=p[2].x,y2=p[2].y,x3=p[3].x,y3=p[3].y;
+  const dx1=x1-x2,dy1=y1-y2,dx2=x3-x2,dy2=y3-y2,sx=x0-x1+x2-x3,sy=y0-y1+y2-y3;
+  let g=0,h=0; const den=dx1*dy2-dx2*dy1;
+  if(Math.abs(den)>1e-6){ g=(sx*dy2-dx2*sy)/den; h=(dx1*sy-sx*dy1)/den; }
+  return { a:x1-x0+g*x1, b:x3-x0+h*x3, c:x0, d:y1-y0+g*y1, e:y3-y0+h*y3, f:y0, g, h };
+}
+function mapPoint(m,u,v){ const den=m.g*u+m.h*v+1; return {x:(m.a*u+m.b*v+m.c)/den, y:(m.d*u+m.e*v+m.f)/den}; }
+function sampleBilinear(img,w,h,x,y){
+  x=clamp(x,0,w-1); y=clamp(y,0,h-1);
+  const x0=Math.floor(x),y0=Math.floor(y),x1=Math.min(w-1,x0+1),y1=Math.min(h-1,y0+1);
+  const tx=x-x0,ty=y-y0,d=img.data,out=[0,0,0,0];
+  const i00=(y0*w+x0)*4,i10=(y0*w+x1)*4,i01=(y1*w+x0)*4,i11=(y1*w+x1)*4;
+  for(let c=0;c<4;c++){ const a=d[i00+c]*(1-tx)+d[i10+c]*tx, b=d[i01+c]*(1-tx)+d[i11+c]*tx; out[c]=Math.round(a*(1-ty)+b*ty); }
+  return out;
+}
+
+/* ---------------- tile post-process: seamless + quantize ---------------- */
+function processTile(tile){
+  let c = tile.rawCanvas;
+  if(state.delight.enabled) c = delightCanvas(c, state.delight.amount, state.delight.spread); // upstream of seam/quant
+  const seam = quadSeam(tileQuad(tile));
+  if(seam.mode!=="none") c = makeSeamless(c, seam);
+  if(state.quant.enabled) c = quantizeCanvas(c, state.quant.colors);
+  tile.canvas = c;
+  tile.thumb = null;        // invalidate cached thumbnail (perf fix from review)
+}
+// De-light: divide out a heavily-blurred luminance field to flatten baked shadows/highlights.
+function boxBlurField(L,w,h,r){
+  const win=r*2+1, tmp=new Float32Array(w*h), out=new Float32Array(w*h);
+  for(let y=0;y<h;y++){
+    let sum=0; for(let x=-r;x<=r;x++) sum+=L[y*w+clamp(x,0,w-1)];
+    for(let x=0;x<w;x++){ tmp[y*w+x]=sum/win; sum+=L[y*w+clamp(x+r+1,0,w-1)]-L[y*w+clamp(x-r,0,w-1)]; }
+  }
+  for(let x=0;x<w;x++){
+    let sum=0; for(let y=-r;y<=r;y++) sum+=tmp[clamp(y,0,h-1)*w+x];
+    for(let y=0;y<h;y++){ out[y*w+x]=sum/win; sum+=tmp[clamp(y+r+1,0,h-1)*w+x]-tmp[clamp(y-r,0,h-1)*w+x]; }
+  }
+  return out;
+}
+function delightCanvas(srcCanvas, amount, spreadPct){
+  const w=srcCanvas.width, h=srcCanvas.height;
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const cx=c.getContext("2d",{willReadFrequently:true});
+  cx.drawImage(srcCanvas,0,0);
+  const img=cx.getImageData(0,0,w,h), d=img.data, N=w*h, L=new Float32Array(N);
+  for(let i=0,p=0;i<d.length;i+=4,p++) L[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+  const r=Math.max(1, Math.min(Math.floor(Math.min(w,h)/2)-1, Math.round(Math.min(w,h)*spreadPct/100)));
+  const B=boxBlurField(L,w,h,r);
+  let mean=0; for(let p=0;p<N;p++) mean+=L[p]; mean/=N;
+  for(let i=0,p=0;i<d.length;i+=4,p++){
+    if(d[i+3]<=8) continue;
+    let gain=1+amount*(mean/Math.max(1,B[p])-1);     // blend toward the divide-by-lighting result
+    gain=clamp(gain,0.2,5);
+    d[i]=clamp(d[i]*gain,0,255); d[i+1]=clamp(d[i+1]*gain,0,255); d[i+2]=clamp(d[i+2]*gain,0,255);
+  }
+  cx.putImageData(img,0,0);
+  return c;
+}
+function reprocessAllTiles(){
+  for(const t of state.extractedTiles) processTile(t);
+  packAtlas();
+}
+// Offset the tile so edges meet in the middle, then feather the central seam(s).
+function makeSeamless(srcCanvas, opt){
+  const w=srcCanvas.width, h=srcCanvas.height;
+  const horiz = opt.mode==="horizontal"||opt.mode==="both";
+  const vert  = opt.mode==="vertical"  ||opt.mode==="both";
+  const off=document.createElement("canvas"); off.width=w; off.height=h;
+  const o=off.getContext("2d",{willReadFrequently:true});
+  const sx=horiz?Math.floor(w/2):0, sy=vert?Math.floor(h/2):0;
+  // wrap-blit four quadrants by (sx,sy)
+  o.drawImage(srcCanvas, sx,sy);
+  if(sx) o.drawImage(srcCanvas, sx-w, sy);
+  if(sy) o.drawImage(srcCanvas, sx, sy-h);
+  if(sx&&sy) o.drawImage(srcCanvas, sx-w, sy-h);
+  const img=o.getImageData(0,0,w,h), d=img.data;
+  const bw=Math.max(0,Math.min(opt.width|0, Math.floor(Math.min(w,h)/2)-1));
+  const rad=Math.max(0.1,opt.radius);
+  // feather across the seam that now sits at the centre line(s)
+  if(horiz && bw>0) featherSeam(d,w,h,sx,bw,rad,true);
+  if(vert  && bw>0) featherSeam(d,w,h,sy,bw,rad,false);
+  o.putImageData(img,0,0);
+  return off;
+}
+// blend a band of width bw on each side of `seam`, mirroring the opposite side
+function featherSeam(d,w,h,seam,bw,rad,vertical){
+  const get=(x,y,c)=>d[(y*w+x)*4+c];
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  for(let s=1;s<=bw;s++){
+    const t=Math.pow(s/(bw+1), rad);      // weight curve shaped by radius
+    const wgt=0.5*(1-t);                  // strongest right at the seam
+    if(vertical){                          // seam is a vertical line at x=seam
+      for(let y=0;y<h;y++){
+        const xa=(seam-s+w)%w, xb=(seam+s-1)%w;  // mirror pair across seam
+        for(let c=0;c<4;c++){
+          const A=get(xa,y,c), B=get(xb,y,c);
+          d[(y*w+xa)*4+c]=lerp(A,B,wgt);
+          d[(y*w+xb)*4+c]=lerp(B,A,wgt);
+        }
+      }
+    } else {                               // seam is a horizontal line at y=seam
+      for(let x=0;x<w;x++){
+        const ya=(seam-s+h)%h, yb=(seam+s-1)%h;
+        for(let c=0;c<4;c++){
+          const A=get(x,ya,c), B=get(x,yb,c);
+          d[(ya*w+x)*4+c]=lerp(A,B,wgt);
+          d[(yb*w+x)*4+c]=lerp(B,A,wgt);
+        }
+      }
+    }
+  }
+}
+// median-cut palette quantization
+function quantizeCanvas(srcCanvas, numColors){
+  const w=srcCanvas.width,h=srcCanvas.height;
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const cx=c.getContext("2d",{willReadFrequently:true});
+  cx.drawImage(srcCanvas,0,0);
+  const img=cx.getImageData(0,0,w,h), d=img.data;
+  // collect opaque pixels as [r,g,b,idx]
+  const px=[];
+  for(let i=0;i<d.length;i+=4){ if(d[i+3]>8) px.push([d[i],d[i+1],d[i+2]]); }
+  if(!px.length) return srcCanvas;
+  let buckets=[px];
+  while(buckets.length<numColors){
+    // split the bucket with the widest channel range
+    let bi=-1, bestRange=-1, bestCh=0;
+    buckets.forEach((b,k)=>{
+      if(b.length<2) return;
+      for(let ch=0;ch<3;ch++){
+        let mn=255,mx=0; for(const p of b){ if(p[ch]<mn)mn=p[ch]; if(p[ch]>mx)mx=p[ch]; }
+        if(mx-mn>bestRange){ bestRange=mx-mn; bi=k; bestCh=ch; }
+      }
+    });
+    if(bi<0) break;
+    const b=buckets[bi]; b.sort((p,q)=>p[bestCh]-q[bestCh]);
+    const mid=b.length>>1;
+    buckets.splice(bi,1,b.slice(0,mid),b.slice(mid));
+  }
+  const palette=buckets.map(b=>{
+    const s=[0,0,0]; for(const p of b){ s[0]+=p[0]; s[1]+=p[1]; s[2]+=p[2]; }
+    return [Math.round(s[0]/b.length),Math.round(s[1]/b.length),Math.round(s[2]/b.length)];
+  });
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]<=8) continue;
+    let best=0,bd=Infinity;
+    for(let k=0;k<palette.length;k++){
+      const p=palette[k], dr=d[i]-p[0], dg=d[i+1]-p[1], db=d[i+2]-p[2];
+      const dd=dr*dr+dg*dg+db*db; if(dd<bd){ bd=dd; best=k; }
+    }
+    d[i]=palette[best][0]; d[i+1]=palette[best][1]; d[i+2]=palette[best][2];
+  }
+  cx.putImageData(img,0,0);
+  c._palette=palette;        // expose for the quantize preview swatches
+  return c;
+}
+
+/* ---------------- atlas packing ---------------- */
+function readAtlasForm(){
+  state.atlas.width=Math.max(1,parseInt(el.atlasWidth.value||"1024",10));
+  state.atlas.height=Math.max(1,parseInt(el.atlasHeight.value||"1024",10));
+  state.atlas.padding=Math.max(0,parseInt(el.padding.value||"0",10));
+  state.atlas.bleedEdges=el.bleedEdges.checked;
+  state.atlas.background=el.bgSel.value;
+}
+function packAtlas(){
+  readAtlasForm();
+  if(!state.extractedTiles.length){ draw(); return; }
+  for(const t of state.extractedTiles){ t.width=t.canvas.width; t.height=t.canvas.height; }
+  const res=shelfPack(state.extractedTiles,state.atlas.width,state.atlas.padding);
+  const atlasW=state.atlas.width;
+  const atlasH=state.atlas.sizeMode==="auto"?res.height:state.atlas.height;
+  const fits=state.atlas.sizeMode==="auto"?!res.tooWide:(res.height<=state.atlas.height && !res.tooWide);
+  for(const t of state.extractedTiles)
+    t.overflow=state.atlas.sizeMode==="fixed" && (t.packedY+t.height>state.atlas.height||t.packedX+t.width>state.atlas.width);
+  state.atlas.lastFits=fits;
+  drawAtlasCanvas(atlasW,Math.max(1,atlasH));
+  renderTileList();
+  setStatus(fits?("Packed: "+atlasW+"×"+atlasH+", "+state.extractedTiles.length+" tiles."):"Packed, but some tiles overflow — use Auto height or a larger canvas.");
+  draw();
+}
+function shelfPack(tiles,atlasWidth,padding){
+  const sorted=tiles.slice().sort((a,b)=>b.height-a.height);
+  let x=padding,y=padding,rowH=0,tooWide=false;
+  for(const t of sorted){
+    if(t.width+padding*2>atlasWidth) tooWide=true;
+    if(x+t.width+padding>atlasWidth){ x=padding; y+=rowH+padding; rowH=0; }
+    t.packedX=x; t.packedY=y; x+=t.width+padding; rowH=Math.max(rowH,t.height);
+  }
+  return { height:y+rowH+padding, tooWide };
+}
+function drawAtlasCanvas(w,h){
+  const c=state.atlasCanvas; c.width=w; c.height=h;
+  const a=c.getContext("2d");
+  if(state.atlas.background==="transparent") a.clearRect(0,0,w,h);
+  else { a.fillStyle=state.atlas.background==="magenta"?"#ff00ff":"#000"; a.fillRect(0,0,w,h); }
+  for(const t of state.extractedTiles){
+    if(t.overflow) continue;
+    if(state.atlas.bleedEdges && state.atlas.padding>0) drawBleed(a,t);
+    a.imageSmoothingEnabled=true; a.drawImage(t.canvas,t.packedX,t.packedY,t.width,t.height);
+  }
+}
+function drawBleed(a,t){
+  const p=state.atlas.padding,x=t.packedX,y=t.packedY,w=t.width,h=t.height,cw=t.canvas.width,ch=t.canvas.height;
+  a.imageSmoothingEnabled=false;
+  a.drawImage(t.canvas,0,0,cw,1,x,y-p,w,p);
+  a.drawImage(t.canvas,0,ch-1,cw,1,x,y+h,w,p);
+  a.drawImage(t.canvas,0,0,1,ch,x-p,y,p,h);
+  a.drawImage(t.canvas,cw-1,0,1,ch,x+w,y,p,h);
+  a.drawImage(t.canvas,0,0,1,1,x-p,y-p,p,p);
+  a.drawImage(t.canvas,cw-1,0,1,1,x+w,y-p,p,p);
+  a.drawImage(t.canvas,0,ch-1,1,1,x-p,y+h,p,p);
+  a.drawImage(t.canvas,cw-1,ch-1,1,1,x+w,y+h,p,p);
+}
+
+/* ---------------- lists ---------------- */
+function renderSourceList(){
+  el.sourceList.innerHTML="";
+  if(!state.sources.length){ el.sourceList.innerHTML='<div class="small">No sources yet — drag & drop images here or into the viewport.</div>'; return; }
+  state.sources.forEach(src=>{
+    const div=document.createElement("div");
+    div.className="card"+(src.id===state.activeSourceId?" active":"");
+    div.innerHTML=`<img class="thumb" src="${src.url}"><div class="mono">${escapeHtml(src.name)}</div>
+      <div class="small">${src.width}×${src.height} · ${src.quads.length} quad(s)</div>
+      <button class="xbtn" title="Remove">×</button>`;
+    div.addEventListener("click",e=>{ if(e.target.classList.contains("xbtn")){ removeSource(src.id); return; }
+      state.activeSourceId=src.id; state.mode="source"; state.selectedQuadId=null; state.selectedVert=null; resetView(); renderSourceList(); syncSeamControls(); draw(); });
+    el.sourceList.appendChild(div);
+  });
+}
+function renderTileList(){
+  el.tileList.innerHTML="";
+  const cnt=$("tileCount"); if(cnt) cnt.textContent=state.extractedTiles.length?state.extractedTiles.length:"";
+  if(!state.extractedTiles.length){ el.tileList.innerHTML='<div class="small">No extracted textures yet.</div>'; return; }
+  for(const t of state.extractedTiles){
+    if(!t.thumb) t.thumb=t.canvas.toDataURL("image/png");   // cached; only rebuilt in processTile
+    const div=document.createElement("div");
+    div.className="card tileCard"+(t.id===state.selectedTileId?" active":"");
+    const of=t.overflow?' <span class="danger">overflow</span>':'';
+    div.innerHTML=`<img class="tileThumb" src="${t.thumb}"><div><div class="mono">${escapeHtml(t.name)}</div>
+      <div class="small">${t.width}×${t.height}${of}</div></div>`;
+    div.addEventListener("click",()=>{
+      state.selectedTileId=t.id;
+      const q=tileQuad(t);                                  // focus the tile's quad so previews + seam follow
+      if(q){ state.activeSourceId=t.sourceId; state.selectedQuadId=q.id; state.selectedVert=null; }
+      renderTileList(); syncSeamControls(); draw();
+    });
+    el.tileList.appendChild(div);
+  }
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+
+/* ---------------- controls ---------------- */
+function setTool(t){ state.tool=t; state.drawingPoints=[];
+  document.querySelectorAll('#toolSeg button').forEach(b=>b.classList.toggle("on",b.dataset.tool===t));
+  el.stage.style.cursor=t==="draw"?"crosshair":"default"; updateBadge(); draw(); }
+function setSelMode(m){ state.selMode=m;
+  document.querySelectorAll('#selSeg button').forEach(b=>b.classList.toggle("on",b.dataset.sel===m));
+  if(m!=="vertex") state.selectedVert=null; updateBadge(); draw(); }
+function setSizeMode(m){ state.atlas.sizeMode=m;
+  document.querySelectorAll('#sizeSeg button').forEach(b=>b.classList.toggle("on",b.dataset.size===m));
+  if(state.extractedTiles.length) packAtlas(); }
+function deleteSelectedQuad(){
+  const src=activeSource(); if(!src||!state.selectedQuadId) return;
+  pushHistory();
+  src.quads=src.quads.filter(q=>q.id!==state.selectedQuadId);
+  state.selectedQuadId=null; state.selectedVert=null;
+  renderSourceList(); draw(); setStatus("Quad deleted.");
+}
+function duplicateSelected(){
+  const src=activeSource(); if(!src) return;
+  const toDup = state.selMode==="all" ? src.quads.slice() : (selectedQuad()?[selectedQuad()]:[]);
+  if(!toDup.length){ setStatus("Nothing to duplicate."); return; }
+  pushHistory();
+  const off=14;
+  const copies=toDup.map(q=>{
+    const c={ id:uid("quad"),
+      points:q.points.map(p=>({x:clamp(p.x+off,0,src.width), y:clamp(p.y+off,0,src.height)})),
+      rawWidth:q.rawWidth, rawHeight:q.rawHeight, seam:{...quadSeam(q)} };
+    src.quads.push(c); return c;
+  });
+  if(state.tool!=="select") setTool("select");
+  if(state.selMode==="vertex") setSelMode("face");
+  state.selectedQuadId=copies[copies.length-1].id; state.selectedVert=null;
+  renderSourceList(); syncSeamControls(); draw();
+  setStatus("Duplicated "+copies.length+" quad(s) — drag, G, or the gizmo to place.");
+}
+document.querySelectorAll('#toolSeg button').forEach(b=>b.addEventListener("click",()=>setTool(b.dataset.tool)));
+document.querySelectorAll('#selSeg button').forEach(b=>b.addEventListener("click",()=>setSelMode(b.dataset.sel)));
+document.querySelectorAll('#sizeSeg button').forEach(b=>b.addEventListener("click",()=>setSizeMode(b.dataset.size)));
+
+el.prevSrcBtn.addEventListener("click",()=>stepSource(-1));
+el.nextSrcBtn.addEventListener("click",()=>stepSource(1));
+el.viewSourceBtn.addEventListener("click",()=>{ state.mode="source"; draw(); });
+el.viewAtlasBtn.addEventListener("click",()=>{ state.mode="atlas"; packAtlas(); });
+el.clearDrawingBtn.addEventListener("click",()=>{ state.drawingPoints=[]; draw(); });
+el.vertexCount.addEventListener("input",()=>{
+  state.vertexCount=clamp(parseInt(el.vertexCount.value||"4",10),3,12);
+  state.drawingPoints=[]; draw();
+});
+el.deleteQuadBtn.addEventListener("click",deleteSelectedQuad);
+el.duplicateBtn.addEventListener("click",duplicateSelected);
+el.extractAllBtn.addEventListener("click",extractAll);
+el.packBtn.addEventListener("click",()=>{ packAtlas(); state.mode="atlas"; draw(); });
+
+el.seamMode.addEventListener("change",()=>{ const q=activeQuad(); if(q) quadSeam(q).mode=el.seamMode.value; reprocessAllTiles(); }); // per-quad
+el.blendWidth.addEventListener("input",()=>{ const q=activeQuad(); if(q) quadSeam(q).width=parseInt(el.blendWidth.value||"0",10); reprocessAllTiles(); });
+el.blendRadius.addEventListener("input",()=>{ const q=activeQuad(); if(q) quadSeam(q).radius=parseFloat(el.blendRadius.value||"1"); reprocessAllTiles(); });
+el.seamGridX.addEventListener("input",()=>{ state.seamGrid.x=clamp(parseInt(el.seamGridX.value||"2",10),1,8); draw(); }); // preview-only
+el.seamGridY.addEventListener("input",()=>{ state.seamGrid.y=clamp(parseInt(el.seamGridY.value||"2",10),1,8); draw(); }); // preview-only
+el.quantOn.addEventListener("change",()=>{ state.quant.enabled=el.quantOn.checked; reprocessAllTiles(); });
+el.quantColors.addEventListener("input",()=>{ state.quant.colors=clamp(parseInt(el.quantColors.value||"16",10),2,256); reprocessAllTiles(); }); // refresh preview even when export is off
+el.delightOn.addEventListener("change",()=>{ state.delight.enabled=el.delightOn.checked; reprocessAllTiles(); });
+el.delightAmt.addEventListener("input",()=>{ state.delight.amount=clamp(parseInt(el.delightAmt.value||"70",10),0,100)/100; reprocessAllTiles(); });
+el.delightSpread.addEventListener("input",()=>{ state.delight.spread=clamp(parseInt(el.delightSpread.value||"30",10),1,80); reprocessAllTiles(); });
+
+[el.atlasWidth,el.atlasHeight,el.padding,el.bleedEdges,el.bgSel].forEach(n=>n.addEventListener("input",()=>{ if(state.extractedTiles.length) packAtlas(); }));
+
+const PRESETS={
+  game1k:{w:1024,h:1024,size:"auto",pad:2,bleed:true,bg:"transparent"},
+  pixel512:{w:512,h:512,size:"fixed",pad:0,bleed:false,bg:"transparent"},
+  big2k:{w:2048,h:2048,size:"auto",pad:4,bleed:true,bg:"black"}
+};
+el.presetSel.addEventListener("change",()=>{
+  const p=PRESETS[el.presetSel.value]; if(!p) return;
+  el.atlasWidth.value=p.w; el.atlasHeight.value=p.h; el.padding.value=p.pad;
+  el.bleedEdges.checked=p.bleed; el.bgSel.value=p.bg; setSizeMode(p.size);
+  if(state.extractedTiles.length) packAtlas();
+});
+
+el.exportPngBtn.addEventListener("click",()=>downloadCanvas("png"));
+el.exportJpgBtn.addEventListener("click",()=>downloadCanvas("jpg"));
+el.exportJsonBtn.addEventListener("click",downloadJson);
+function downloadCanvas(type){
+  if(!state.atlasCanvas.width){ setStatus("Nothing to export yet."); return; }
+  let canvas=state.atlasCanvas;
+  if(type==="jpg"){
+    const c=document.createElement("canvas"); c.width=canvas.width; c.height=canvas.height;
+    const j=c.getContext("2d"); j.fillStyle="#ff00ff"; j.fillRect(0,0,c.width,c.height); j.drawImage(canvas,0,0); canvas=c;
+  }
+  const a=document.createElement("a");
+  a.href=canvas.toDataURL(type==="jpg"?"image/jpeg":"image/png",.95);
+  a.download="rensem-atlas."+(type==="jpg"?"jpg":"png"); a.click();
+}
+function downloadJson(){
+  const data={
+    atlas:{ width:state.atlasCanvas.width, height:state.atlasCanvas.height, padding:state.atlas.padding,
+            background:state.atlas.background },
+    pipeline:{ delight:state.delight, quantize:state.quant },
+    tiles:state.extractedTiles.filter(t=>!t.overflow).map(t=>({
+      name:t.name, source:t.sourceName, x:t.packedX, y:t.packedY, w:t.width, h:t.height,
+      seam:quadSeam(tileQuad(t)) }))
+  };
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+  a.download="rensem-atlas.json"; a.click();
+}
+
+/* ---------------- help overlay ---------------- */
+el.help.innerHTML=`<h2>Rensem Ripper 3 — shortcuts</h2>
+<div class="col"><table>
+  <tr><td><span class="kbd">Tab</span></td><td>toggle Draw / Select</td></tr>
+  <tr><td><span class="kbd">1</span> / <span class="kbd">2</span> / <span class="kbd">3</span></td><td>vertex / face / all select</td></tr>
+  <tr><td><span class="kbd">G</span> / <span class="kbd">S</span> / <span class="kbd">R</span></td><td>grab / scale / rotate</td></tr>
+  <tr><td>drag handle / quad</td><td>move directly (no keys)</td></tr>
+  <tr><td>gizmo arrows / ring</td><td>drag to move / rotate</td></tr>
+  <tr><td>type a number</td><td>exact amount (e.g. R 45)</td></tr>
+  <tr><td><span class="kbd">A</span> / <span class="kbd">Alt</span>+<span class="kbd">A</span></td><td>select all / deselect</td></tr>
+  <tr><td><span class="kbd">Shift</span>+<span class="kbd">D</span></td><td>duplicate selected</td></tr>
+</table></div>
+<div class="col"><table>
+  <tr><td><span class="kbd">X</span> / <span class="kbd">Y</span></td><td>lock transform axis</td></tr>
+  <tr><td><span class="kbd">Enter</span> / click</td><td>confirm transform</td></tr>
+  <tr><td><span class="kbd">Esc</span> / right-click</td><td>cancel transform or draw</td></tr>
+  <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Z</span> / <span class="kbd">Shift</span>+<span class="kbd">Ctrl</span>+<span class="kbd">Z</span></td><td>undo / redo</td></tr>
+  <tr><td><span class="kbd">N</span></td><td>show / hide gizmo</td></tr>
+  <tr><td><span class="kbd">Del</span></td><td>delete selected quad</td></tr>
+  <tr><td><span class="kbd">E</span> / <span class="kbd">P</span></td><td>extract all / pack atlas</td></tr>
+  <tr><td>scroll / middle-drag</td><td>zoom / pan (Source &amp; Atlas)</td></tr>
+  <tr><td><span class="kbd">Home</span></td><td>reset zoom &amp; pan</td></tr>
+  <tr><td><span class="kbd">H</span></td><td>toggle this help</td></tr>
+</table></div>
+<p class="small" style="margin-top:18px">Workflow: drag &amp; drop or add a folder of reference images → <span class="kbd">Tab</span> into Draw and pick out your favourite parts as polygons (set Vertices to 4 for a perspective quad, or 3/5-12 for a tri/n-gon that masks transparent against an auto bounding quad; right-click to cancel a half-drawn shape) → click any corner to edit it → <span class="kbd">E</span> to extract → they auto-pack into the atlas → tweak seam / quantize / preset, or nudge tiles with the gizmo or <span class="kbd">G/S/R</span>.</p>
+<p class="small">Your project auto-saves to this browser's local storage every time you finish a polygon; use the Project panel's Save button after other edits. Works fully offline in Firefox, Chrome, and Edge.</p>
+<p class="small">Press <span class="kbd">H</span> or <span class="kbd">Esc</span> to close.</p>`;
+
+/* ---------------- nicer number inputs: scrub, wheel, select-on-focus ---------------- */
+function setNumber(inp, v){
+  if(inp.min!=="") v=Math.max(parseFloat(inp.min), v);
+  if(inp.max!=="") v=Math.min(parseFloat(inp.max), v);
+  const step=parseFloat(inp.step)||1;
+  if(step<1){ const dec=(String(step).split(".")[1]||"").length; v=parseFloat(v.toFixed(dec)); }
+  else v=Math.round(v);
+  inp.value=v;
+  inp.dispatchEvent(new Event("input",{bubbles:true}));   // drive the live preview
+}
+function enhanceNumberInputs(){
+  document.querySelectorAll('input[type=number]').forEach(inp=>{
+    inp.addEventListener("focus", ()=>inp.select());       // click & type to replace
+    inp.addEventListener("wheel", e=>{                      // wheel adjusts while focused
+      if(document.activeElement!==inp) return;
+      e.preventDefault();
+      const step=parseFloat(inp.step)||1, mult=e.shiftKey?10:1;
+      setNumber(inp, (parseFloat(inp.value)||0) + (e.deltaY<0?1:-1)*step*mult);
+    }, {passive:false});
+    let scrub=null;
+    inp.addEventListener("pointerdown", e=>{ if(e.button===0) scrub={x:e.clientX, val:parseFloat(inp.value)||0, on:false, id:e.pointerId}; });
+    inp.addEventListener("pointermove", e=>{
+      if(!scrub) return;
+      const dx=e.clientX-scrub.x;
+      if(!scrub.on){ if(Math.abs(dx)<4) return; scrub.on=true; try{inp.setPointerCapture(scrub.id);}catch(_){} }
+      e.preventDefault();                                   // suppress text-selection while scrubbing
+      const step=parseFloat(inp.step)||1, pxPer=e.shiftKey?10:3;   // shift = fine
+      setNumber(inp, scrub.val + Math.round(dx/pxPer)*step);
+    });
+    const end=()=>{ if(scrub&&scrub.on){ try{inp.releasePointerCapture(scrub.id);}catch(_){} } scrub=null; };
+    inp.addEventListener("pointerup", end);
+    inp.addEventListener("pointercancel", end);
+  });
+}
+
+/* ---------------- local-storage project save/load (IndexedDB) ---------------- */
+const DB_NAME="rensemRipperDB", DB_STORE="sessions", DB_KEY="current";
+function dbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=()=>{ req.result.createObjectStore(DB_STORE); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function dbPut(val){
+  const db=await dbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(DB_STORE,"readwrite");
+    tx.objectStore(DB_STORE).put(val,DB_KEY);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  });
+}
+async function dbGet(){
+  const db=await dbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(DB_STORE,"readonly");
+    const req=tx.objectStore(DB_STORE).get(DB_KEY);
+    req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error);
+  });
+}
+async function dbClear(){
+  const db=await dbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(DB_STORE,"readwrite");
+    tx.objectStore(DB_STORE).delete(DB_KEY);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  });
+}
+function sourceToDataURL(src){
+  const c=document.createElement("canvas"); c.width=src.width; c.height=src.height;
+  c.getContext("2d").drawImage(src.image,0,0);
+  return c.toDataURL("image/png");
+}
+async function saveSession(silent){
+  try{
+    const payload={
+      v:1,
+      vertexCount: state.vertexCount,
+      delight: state.delight, quant: state.quant, seamGrid: state.seamGrid,
+      atlas: { width:state.atlas.width, height:state.atlas.height, sizeMode:state.atlas.sizeMode,
+               padding:state.atlas.padding, bleedEdges:state.atlas.bleedEdges, background:state.atlas.background },
+      sources: state.sources.map(s=>({
+        name:s.name, width:s.width, height:s.height, dataUrl: sourceToDataURL(s),
+        quads: s.quads.map(q=>({ id:q.id, points:q.points, rawWidth:q.rawWidth, rawHeight:q.rawHeight, seam:q.seam }))
+      }))
+    };
+    await dbPut(payload);
+    setStatus((silent?"Auto-saved.":"Saved.")+(silent?"":" Project stored in local storage."));
+  }catch(err){ console.warn("save failed",err); setStatus("Save failed: "+err.message); }
+}
+function dataUrlToImage(url){ return new Promise(resolve=>{ const img=new Image(); img.onload=()=>resolve(img); img.src=url; }); }
+async function loadSession(){
+  let payload;
+  try{ payload=await dbGet(); }catch(err){ return; }
+  if(!payload || !payload.sources || !payload.sources.length) return;
+  for(const s of state.sources) URL.revokeObjectURL(s.url);
+  state.sources=[];
+  for(const sd of payload.sources){
+    const img=await dataUrlToImage(sd.dataUrl);
+    state.sources.push({ id:uid("source"), name:sd.name, image:img, url:sd.dataUrl,
+      width:sd.width, height:sd.height, quads: sd.quads.map(q=>({...q})) });
+  }
+  state.activeSourceId = state.sources[0]?.id || null;
+  state.vertexCount = payload.vertexCount || 4; el.vertexCount.value = state.vertexCount;
+  if(payload.delight) Object.assign(state.delight, payload.delight);
+  if(payload.quant) Object.assign(state.quant, payload.quant);
+  if(payload.seamGrid) Object.assign(state.seamGrid, payload.seamGrid);
+  if(payload.atlas) Object.assign(state.atlas, payload.atlas);
+  el.delightOn.checked=state.delight.enabled; el.delightAmt.value=Math.round(state.delight.amount*100); el.delightSpread.value=state.delight.spread;
+  el.quantOn.checked=state.quant.enabled; el.quantColors.value=state.quant.colors;
+  el.atlasWidth.value=state.atlas.width; el.atlasHeight.value=state.atlas.height; el.padding.value=state.atlas.padding;
+  el.bleedEdges.checked=state.atlas.bleedEdges; el.bgSel.value=state.atlas.background;
+  setSizeMode(state.atlas.sizeMode||"auto");
+  resetView(); renderSourceList(); syncSeamControls(); draw();
+  if(state.sources.some(s=>s.quads.length)) extractAll();
+  setStatus("Restored saved session ("+state.sources.length+" image(s)) from local storage.");
+}
+el.saveBtn.addEventListener("click",()=>saveSession(false));
+el.clearSavedBtn.addEventListener("click",async ()=>{
+  try{ await dbClear(); setStatus("Cleared saved data."); }
+  catch(err){ setStatus("Clear failed: "+err.message); }
+});
+
+/* ---------------- GUI chrome (v3): collapsible panels, toolbar transforms, header ---------------- */
+// Reflect engine state into the new chrome (view tabs, gizmo toggle). Called at the end of draw().
+function syncChrome(){
+  el.viewSourceBtn.classList.toggle("tab-on", state.mode==="source");
+  el.viewAtlasBtn.classList.toggle("tab-on", state.mode==="atlas");
+  const gz=$("gizmoBtn"); if(gz) gz.classList.toggle("on", state.showGizmo);
+}
+// Toolbar transform buttons behave like the G/S/R keys.
+function triggerTransform(op){
+  if(state.tool!=="select") setTool("select");
+  if(!transformTargets().length){ setStatus("Select a polygon first."); return; }
+  pushHistory(); startModal(op);
+}
+function initChrome(){
+  // collapsible panels
+  document.querySelectorAll(".panel > .panel-head").forEach(h=>{
+    h.addEventListener("click", ()=>h.parentElement.classList.toggle("collapsed"));
+  });
+  // left-toolbar transforms
+  $("grabBtn").addEventListener("click", ()=>triggerTransform("grab"));
+  $("rotateBtn").addEventListener("click", ()=>triggerTransform("rotate"));
+  $("scaleBtn").addEventListener("click", ()=>triggerTransform("scale"));
+  // header buttons
+  $("undoBtn").addEventListener("click", undo);
+  $("redoBtn").addEventListener("click", redo);
+  $("resetViewBtn").addEventListener("click", ()=>{ resetView(); draw(); });
+  $("gizmoBtn").addEventListener("click", ()=>{ state.showGizmo=!state.showGizmo; draw(); });
+  $("helpBtn").addEventListener("click", ()=>el.help.classList.toggle("show"));
+  // viewport hint dismiss
+  const hc=$("hintClose"); if(hc) hc.addEventListener("click", ()=>el.hint.classList.add("hide"));
+}
+
+/* ---------------- boot ---------------- */
+setTool("select"); setSelMode("face"); setSizeMode("auto");
+initChrome();
+resizeStage(); renderSourceList(); renderTileList(); updateBadge(); syncSeamControls();
+enhanceNumberInputs();
+loadSession();
+</script>
+</body>
+</html>

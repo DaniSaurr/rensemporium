@@ -1,0 +1,127 @@
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>block game!</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+  </head>
+  <body>
+    <canvas id="myCanvas" width="540" height="900" style="border:1px solid #d3d3d3;">
+    Your browser does not support the HTML canvas tag.</canvas>
+    <script>
+      //<!-- TODO:  -->
+      //MAKE COLLISION WORK FOR THE X AXIS
+      //FIX BUG: BLOCKS WON'T RENDER UNTIL MOUSE HAS BEEN ON SCREEN AT LEAST ONCE
+
+
+      const canvas = document.getElementById("myCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.addEventListener('mousemove', mouseMove);
+      let floor;
+      let blockStart = canvas.width / 2;
+      let blockSize = 90;
+      let fallRate = 5;
+      let mousePos = [];
+      let blockWidth = 200;
+      class Square {
+        constructor(position,size,colour, bottom, top) {
+          this.position = position;
+          this.size = size;
+          this.colour = colour;
+          this.bottom = bottom;
+          this.top = top;
+        }
+      }
+      gameStart();
+
+      function mouseMove(event){
+        mousePos[0] = event.offsetX;
+        mousePos[1] = event.offsetY;
+      }
+
+      function update()
+      {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        blocks.forEach(entry => drawBlock(entry.position, entry.width, entry.size, entry.colour))
+        blocks[0].top = blocks[0].position[1] + blocks[0].size
+        blocks[0].bottom = blocks[0].position[1] + blocks[0].size
+        if(isBetween(mousePos[0], 0, canvas.width) && isBetween(mousePos[1], 0, canvas.height))
+        {
+          blocks[0].position[0] = mousePos[0]-(blockSize / 2);
+        }
+        if(blocks[0].bottom < floor) // if the block hasn't landed yet
+        {
+          blocks[0].position[1] += fallRate; // apply gravity to it
+        }
+        else{ // when it does land
+          if(blocks.length > 1)
+          {
+            if(isBetween(blocks[0].position[0], blocks[1].position[0], blocks[1].position[0]+blocks[1].width)) //make sure its on top of a previous block
+            {
+            blockWidth = blockWidth - 20; //reduce the block width for the next one
+            floor -= blockSize; //decrease the height of the according to our block height
+            makeNewBlock(); //make a new block
+            }
+            else {
+              blocks.shift();
+              makeNewBlock()
+            }
+          }
+          else {
+            blockWidth = blockWidth - 20; //reduce the block width for the next one
+            floor -= blockSize; //decrease the height of the according to our block height
+            makeNewBlock(); //make a new block
+          }
+        }
+        if(blocks[0].position[0] < 0)
+        {
+          blocks[0].position[0] = 0;
+        }
+        if(blocks[0].position[0] > canvas.width - blockWidth)
+        {
+          blocks[0].position[0] = canvas.width - blockWidth;
+        }
+        window.requestAnimationFrame(update);
+      }
+      function gameStart() {
+        blocks = [];
+        blockStart = (canvas.width / 2) - (blockSize / 2);
+        floor = canvas.height;
+        makeNewBlock();
+        update();
+      }
+      function makeNewBlock(){
+        if(floor > 0)
+        {
+        var block = new Square([0,0], 100, "red")
+        block.position[0] = canvas.width /2 ;
+        block.position[1] = 0;
+        block.width = blockWidth;
+        block.size = blockSize;
+        block.colour = randomColour();
+        block.bottom = block.position[1] - block.size;
+        blocks.unshift(block);
+      }
+      }
+      function drawBlock(blockPosition, blockWidth, blockSize, blockColour) {
+        ctx.fillStyle = blockColour;
+        ctx.fillRect(blockPosition[0], blockPosition[1], blockWidth, blockSize);
+      }
+
+      function randomRange(min, max) {
+        return Math.floor(Math.random()*(max-min+1))+min;
+      }
+      function randomColour() {
+        let num = Math.floor(Math.random()*(16777215-1+1))+1;
+        return '#'+num.toString(16);
+      }
+      function isBetween(number, lowerBound, upperBound) {
+        return number >= lowerBound && number <= upperBound;
+      }
+
+    </script>
+  </body>
+</html>
